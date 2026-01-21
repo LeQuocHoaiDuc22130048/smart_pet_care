@@ -1,0 +1,20 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /pet_care
+
+spring:
+  datasource:
+    url: ${DBMS_CONNECTION:jdbc:mysql://mysql-8:3306/pet_care}
+    driver-class-name: "com.mysql.cj.jdbc.Driver"
+    username: ${DBMS_USERNAME:root}
+    password: ${DBMS_PASSWORD:root}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  signerKey: "cnGDY/xuGdmN0zD9ktlVWVA8/Vki3ep0ZiDNJC++DHFSIerOdQJNH4epcyEy+YZR"
+  valid-duration: 3600 # in seconds
+  refreshable-duration: 36000 # in seconds
