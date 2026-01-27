@@ -62,8 +62,10 @@ public class CategoryService {
 
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteCategory(String categoryId) {
-        boolean exists = categoryRepository.existsProductByCategoryId(categoryId);
-        if (exists) throw new AppException(ErrorCode.CATEGORY_IS_USED);
-        categoryRepository.deleteById(categoryId);
+        Categories categories = categoryRepository.findById(categoryId).orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
+        if (categoryRepository.existsProductByCategoryId(categoryId)){
+            throw new AppException(ErrorCode.CATEGORY_IS_USED);
+        }
+        categoryRepository.delete(categories);
     }
 }

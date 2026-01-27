@@ -3,6 +3,7 @@ package com.pet_care.product.controller;
 
 import com.pet_care.product.dto.ApiResponse;
 import com.pet_care.product.dto.request.CategoryCreationRequest;
+import com.pet_care.product.dto.request.CategoryUpdateRequest;
 import com.pet_care.product.dto.response.CategoryResponse;
 import com.pet_care.product.service.CategoryService;
 import jakarta.validation.Valid;
@@ -44,5 +45,18 @@ public class CategoryController {
                 .build();
     }
 
+    @PutMapping("/{id}")
+    public ApiResponse<CategoryResponse> updateCategory(@PathVariable String id, @RequestBody CategoryUpdateRequest request) {
+        return ApiResponse.<CategoryResponse>builder()
+                .result(categoryService.updateCategory(id, request))
+                .build();
+    }
 
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> deleteCategory(@PathVariable String id) {
+        categoryService.deleteCategory(id);
+        return ApiResponse.<String>builder()
+                .result("Category deleted successfully")
+                .build();
+    }
 }
