@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.hoaiduc</groupId>
-    <artifactId>identity</artifactId>
+    <artifactId>identity_service</artifactId>
     <version>0.9-SNAPSHOT</version>
     <name>identity</name>
     <description>identity</description>
