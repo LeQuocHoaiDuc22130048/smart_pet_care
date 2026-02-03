@@ -22,7 +22,7 @@ import org.springframework.web.filter.CorsFilter;
 public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/products",
+            "/products/*",
             "/products/*",
             "/products/*/images",
             "/products/search",
@@ -44,6 +44,7 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/products").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .anyRequest().authenticated()
                 )

@@ -17,8 +17,9 @@ public class Image {
     @GeneratedValue(strategy = GenerationType.UUID)
     String imageId;
 
-    @Column(nullable = false)
-    String productId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    Products product;
 
     @Column(nullable = false)
     String imageUrl;

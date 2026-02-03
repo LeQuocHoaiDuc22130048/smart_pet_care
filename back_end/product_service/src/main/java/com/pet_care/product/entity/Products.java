@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -17,16 +19,36 @@ public class Products {
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
-    String categoryId;
+    @Column(nullable = false)
+    String productName;
 
+    @Column(length = 500)
     String description;
 
     Double price;
 
-    Integer stockQuantity;
+    @Column(nullable = false)
+    Integer stockQuantity = 0;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     ProductStatus status;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "product_category",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    Set<Categories> categories;
+
+    @OneToMany(
+            mappedBy = "product",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    List<Image> images;
+
 
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
@@ -36,7 +58,11 @@ public class Products {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (status == null) {
-            status = ProductStatus.ACTIVE;
+            status = ProductStatus.INACTIVE;
+        }
+
+        if (stockQuantity == null) {
+            stockQuantity = 0;
         }
     }
 

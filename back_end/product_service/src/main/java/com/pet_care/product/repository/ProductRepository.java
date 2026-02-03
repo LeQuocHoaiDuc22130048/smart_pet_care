@@ -9,7 +9,5 @@ import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Products, String> {
-    List<Products> findByStatus(ProductStatus status);
-
-    List<Products> findByCategoryId(String categoryId);
+    boolean existsByProductName(String productName);
 }

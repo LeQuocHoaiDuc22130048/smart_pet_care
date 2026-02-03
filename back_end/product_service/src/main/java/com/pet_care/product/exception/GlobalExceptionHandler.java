@@ -3,11 +3,14 @@ package com.pet_care.product.exception;
 import com.pet_care.product.dto.ApiResponse;
 import jakarta.validation.ConstraintViolation;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.Map;
 import java.util.Objects;
@@ -74,6 +77,15 @@ public class GlobalExceptionHandler {
                         : errorCode.getMessage());
         return ResponseEntity.badRequest().body(apiResponse);
     }
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleMaxSize(MaxUploadSizeExceededException ex) {
+        return ApiResponse.<Void>builder()
+                .code(4001)
+                .message("File upload quá dung lượng cho phép")
+                .build();
+    }
+
 
     private String mapAttribute(String message, Map<String, Object> attributes) {
         String minValue = String.valueOf(attributes.get(MIN_ATTRIBUTE));
