@@ -1,14 +1,15 @@
 server:
   port: 8080
   servlet:
-    context-path: /pet_care
+    context-path: /pet_care_identity
 
 spring:
+
   datasource:
-    url: ${DBMS_CONNECTION:jdbc:mysql://mysql-8:3306/pet_care}
+    url: "jdbc:mysql://localhost:3306/bookteria_identity"
     driver-class-name: "com.mysql.cj.jdbc.Driver"
-    username: ${DBMS_USERNAME:root}
-    password: ${DBMS_PASSWORD:root}
+    username: root
+    password: root
   jpa:
     hibernate:
       ddl-auto: update

@@ -1,0 +1,37 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /pet_care_product
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.springframework.web.multipart: DEBUG
+    org.springframework.web.servlet.DispatcherServlet: DEBUG
+
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+    date-format: dd-MM-yyyy HH:mm:ss
+  application:
+    name: product_service
+  datasource:
+    url: "jdbc:mysql://localhost:3306/pet_care_product"
+    driver-class-name: "com.mysql.cj.jdbc.Driver"
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
