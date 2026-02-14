@@ -119,6 +119,12 @@ const PublicNavbar = () => {
                                 Sign In
                             </Button>
                         )} */}
+                        <Button
+                            onClick={() => navigate('/login')}
+                            className='hidden md:inline-flex rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
+                        >
+                            Sign In
+                        </Button>
 
                         {/* Mobile Menu Toggle */}
                         <Button
