@@ -1,7 +1,6 @@
-package com.hoaiduc.identity.dto.request;
+package com.pet_care.api_gateway.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
