@@ -1,4 +1,4 @@
-package com.hoaiduc.identity.dto.response;
+package com.pet_care.api_gateway.dto.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;

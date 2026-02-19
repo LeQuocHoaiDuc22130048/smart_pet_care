@@ -1,4 +1,16 @@
 package com.pet_care.api_gateway.repository;
 
-public class IdentityClient {
+import com.pet_care.api_gateway.dto.ApiResponse;
+import com.pet_care.api_gateway.dto.request.IntrospectRequest;
+import com.pet_care.api_gateway.dto.response.IntrospectResponse;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Repository;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.service.annotation.PostExchange;
+import reactor.core.publisher.Mono;
+
+@Repository
+public interface IdentityClient {
+    @PostExchange(url = "/auth/introspect", contentType = MediaType.APPLICATION_JSON_VALUE)
+    Mono<ApiResponse<IntrospectResponse>> introspect(@RequestBody IntrospectRequest request);
 }

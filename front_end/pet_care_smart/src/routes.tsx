@@ -3,6 +3,9 @@ import PublicLayout from './layout/PublicLayout';
 import Homepage from './pages/Homepage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ProductListingPage from './pages/ProductListingPage';
+import NotFoundPage from './pages/NotFoundPage';
+import ProductDetailPage from './pages/ProductDetailPage';
 
 export const routes = createBrowserRouter([
     {
@@ -11,8 +14,10 @@ export const routes = createBrowserRouter([
         children: [
             { index: true, Component: Homepage },
             { path: 'login', Component: LoginPage },
-            { path: 'register', Component: RegisterPage }
+            { path: 'register', Component: RegisterPage },
+            { path: 'products', Component: ProductListingPage },
+            { path: 'products/:id', Component: ProductDetailPage }
         ]
     },
-    {}
+    { path: '*', Component: NotFoundPage }
 ]);
