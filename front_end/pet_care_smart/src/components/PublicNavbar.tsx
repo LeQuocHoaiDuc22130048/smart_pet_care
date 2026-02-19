@@ -9,10 +9,12 @@ import {
     X
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { useCart } from '@/context/CartContext';
+import { Badge } from './ui/badge';
 
 const PublicNavbar = () => {
     const navigate = useNavigate();
-    // const { cartCount } = useCart();
+    const { cartCount } = useCart();
     // const { isAuthenticated, user } = useAuth();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -81,11 +83,11 @@ const PublicNavbar = () => {
                             onClick={() => navigate('/cart')}
                         >
                             <ShoppingCart className='w-5 h-5' />
-                            {/* {cartCount > 0 && (
+                            {cartCount > 0 && (
                                 <Badge className='absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-[#FFB86F] text-xs border-2 border-white'>
                                     {cartCount}
                                 </Badge>
-                            )} */}
+                            )}
                         </Button>
 
                         {/* {isAuthenticated ? (
