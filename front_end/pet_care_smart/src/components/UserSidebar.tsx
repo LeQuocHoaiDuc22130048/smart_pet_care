@@ -28,8 +28,10 @@ const UserSidebar = () => {
             {/* Logo */}
             <div className='p-6 border-b border-border'>
                 <Link to='/' className='flex items-center space-x-2'>
-                    <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-[#5B9FD8] to-[#3D7BA8] flex items-center justify-center'>
-                        <span className='text-white font-bold text-xl'>🐾</span>
+                    <div className='w-10 h-10 rounded-xl  flex items-center justify-center'>
+                        <span className='text-white font-bold text-xl'>
+                            <img src='/image-removebg-preview.png' alt='Logo' />
+                        </span>
                     </div>
                     <div className='flex flex-col'>
                         <span className='font-bold text-lg text-foreground'>

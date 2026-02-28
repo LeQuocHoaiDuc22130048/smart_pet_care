@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import {
     // Badge,
     Menu,
@@ -11,6 +11,7 @@ import {
 import { Button } from './ui/button';
 import { useCart } from '@/context/CartContext';
 import { Badge } from './ui/badge';
+import ThemeToggle from './theme/ThemeToggle';
 
 const PublicNavbar = () => {
     const navigate = useNavigate();
@@ -28,22 +29,22 @@ const PublicNavbar = () => {
         { name: 'Booking', path: '/booking' }
     ];
     return (
-        <header className='sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border shadow-sm'>
+        <header className='sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-sm'>
             <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                 <div className='flex items-center justify-between h-16'>
                     {/* Logo */}
                     <Link to='/' className='flex items-center space-x-2 group'>
                         <div className='w-10 h-10 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform'>
                             <span className='text-white font-bold text-xl'>
-                                <img
-                                    src='../../public/image-removebg-preview.png'
-                                    alt='Logo'
-                                />
+                                <img src='/image-removebg-preview.png' alt='' />
                             </span>
                         </div>
                         <div className='flex flex-col'>
                             <span className='font-bold text-lg text-foreground'>
-                                PetCareSmart
+                                PetCare
+                            </span>
+                            <span className='text-xs text-muted-foreground -mt-1'>
+                                AI-Powered
                             </span>
                         </div>
                     </Link>
@@ -67,11 +68,14 @@ const PublicNavbar = () => {
 
                     {/* Actions */}
                     <div className='flex items-center space-x-2'>
+                        <ThemeToggle />
+
                         <Button
                             variant='ghost'
                             size='icon'
                             className='rounded-xl hover:bg-[#5B9FD8]/10'
                             onClick={() => navigate('/products')}
+                            aria-label='Search products'
                         >
                             <Search className='w-5 h-5' />
                         </Button>
@@ -81,52 +85,38 @@ const PublicNavbar = () => {
                             size='icon'
                             className='rounded-xl hover:bg-[#5B9FD8]/10 relative'
                             onClick={() => navigate('/cart')}
+                            aria-label={`Shopping cart with ${cartCount} items`}
                         >
                             <ShoppingCart className='w-5 h-5' />
                             {cartCount > 0 && (
-                                <Badge className='absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-[#FFB86F] text-xs border-2 border-white'>
+                                <Badge className='absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-[#FFB86F] text-xs border-2 border-card'>
                                     {cartCount}
                                 </Badge>
                             )}
                         </Button>
 
                         {/* {isAuthenticated ? (
-                            <Button
-                                variant='ghost'
-                                size='icon'
-                                className='rounded-xl hover:bg-[#5B9FD8]/10'
-                                onClick={() =>
-                                    navigate(
-                                        user?.role === 'admin'
-                                            ? '/admin'
-                                            : '/dashboard'
-                                    )
-                                }
-                            >
-                                {user?.avatar ? (
-                                    <img
-                                        src={user.avatar}
-                                        alt={user.name}
-                                        className='w-8 h-8 rounded-full'
-                                    />
-                                ) : (
-                                    <User className='w-5 h-5' />
-                                )}
-                            </Button>
-                        ) : (
-                            <Button
-                                onClick={() => navigate('/login')}
-                                className='hidden md:inline-flex rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
-                            >
-                                Sign In
-                            </Button>
-                        )} */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl hover:bg-[#5B9FD8]/10"
+                onClick={() => navigate(user?.role === "admin" ? "/admin" : "/dashboard")}
+                aria-label="User profile"
+              >
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" />
+                ) : (
+                  <User className="w-5 h-5" />
+                )}
+              </Button>
+            ) : ( */}
                         <Button
                             onClick={() => navigate('/login')}
                             className='hidden md:inline-flex rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
                         >
                             Sign In
                         </Button>
+                        {/* )} */}
 
                         {/* Mobile Menu Toggle */}
                         <Button
@@ -134,6 +124,8 @@ const PublicNavbar = () => {
                             size='icon'
                             className='md:hidden rounded-xl'
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            aria-label='Toggle mobile menu'
+                            aria-expanded={mobileMenuOpen}
                         >
                             {mobileMenuOpen ? (
                                 <X className='w-6 h-6' />
@@ -167,16 +159,16 @@ const PublicNavbar = () => {
                                 </Button>
                             ))}
                             {/* {!isAuthenticated && (
-                                <Button
-                                    onClick={() => {
-                                        navigate('/login');
-                                        setMobileMenuOpen(false);
-                                    }}
-                                    className='rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
-                                >
-                                    Sign In
-                                </Button>
-                            )} */}
+                <Button
+                  onClick={() => {
+                    navigate("/login");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white"
+                >
+                  Sign In
+                </Button>
+              )} */}
                         </nav>
                     </div>
                 )}
