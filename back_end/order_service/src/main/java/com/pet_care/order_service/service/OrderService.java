@@ -10,6 +10,7 @@ import com.pet_care.order_service.entity.Orders;
 import com.pet_care.order_service.enums.OrderStatus;
 import com.pet_care.order_service.event.OrderCreatedEvent;
 import com.pet_care.order_service.event.OrderEventPublisher;
+import com.pet_care.order_service.event.OrderItemEvent;
 import com.pet_care.order_service.mapper.OrderMapper;
 import com.pet_care.order_service.repository.OrderRepository;
 import lombok.AccessLevel;
@@ -69,10 +70,20 @@ public class OrderService {
 
         Orders saved = orderRepository.save(order);
 
+        List<OrderItemEvent> itemEvents = saved.getItems()
+                .stream()
+                .map(item -> OrderItemEvent.builder()
+                        .productId(item.getProductId())
+                        .quantity(item.getQuantity())
+                        .build())
+                .toList();
+
+
         OrderCreatedEvent event = OrderCreatedEvent.builder()
                 .orderId(saved.getId())
                 .userId(saved.getUserId())
                 .totalPrice(saved.getTotalPrice())
+                .items(itemEvents)
                 .build();
 
         orderEventPublisher.publishOrderCreated(event);
