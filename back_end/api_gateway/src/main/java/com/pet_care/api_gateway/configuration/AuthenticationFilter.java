@@ -36,7 +36,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     @NonFinal
     String[] publicEndpoints = {
-            "/pet_care_product/products"
+            "/pet_care_product/products", "/pet_care_identity/auth/token"
     };
 
     @Value("${app.api-prefix}")

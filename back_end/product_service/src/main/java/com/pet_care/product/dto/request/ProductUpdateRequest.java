@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.Set;
 
 @Data
@@ -21,7 +22,7 @@ public class ProductUpdateRequest {
     @Size(max = 500)
     String description;
 
-    Double price;
+    BigDecimal price;
 
     Integer stockQuantity;
 
