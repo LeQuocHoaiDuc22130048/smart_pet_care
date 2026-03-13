@@ -31,9 +31,12 @@ public class CategoryService {
     public CategoryResponse createCategory(CategoryCreationRequest request) {
         Categories categories = categoryMapper.toCategory(request);
 
-        try{
+        try {
+            if (categoryRepository.existsByCategoryName((request.getCategoryName()))) {
+                throw new AppException(ErrorCode.CATEGORY_EXISTED);
+            }
             categories = categoryRepository.save(categories);
-        }catch (DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException e) {
             throw new AppException(ErrorCode.CATEGORY_EXISTED);
         }
 
@@ -63,7 +66,7 @@ public class CategoryService {
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteCategory(String categoryId) {
         Categories categories = categoryRepository.findById(categoryId).orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
-        if (categoryRepository.existsProductByCategoryId(categoryId)){
+        if (categoryRepository.existsProductByCategoryId(categoryId)) {
             throw new AppException(ErrorCode.CATEGORY_IS_USED);
         }
         categoryRepository.delete(categories);

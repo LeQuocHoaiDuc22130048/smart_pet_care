@@ -13,7 +13,7 @@ public enum ErrorCode {
     PRIMARY_IMAGE_REQUIRED(2003, "Primary image is required", HttpStatus.BAD_REQUEST),
     PRIMARY_IMAGE_INDEX_INVALID(2004, "Primary image index is invalid", HttpStatus.BAD_REQUEST),
 
-    CATEGORY_EXISTED(2101, "User existed", HttpStatus.BAD_REQUEST),
+    CATEGORY_EXISTED(2101, "Category existed", HttpStatus.BAD_REQUEST),
     CATEGORY_NOT_FOUND(2102, "Category not found", HttpStatus.NOT_FOUND),
     CATEGORY_IS_USED(2103, "Category is used by products", HttpStatus.BAD_REQUEST),
     INVALID_KEY(1004, "Invalid message key", HttpStatus.BAD_REQUEST),

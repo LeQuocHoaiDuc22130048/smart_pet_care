@@ -17,5 +17,4 @@ public interface CategoryMapper {
     @Mapping(target = "createdAt", ignore = true)
     void updateCategory(@MappingTarget Categories category, CategoryUpdateRequest request);
 
-
 }

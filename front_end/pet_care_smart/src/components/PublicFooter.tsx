@@ -6,7 +6,7 @@ import {
     Phone,
     Twitter
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 const PublicFooter = () => {
     const currentYear = new Date().getFullYear();
@@ -20,7 +20,7 @@ const PublicFooter = () => {
                             <div className='w-10 h-10 rounded-xl  flex items-center justify-center'>
                                 <span className='text-white font-bold text-xl'>
                                     <img
-                                        src='../../public/image-removebg-preview.png'
+                                        src='/image-removebg-preview.png'
                                         alt='Logo'
                                     />
                                 </span>

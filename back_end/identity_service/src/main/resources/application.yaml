@@ -7,7 +7,7 @@ spring:
   application:
     name: identity_service
   datasource:
-    url: "jdbc:mysql://localhost:3306/pet_care_identity"
+    url: "jdbc:mysql://localhost:3306/pet_care_identity?createDatabaseIfNotExist=true"
     driver-class-name: "com.mysql.cj.jdbc.Driver"
     username: root
     password: root
@@ -15,6 +15,9 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
 
 jwt:
   signerKey: "cnGDY/xuGdmN0zD9ktlVWVA8/Vki3ep0ZiDNJC++DHFSIerOdQJNH4epcyEy+YZR"

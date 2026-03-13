@@ -4,6 +4,7 @@ import com.pet_care.product.enums.ProductStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -25,7 +26,7 @@ public class Products {
     @Column(length = 500)
     String description;
 
-    Double price;
+    BigDecimal price;
 
     @Column(nullable = false)
     Integer stockQuantity = 0;
