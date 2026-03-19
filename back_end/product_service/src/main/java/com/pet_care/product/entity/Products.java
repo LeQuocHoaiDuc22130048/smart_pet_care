@@ -29,7 +29,7 @@ public class Products {
     BigDecimal price;
 
     @Column(nullable = false)
-    Integer stockQuantity = 0;
+    Integer stockQuantity;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -53,6 +53,9 @@ public class Products {
 
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+
+    @Version
+    Long version;
 
     @PrePersist
     public void prePersist() {
