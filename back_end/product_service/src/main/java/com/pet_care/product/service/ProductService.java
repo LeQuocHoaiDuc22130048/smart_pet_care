@@ -3,6 +3,8 @@ package com.pet_care.product.service;
 import com.pet_care.product.dto.ImageUploadData;
 import com.pet_care.product.dto.request.ProductCreationRequest;
 import com.pet_care.product.dto.request.ProductUpdateRequest;
+import com.pet_care.product.dto.request.ReserveStockRequest;
+import com.pet_care.product.dto.request.RollbackStockRequest;
 import com.pet_care.product.dto.response.ProductResponse;
 import com.pet_care.product.entity.Categories;
 import com.pet_care.product.entity.Products;
@@ -49,10 +51,13 @@ public class ProductService {
 
         Set<Categories> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryId()));
 
-        if (categories.isEmpty()) throw new RuntimeException("Categories not found");
+        if (categories.isEmpty()) throw new AppException(ErrorCode.CATEGORY_NOT_FOUND);
 
         if (request.getPrimaryImageIndex() >= images.size())
-            throw new RuntimeException("Primary image index out of bounds");
+            throw new AppException(ErrorCode.PRIMARY_IMAGE_INDEX_INVALID);
+
+        if (productRepository.existsByProductName(request.getProductName()))
+            throw new AppException(ErrorCode.PRODUCT_NAME_EXISTED);
 
         products.setCategories(categories);
 
@@ -184,14 +189,42 @@ public class ProductService {
             );
         }
     }
+    //    UPDATE PRODUCT ENDS HERE
 
-//    UPDATE PRODUCT ENDS HERE
-
+    //    DELETE PRODUCT
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteProduct(String productId) {
         Products product = productRepository.findById(productId).orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
         productRepository.delete(product);
+    }
+
+    //    RESERVE STOCK
+    @Transactional
+    public void reserveStock(List<ReserveStockRequest> requests) {
+        for (ReserveStockRequest request : requests) {
+            Products products = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+
+            if (products.getStockQuantity() < request.getQuantity()) {
+                throw new AppException(ErrorCode.NOT_ENOUGH_PRODUCT_STOCK);
+            }
+
+            products.setStockQuantity(products.getStockQuantity() - request.getQuantity());
+            productRepository.save(products);
+        }
+    }
+
+    //ROLLBACK STOCK
+    @Transactional
+    public void rollbackStock(List<RollbackStockRequest> requests) {
+        for (RollbackStockRequest request : requests) {
+            Products products = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+
+            products.setStockQuantity(products.getStockQuantity() + request.getQuantity());
+            productRepository.save(products);
+        }
     }
 }

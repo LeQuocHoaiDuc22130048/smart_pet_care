@@ -36,7 +36,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     @NonFinal
     String[] publicEndpoints = {
-            "/pet_care_product/products", "/pet_care_identity/auth/token"
+            "/pet_care_product/products",
+            "/pet_care_identity/auth/token",
+            "/pet_care_identity/auth/log-out"
     };
 
     @Value("${app.api-prefix}")
@@ -78,7 +80,12 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isPublicEndpoint(ServerHttpRequest request) {
-        return Arrays.stream(publicEndpoints).anyMatch(s -> request.getURI().getPath().matches(apiPrefix + s));
+        String path = request.getURI().getPath();
+        String method = request.getMethod().name();
+
+        if (path.endsWith("/users") && method.equalsIgnoreCase("POST")) return true;
+
+        return Arrays.stream(publicEndpoints).anyMatch(s -> path.startsWith(apiPrefix + s));
     }
 
     Mono<Void> unAuthenticated(ServerHttpResponse response) {

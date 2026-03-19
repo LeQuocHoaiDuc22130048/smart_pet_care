@@ -24,6 +24,8 @@ public class ProductCreationRequest {
 
     BigDecimal price;
 
+    Integer stockQuantity;
+
     @NotBlank
     Set<String> categoryId;
 

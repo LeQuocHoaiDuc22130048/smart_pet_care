@@ -18,7 +18,10 @@ public enum ErrorCode {
     CATEGORY_IS_USED(2103, "Category is used by products", HttpStatus.BAD_REQUEST),
     INVALID_KEY(1004, "Invalid message key", HttpStatus.BAD_REQUEST),
     UNAUTHORIZED(1005, "you do not have permission", HttpStatus.FORBIDDEN),
-    UNAUTHENTICATED(1006, "unauthenticated", HttpStatus.UNAUTHORIZED)
+    UNAUTHENTICATED(1006, "unauthenticated", HttpStatus.UNAUTHORIZED),
+
+    ORDER_NOT_FOUND(3001, "Order not found", HttpStatus.NOT_FOUND),
+    ORDER_STATUS_INVALID(3002, "Order status invalid", HttpStatus.BAD_REQUEST)
     ;
 
     private int code;

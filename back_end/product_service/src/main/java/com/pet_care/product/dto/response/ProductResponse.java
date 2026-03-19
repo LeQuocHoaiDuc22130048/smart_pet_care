@@ -19,6 +19,7 @@ public class ProductResponse {
     String productName;
     String description;
     BigDecimal price;
+    Integer stockQuantity;
     Set<CategoryResponseCreateProduct> category;
     LocalDateTime createdAt;
 }
