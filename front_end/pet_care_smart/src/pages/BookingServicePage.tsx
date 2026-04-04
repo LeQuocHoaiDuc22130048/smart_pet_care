@@ -231,7 +231,7 @@ const BookingServicePage = () => {
 
                             <div className='space-y-4 mb-6'>
                                 {selectedService && (
-                                    <div className='p-4 rounded-xl bg-background-alt'>
+                                    <div className='p-4 rounded-xl bg-muted/50'>
                                         <p className='text-sm text-muted-foreground mb-1'>
                                             Service
                                         </p>
@@ -247,7 +247,7 @@ const BookingServicePage = () => {
                                 )}
 
                                 {selectedDate && (
-                                    <div className='p-4 rounded-xl bg-background-alt'>
+                                    <div className='p-4 rounded-xl bg-muted/50'>
                                         <p className='text-sm text-muted-foreground mb-1'>
                                             Date
                                         </p>
@@ -267,7 +267,7 @@ const BookingServicePage = () => {
                                 )}
 
                                 {selectedTime && (
-                                    <div className='p-4 rounded-xl bg-background-alt'>
+                                    <div className='p-4 rounded-xl bg-muted/50'>
                                         <p className='text-sm text-muted-foreground mb-1'>
                                             Time
                                         </p>
@@ -279,7 +279,7 @@ const BookingServicePage = () => {
                                 )}
 
                                 {petName && (
-                                    <div className='p-4 rounded-xl bg-background-alt'>
+                                    <div className='p-4 rounded-xl bg-muted/50'>
                                         <p className='text-sm text-muted-foreground mb-1'>
                                             Pet Name
                                         </p>

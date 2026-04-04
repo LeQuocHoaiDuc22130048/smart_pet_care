@@ -146,7 +146,6 @@ const HeroSlider = () => {
                                     onClick={() => navigate(slide.ctaSecondary.path)}
                                     className='rounded-xl border-2 border-[#448B3D] text-[#448B3D] hover:bg-[#448B3D] hover:text-white px-8'
                                 >
-                                    <Calendar className='mr-2 w-5 h-5' />
                                     {slide.ctaSecondary.label}
                                 </Button>
                             </motion.div>

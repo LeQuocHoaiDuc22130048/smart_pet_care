@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Calendar, Heart, ImageIcon, Shield, ShoppingBag, Truck, Phone } from 'lucide-react';
+import { Calendar, Heart, ImageIcon, Shield, ShoppingBag, Truck, Phone, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import HeroSlider from '@/components/HeroSlider';
@@ -22,43 +22,43 @@ const Homepage = () => {
             icon: '✅',
             title: 'Hàng chính hãng',
             description: 'Tất cả sản phẩm đều có nguồn gốc rõ ràng, an toàn cho vật nuôi của bạn',
-            bg: 'bg-green-50 border-green-200'
+            bg: 'bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800'
         },
         {
             icon: '🚚',
             title: 'Giao hàng tận nơi',
             description: 'Giao hàng đến tận nhà, kể cả vùng nông thôn. Miễn phí đơn từ 500.000đ',
-            bg: 'bg-orange-50 border-orange-200'
+            bg: 'bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800'
         },
         {
             icon: '💰',
             title: 'Giá cả phải chăng',
             description: 'Giá tốt nhất thị trường, nhiều chương trình khuyến mãi cho bà con',
-            bg: 'bg-yellow-50 border-yellow-200'
+            bg: 'bg-yellow-50 dark:bg-yellow-950/40 border-yellow-200 dark:border-yellow-800'
         },
         {
             icon: '📞',
             title: 'Tư vấn miễn phí',
             description: 'Gọi ngay (84) 702 500 551 để được tư vấn chọn sản phẩm phù hợp',
-            bg: 'bg-blue-50 border-blue-200'
+            bg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800'
         }
     ];
 
     const categories = [
         {
-            name: '🍖 Thức ăn',
+            name: 'Thức ăn',
             desc: 'Thức ăn cho chó, mèo, gia súc',
             image: 'https://images.unsplash.com/photo-1767023023369-96a7c923be0c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkb2clMjBmb29kJTIwYm93bCUyMGhlYWx0aHl8ZW58MXx8fHwxNzcwNzQyNDk0fDA&ixlib=rb-4.1.0&q=80&w=1080',
             count: '500+ sản phẩm'
         },
         {
-            name: '🎾 Đồ chơi & Phụ kiện',
+            name: 'Đồ chơi & Phụ kiện',
             desc: 'Vòng cổ, dây dắt, đồ chơi',
             image: 'https://images.unsplash.com/photo-1744608257939-1ecbd90f1320?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjB0b3lzJTIwY29sb3JmdWx8ZW58MXx8fHwxNzcwNzYxMDAwfDA&ixlib=rb-4.1.0&q=80&w=1080',
             count: '300+ sản phẩm'
         },
         {
-            name: '💊 Thuốc & Sức khỏe',
+            name: 'Thuốc & Sức khỏe',
             desc: 'Thuốc, vitamin, tiêm phòng',
             image: 'https://images.unsplash.com/photo-1625321171045-1fea4ac688e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2ZXRlcmluYXJpYW4lMjBleGFtaW5pbmclMjBwZXR8ZW58MXx8fHwxNzcwNzM3MjE3fDA&ixlib=rb-4.1.0&q=80&w=1080',
             count: 'Đặt lịch ngay'
@@ -154,8 +154,7 @@ const Homepage = () => {
                             onClick={() => navigate('/products')}
                             className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-13 px-10 text-lg'
                         >
-                            <ShoppingBag className='mr-2 w-5 h-5' />
-                            Xem tất cả sản phẩm
+                            Xem tất cả sản phẩm<ChevronRight />
                         </Button>
                     </motion.div>
                 </div>
@@ -224,7 +223,7 @@ const Homepage = () => {
                     {/* Số điện thoại nổi bật */}
                     <a
                         href='tel:+84702500551'
-                        className='inline-flex items-center gap-3 bg-white text-[#448B3D] rounded-xl px-8 py-4 text-2xl font-bold hover:bg-gray-100 transition-colors shadow-lg mb-6'
+                        className='inline-flex items-center gap-3 bg-white/95 text-[#448B3D] rounded-xl px-8 py-4 text-2xl font-bold hover:bg-white transition-colors shadow-lg mb-6'
                     >
                         <Phone className='w-7 h-7' />
                         (84) 702 500 551
@@ -234,7 +233,7 @@ const Homepage = () => {
                         <Button
                             size='lg'
                             onClick={() => navigate('/products')}
-                            className='rounded-xl bg-white text-[#448B3D] hover:bg-gray-100 font-bold h-13 px-8 text-lg shadow-lg'
+                            className='rounded-xl bg-white/95 text-[#448B3D] hover:bg-white font-bold h-13 px-8 text-lg shadow-lg'
                         >
                             <ShoppingBag className='mr-2 w-5 h-5' />
                             Mua sắm ngay
@@ -242,7 +241,7 @@ const Homepage = () => {
                         <Button
                             size='lg'
                             onClick={() => navigate('/booking')}
-                            className='rounded-xl bg-white text-[#448B3D] hover:bg-gray-100 font-bold h-13 px-8 text-lg shadow-lg'
+                            className='rounded-xl bg-white/95 text-[#448B3D] hover:bg-white font-bold h-13 px-8 text-lg shadow-lg'
                         >
                             <Calendar className='mr-2 w-5 h-5' />
                             Đặt lịch dịch vụ

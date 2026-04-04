@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 
 const AdminHeader = () => {
     return (
-        <header className='fixed top-0 right-0 left-64 h-16 bg-white border-b border-border z-30 px-6 flex items-center justify-between'>
+        <header className='fixed top-0 right-0 left-64 h-16 bg-card border-b border-border z-30 px-6 flex items-center justify-between'>
             <div className='flex-1 max-w-xl'>
                 <div className='relative'>
                     <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground' />

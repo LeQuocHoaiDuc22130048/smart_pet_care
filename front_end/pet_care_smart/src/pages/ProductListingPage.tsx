@@ -153,7 +153,7 @@ const ProductListingPage = () => {
                 </div>
 
                 {/* AI Banner */}
-                <Card className='p-5 mb-8 bg-green-50 border-2 border-[#448B3D]/30 rounded-xl'>
+                <Card className='p-5 mb-8 bg-green-50 dark:bg-green-950/40 border-2 border-[#448B3D]/30 rounded-xl'>
                     <div className='flex items-center justify-between flex-wrap gap-3'>
                         <div className='flex items-center space-x-4'>
                             <div className='text-4xl'>📞</div>

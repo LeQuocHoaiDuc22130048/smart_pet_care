@@ -48,10 +48,10 @@ const PublicFooter = () => {
                         <h3 className='font-bold text-lg text-white mb-4'>Mua sắm</h3>
                         <ul className='space-y-3'>
                             {[
-                                { label: '🛒 Tất cả sản phẩm', path: '/products' },
-                                { label: '📅 Đặt lịch dịch vụ', path: '/booking' },
-                                { label: '🔍 Tìm theo ảnh', path: '/image-search' },
-                                { label: '🛍️ Giỏ hàng', path: '/cart' },
+                                { label: 'Tất cả sản phẩm', path: '/products' },
+                                { label: 'Đặt lịch dịch vụ', path: '/booking' },
+                                { label: 'Tìm theo ảnh', path: '/image-search' },
+                                { label: 'Giỏ hàng', path: '/cart' },
                             ].map((link) => (
                                 <li key={link.path}>
                                     <Link to={link.path} className='text-white/75 hover:text-white transition-colors text-base'>
@@ -66,7 +66,7 @@ const PublicFooter = () => {
                     <div>
                         <h3 className='font-bold text-lg text-white mb-4'>Dịch vụ thú y</h3>
                         <ul className='space-y-3'>
-                            {['🛁 Tắm & Cắt lông', '💉 Tiêm phòng', '🏥 Khám sức khỏe', '✂️ Cắt tỉa lông'].map((s) => (
+                            {['Tắm & Cắt lông', 'Tiêm phòng', 'Khám sức khỏe', 'Cắt tỉa lông'].map((s) => (
                                 <li key={s}>
                                     <Link to='/booking' className='text-white/75 hover:text-white transition-colors text-base'>
                                         {s}
