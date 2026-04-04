@@ -1,7 +1,14 @@
 import UserSidebar from '@/components/UserSidebar';
-import { Outlet } from 'react-router';
+import { useAuth } from '@/context/AuthContext';
+import { Navigate, Outlet } from 'react-router';
 
 const UserDashboardLayout = () => {
+    const { isAuthenticated } = useAuth();
+
+    if (!isAuthenticated) {
+        return <Navigate to='/login' replace />;
+    }
+
     return (
         <div className='min-h-screen flex bg-background'>
             <UserSidebar />

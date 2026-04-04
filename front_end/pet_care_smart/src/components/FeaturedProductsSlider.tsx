@@ -107,10 +107,8 @@ const FeaturedProductsSlider = () => {
             <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                 <div className='flex items-center justify-between mb-10'>
                     <div>
-                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-2'>
-                            Featured Products
-                        </h2>
-                        <p className='text-muted-foreground'>Handpicked by our AI for you</p>
+                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-2'>Sản phẩm bán chạy</h2>
+                        <p className='text-muted-foreground text-base'>Được bà con tin dùng nhiều nhất</p>
                     </div>
                     <div className='flex items-center space-x-2'>
                         <button
@@ -170,7 +168,7 @@ const FeaturedProductsSlider = () => {
                                 <div className='p-4'>
                                     <p className='text-xs text-muted-foreground mb-1'>{product.category}</p>
                                     <h3
-                                        className='font-semibold text-foreground mb-2 hover:text-[#5B9FD8] transition-colors line-clamp-2 cursor-pointer'
+                                        className='font-semibold text-foreground mb-2 hover:text-[#448B3D] transition-colors line-clamp-2 cursor-pointer'
                                         onClick={() => navigate(`/products/${product.id}`)}
                                     >
                                         {product.name}
@@ -188,7 +186,7 @@ const FeaturedProductsSlider = () => {
                                         <div>
                                             {product.discount ? (
                                                 <div className='flex items-center space-x-1.5'>
-                                                    <span className='text-lg font-bold text-[#5B9FD8]'>
+                                                    <span className='text-lg font-bold text-[#448B3D]'>
                                                         ${(product.price * (1 - product.discount / 100)).toFixed(2)}
                                                     </span>
                                                     <span className='text-sm text-muted-foreground line-through'>
@@ -196,13 +194,13 @@ const FeaturedProductsSlider = () => {
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <span className='text-lg font-bold text-[#5B9FD8]'>${product.price}</span>
+                                                <span className='text-lg font-bold text-[#448B3D]'>${product.price}</span>
                                             )}
                                         </div>
                                         <Button
                                             size='sm'
                                             onClick={() => handleAddToCart(product)}
-                                            className='rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
+                                            className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white'
                                         >
                                             <ShoppingCart className='w-4 h-4' />
                                         </Button>
@@ -214,13 +212,8 @@ const FeaturedProductsSlider = () => {
                 </div>
 
                 <div className='text-center mt-8'>
-                    <Button
-                        variant='outline'
-                        size='lg'
-                        onClick={() => navigate('/products')}
-                        className='rounded-xl border-2 px-8'
-                    >
-                        View All Products
+                    <Button variant='outline' size='lg' onClick={() => navigate('/products')} className='rounded-xl border-2 px-8'>
+                        Xem tất cả sản phẩm
                     </Button>
                 </div>
             </div>

@@ -8,28 +8,23 @@ import { toast } from 'sonner';
 
 const CartPage = () => {
     const navigate = useNavigate();
-    const { cart, removeFromCart, updateQuantity, cartTotal, clearCart } =
-        useCart();
+    const { cart, removeFromCart, updateQuantity, cartTotal, clearCart } = useCart();
 
     if (cart.length === 0) {
         return (
             <div className='min-h-screen bg-background flex items-center justify-center'>
                 <div className='text-center py-16'>
-                    <div className='w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#5B9FD8]/20 to-[#FFB86F]/20 flex items-center justify-center'>
-                        <ShoppingBag className='w-16 h-16 text-[#5B9FD8]' />
+                    <div className='w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#448B3D]/20 to-[#FFB86F]/20 flex items-center justify-center'>
+                        <ShoppingBag className='w-16 h-16 text-[#448B3D]' />
                     </div>
-                    <h2 className='text-2xl font-bold text-foreground mb-4'>
-                        Your cart is empty
-                    </h2>
-                    <p className='text-muted-foreground mb-8'>
-                        Start adding some products to your cart!
-                    </p>
+                    <h2 className='text-2xl font-bold text-foreground mb-4'>Giỏ hàng trống</h2>
+                    <p className='text-muted-foreground mb-8'>Hãy thêm sản phẩm vào giỏ hàng của bạn!</p>
                     <Button
                         size='lg'
                         onClick={() => navigate('/products')}
-                        className='rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
+                        className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white'
                     >
-                        Continue Shopping
+                        Tiếp tục mua sắm
                     </Button>
                 </div>
             </div>
@@ -39,73 +34,33 @@ const CartPage = () => {
     return (
         <div className='min-h-screen bg-background py-8'>
             <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <h1 className='text-3xl font-bold text-foreground mb-8'>
-                    Shopping Cart
-                </h1>
+                <h1 className='text-3xl font-bold text-foreground mb-8'>Giỏ hàng</h1>
 
                 <div className='grid lg:grid-cols-3 gap-8'>
-                    {/* Cart Items */}
                     <div className='lg:col-span-2 space-y-4'>
                         {cart.map((item) => (
                             <Card key={item.id} className='p-6 rounded-2xl'>
                                 <div className='flex items-center space-x-6'>
-                                    <img
-                                        src={item.image}
-                                        alt={item.name}
-                                        className='w-24 h-24 object-cover rounded-xl'
-                                    />
+                                    <img src={item.image} alt={item.name} className='w-24 h-24 object-cover rounded-xl' />
                                     <div className='flex-1'>
-                                        <h3 className='font-semibold text-foreground mb-1'>
-                                            {item.name}
-                                        </h3>
-                                        <p className='text-sm text-muted-foreground mb-3'>
-                                            {item.category}
-                                        </p>
-                                        <p className='text-lg font-bold text-[#5B9FD8]'>
-                                            ${item.price.toFixed(2)}
-                                        </p>
+                                        <h3 className='font-semibold text-foreground mb-1'>{item.name}</h3>
+                                        <p className='text-sm text-muted-foreground mb-3'>{item.category}</p>
+                                        <p className='text-lg font-bold text-[#448B3D]'>${item.price.toFixed(2)}</p>
                                     </div>
                                     <div className='flex items-center space-x-4'>
                                         <div className='flex items-center border border-border rounded-xl overflow-hidden'>
-                                            <Button
-                                                variant='ghost'
-                                                size='sm'
-                                                onClick={() =>
-                                                    updateQuantity(
-                                                        item.id,
-                                                        item.quantity - 1
-                                                    )
-                                                }
-                                                className='rounded-none'
-                                            >
+                                            <Button variant='ghost' size='sm' onClick={() => updateQuantity(item.id, item.quantity - 1)} className='rounded-none'>
                                                 <Minus className='w-4 h-4' />
                                             </Button>
-                                            <span className='px-4 py-2 font-semibold'>
-                                                {item.quantity}
-                                            </span>
-                                            <Button
-                                                variant='ghost'
-                                                size='sm'
-                                                onClick={() =>
-                                                    updateQuantity(
-                                                        item.id,
-                                                        item.quantity + 1
-                                                    )
-                                                }
-                                                className='rounded-none'
-                                            >
+                                            <span className='px-4 py-2 font-semibold'>{item.quantity}</span>
+                                            <Button variant='ghost' size='sm' onClick={() => updateQuantity(item.id, item.quantity + 1)} className='rounded-none'>
                                                 <Plus className='w-4 h-4' />
                                             </Button>
                                         </div>
                                         <Button
                                             variant='ghost'
                                             size='icon'
-                                            onClick={() => {
-                                                removeFromCart(item.id);
-                                                toast.success(
-                                                    'Item removed from cart'
-                                                );
-                                            }}
+                                            onClick={() => { removeFromCart(item.id); toast.success('Đã xóa sản phẩm khỏi giỏ hàng'); }}
                                             className='text-destructive hover:text-destructive rounded-xl'
                                         >
                                             <Trash2 className='w-5 h-5' />
@@ -116,45 +71,38 @@ const CartPage = () => {
                         ))}
                     </div>
 
-                    {/* Order Summary */}
                     <div>
                         <Card className='p-6 rounded-2xl sticky top-20'>
-                            <h3 className='text-xl font-bold text-foreground mb-6'>
-                                Order Summary
-                            </h3>
+                            <h3 className='text-xl font-bold text-foreground mb-6'>Tóm tắt đơn hàng</h3>
 
                             <div className='space-y-3 mb-6'>
                                 <div className='flex justify-between text-muted-foreground'>
-                                    <span>Subtotal</span>
+                                    <span>Tạm tính</span>
                                     <span>${cartTotal.toFixed(2)}</span>
                                 </div>
                                 <div className='flex justify-between text-muted-foreground'>
-                                    <span>Shipping</span>
-                                    <span className='text-[#7FD99E]'>Free</span>
+                                    <span>Phí vận chuyển</span>
+                                    <span className='text-[#7FD99E]'>Miễn phí</span>
                                 </div>
                                 <div className='flex justify-between text-muted-foreground'>
-                                    <span>Tax</span>
-                                    <span>
-                                        ${(cartTotal * 0.08).toFixed(2)}
-                                    </span>
+                                    <span>Thuế (8%)</span>
+                                    <span>${(cartTotal * 0.08).toFixed(2)}</span>
                                 </div>
                             </div>
 
                             <Separator className='my-4' />
 
                             <div className='flex justify-between text-lg font-bold text-foreground mb-6'>
-                                <span>Total</span>
-                                <span className='text-[#5B9FD8]'>
-                                    ${(cartTotal * 1.08).toFixed(2)}
-                                </span>
+                                <span>Tổng cộng</span>
+                                <span className='text-[#448B3D]'>${(cartTotal * 1.08).toFixed(2)}</span>
                             </div>
 
                             <Button
                                 size='lg'
                                 onClick={() => navigate('/checkout')}
-                                className='w-full rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white mb-3'
+                                className='w-full rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white mb-3'
                             >
-                                Proceed to Checkout
+                                Tiến hành thanh toán
                                 <ArrowRight className='ml-2 w-5 h-5' />
                             </Button>
 
@@ -164,7 +112,7 @@ const CartPage = () => {
                                 onClick={() => navigate('/products')}
                                 className='w-full rounded-xl'
                             >
-                                Continue Shopping
+                                Tiếp tục mua sắm
                             </Button>
                         </Card>
                     </div>
