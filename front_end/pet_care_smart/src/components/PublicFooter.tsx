@@ -10,7 +10,7 @@ const PublicFooter = () => {
                 <p className='text-white/80 text-base mb-2'>Cần hỗ trợ? Gọi ngay — Miễn phí tư vấn</p>
                 <a
                     href='tel:+84702500551'
-                    className='inline-flex items-center gap-2 text-3xl font-bold text-white hover:text-yellow-300 transition-colors'
+                    className='inline-flex items-center gap-2 text-2xl sm:text-3xl font-bold text-white hover:text-yellow-300 transition-colors'
                 >
                     <Phone className='w-7 h-7' />
                     (84) 702 500 551
@@ -48,10 +48,10 @@ const PublicFooter = () => {
                         <h3 className='font-bold text-lg text-white mb-4'>Mua sắm</h3>
                         <ul className='space-y-3'>
                             {[
-                                { label: '🛒 Tất cả sản phẩm', path: '/products' },
-                                { label: '📅 Đặt lịch dịch vụ', path: '/booking' },
-                                { label: '🔍 Tìm theo ảnh', path: '/image-search' },
-                                { label: '🛍️ Giỏ hàng', path: '/cart' },
+                                { label: 'Tất cả sản phẩm', path: '/products' },
+                                { label: 'Đặt lịch dịch vụ', path: '/booking' },
+                                { label: 'Tìm theo ảnh', path: '/image-search' },
+                                { label: 'Giỏ hàng', path: '/cart' },
                             ].map((link) => (
                                 <li key={link.path}>
                                     <Link to={link.path} className='text-white/75 hover:text-white transition-colors text-base'>
@@ -66,7 +66,7 @@ const PublicFooter = () => {
                     <div>
                         <h3 className='font-bold text-lg text-white mb-4'>Dịch vụ thú y</h3>
                         <ul className='space-y-3'>
-                            {['🛁 Tắm & Cắt lông', '💉 Tiêm phòng', '🏥 Khám sức khỏe', '✂️ Cắt tỉa lông'].map((s) => (
+                            {['Tắm & Cắt lông', 'Tiêm phòng', 'Khám sức khỏe', 'Cắt tỉa lông'].map((s) => (
                                 <li key={s}>
                                     <Link to='/booking' className='text-white/75 hover:text-white transition-colors text-base'>
                                         {s}

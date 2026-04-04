@@ -62,12 +62,7 @@ const ImageSearchPage = () => {
                             <p className='text-muted-foreground mb-4'>
                                 {uploading ? 'AI đang phân tích hình ảnh của bạn' : uploadedImage ? 'Đang tìm sản phẩm tương tự' : 'Kéo thả hoặc nhấn để chọn ảnh'}
                             </p>
-                            {!uploadedImage && (
-                                <Button className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white'>
-                                    <ImageIcon className='w-4 h-4 mr-2' />
-                                    Chọn ảnh
-                                </Button>
-                            )}
+                            
                         </label>
                     </div>
 
@@ -81,6 +76,14 @@ const ImageSearchPage = () => {
 
                 {searchResults.length > 0 && (
                     <div>
+                        {/* Cảnh báo kết quả tham khảo */}
+                        <div className='flex items-start gap-3 bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-300 dark:border-yellow-700 rounded-xl px-4 py-3 mb-6'>
+                            <span className='text-yellow-500 text-xl shrink-0'>⚠️</span>
+                            <p className='text-yellow-800 dark:text-yellow-300 text-sm font-medium leading-relaxed'>
+                                Đây là kết quả tham khảo, có thể có sai sót. Vui lòng kiểm tra lại sản phẩm trước khi đặt hàng hoặc gọi <a href='tel:+84702500551' className='font-bold underline'>(84) 702 500 551</a> để được tư vấn.
+                            </p>
+                        </div>
+
                         <div className='flex items-center justify-between mb-6'>
                             <h2 className='text-2xl font-bold text-foreground'>Sản phẩm tương tự</h2>
                             <p className='text-muted-foreground'>{searchResults.length} kết quả</p>

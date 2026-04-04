@@ -69,7 +69,7 @@ const HeroSlider = () => {
     };
 
     return (
-        <section className='relative overflow-hidden min-h-[600px] lg:min-h-[700px]'>
+        <section className='relative overflow-hidden min-h-[420px] sm:min-h-[520px] lg:min-h-[680px]'>
             {/* Background gradient */}
             <AnimatePresence mode='wait'>
                 <motion.div
@@ -82,8 +82,8 @@ const HeroSlider = () => {
                 />
             </AnimatePresence>
 
-            <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28'>
-                <div className='grid lg:grid-cols-2 gap-12 items-center'>
+            <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 lg:py-28'>
+                <div className='grid lg:grid-cols-2 gap-8 lg:gap-12 items-center'>
                     {/* Text content */}
                     <AnimatePresence mode='wait' custom={direction}>
                         <motion.div
@@ -109,7 +109,7 @@ const HeroSlider = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.25 }}
-                                className='text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight'
+                                className='text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground leading-tight'
                             >
                                 {slide.title}{' '}
                                 <span className='bg-gradient-to-r from-[#448B3D] to-[#FFB86F] bg-clip-text text-transparent'>
@@ -121,7 +121,7 @@ const HeroSlider = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className='text-lg text-muted-foreground max-w-xl'
+                                className='text-base sm:text-lg text-muted-foreground max-w-xl'
                             >
                                 {slide.description}
                             </motion.p>
@@ -146,7 +146,6 @@ const HeroSlider = () => {
                                     onClick={() => navigate(slide.ctaSecondary.path)}
                                     className='rounded-xl border-2 border-[#448B3D] text-[#448B3D] hover:bg-[#448B3D] hover:text-white px-8'
                                 >
-                                    <Calendar className='mr-2 w-5 h-5' />
                                     {slide.ctaSecondary.label}
                                 </Button>
                             </motion.div>
@@ -156,7 +155,7 @@ const HeroSlider = () => {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.45 }}
-                                className='flex items-center space-x-8 pt-4'
+                                className='flex items-center space-x-4 sm:space-x-8 pt-2 sm:pt-4'
                             >
                                 {[
                                     { value: '50K+', label: 'Hộ gia đình tin dùng' },
@@ -166,8 +165,8 @@ const HeroSlider = () => {
                                     <div key={i} className='flex items-center space-x-4'>
                                         {i > 0 && <div className='w-px h-12 bg-border' />}
                                         <div className='text-center'>
-                                            <div className='text-3xl font-bold text-foreground'>{stat.value}</div>
-                                            <div className='text-sm text-muted-foreground'>{stat.label}</div>
+                                            <div className='text-xl sm:text-3xl font-bold text-foreground'>{stat.value}</div>
+                                            <div className='text-xs sm:text-sm text-muted-foreground'>{stat.label}</div>
                                         </div>
                                     </div>
                                 ))}
@@ -185,13 +184,13 @@ const HeroSlider = () => {
                             animate='center'
                             exit='exit'
                             transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-                            className='relative'
+                            className='relative hidden lg:block'
                         >
                             <div className='absolute inset-0 bg-gradient-to-br from-[#448B3D] to-[#FFB86F] rounded-3xl blur-3xl opacity-20' />
                             <img
                                 src={slide.image}
                                 alt='Hero'
-                                className='relative rounded-3xl shadow-2xl w-full h-[480px] object-cover'
+                                className='relative rounded-3xl shadow-2xl w-full h-[380px] lg:h-[480px] object-cover'
                             />
                         </motion.div>
                     </AnimatePresence>

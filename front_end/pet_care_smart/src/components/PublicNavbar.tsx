@@ -17,9 +17,9 @@ const PublicNavbar = () => {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
 
     const navLinks = [
-        { name: '🛒 Sản phẩm', path: '/products' },
-        { name: '📅 Đặt lịch', path: '/booking' },
-        { name: '🔍 Tìm theo ảnh', path: '/image-search' },
+        { name: 'Sản phẩm', path: '/products' },
+        { name: 'Đặt lịch', path: '/booking' },
+        { name: 'Tìm theo ảnh', path: '/image-search' },
     ];
 
     return (

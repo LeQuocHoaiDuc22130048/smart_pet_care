@@ -82,11 +82,11 @@ const TestimonialsSlider = () => {
                             animate='center'
                             exit='exit'
                             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-                            className='bg-card border border-border rounded-3xl p-8 md:p-12 shadow-lg text-center'
+                            className='bg-card border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-lg text-center'
                         >
                             <Quote className='w-10 h-10 text-[#448B3D]/30 mx-auto mb-6' />
 
-                            <p className='text-lg md:text-xl text-foreground leading-relaxed mb-8 italic'>
+                            <p className='text-base sm:text-lg md:text-xl text-foreground leading-relaxed mb-6 sm:mb-8 italic'>
                                 "{t.text}"
                             </p>
 

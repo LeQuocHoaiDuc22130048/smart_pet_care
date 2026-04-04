@@ -89,7 +89,7 @@ const AIChatBot = () => {
                         whileHover={{ scale: 1.08 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setIsOpen(true)}
-                        className='fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#448B3D] hover:bg-[#336B2D] text-white rounded-full shadow-2xl px-5 py-3.5 transition-colors'
+                        className='fixed bottom-4 right-4 z-50 flex items-center gap-2.5 bg-[#448B3D] hover:bg-[#336B2D] text-white rounded-full shadow-2xl px-4 py-3 sm:px-5 sm:py-3.5 transition-colors'
                         aria-label='Mở hỗ trợ'
                     >
                         <div className='relative'>
@@ -110,8 +110,9 @@ const AIChatBot = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 24, scale: 0.95 }}
                         transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                        className='fixed bottom-6 right-6 z-50 w-[360px] sm:w-[380px] flex flex-col rounded-2xl shadow-2xl overflow-hidden border border-border'
-                        style={{ height: '520px' }}
+                        className='fixed z-50 flex flex-col overflow-hidden border border-border bg-card shadow-2xl
+                            inset-0 rounded-none
+                            sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[380px] sm:h-[520px] sm:rounded-2xl'
                     >
                         {/* ── Header ── */}
                         <div className='bg-[#448B3D] px-4 py-3 flex items-center justify-between shrink-0'>
@@ -146,7 +147,7 @@ const AIChatBot = () => {
                         </div>
 
                         {/* ── Messages ── */}
-                        <div className='flex-1 overflow-y-auto bg-[#f5f0e8] px-4 py-4 space-y-3'>
+                        <div className='flex-1 overflow-y-auto bg-background px-4 py-4 space-y-3'>
                             {messages.map((msg) => (
                                 <div
                                     key={msg.id}
@@ -162,8 +163,8 @@ const AIChatBot = () => {
                                     <div className={`flex flex-col gap-0.5 max-w-[78%] ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
                                         <div
                                             className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.sender === 'user'
-                                                    ? 'bg-[#448B3D] text-white rounded-br-sm'
-                                                    : 'bg-white text-gray-800 rounded-bl-sm shadow-sm border border-gray-100'
+                                                ? 'bg-[#448B3D] text-white rounded-br-sm'
+                                                : 'bg-card text-foreground rounded-bl-sm shadow-sm border border-border'
                                                 }`}
                                         >
                                             {msg.text}
@@ -181,7 +182,7 @@ const AIChatBot = () => {
                                     <div className='w-7 h-7 rounded-full bg-[#448B3D] flex items-center justify-center shrink-0'>
                                         <Bot className='w-4 h-4 text-white' />
                                     </div>
-                                    <div className='bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm border border-gray-100'>
+                                    <div className='bg-card rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm border border-border'>
                                         <div className='flex gap-1.5 items-center h-4'>
                                             {[0, 160, 320].map((d) => (
                                                 <span
@@ -198,12 +199,12 @@ const AIChatBot = () => {
                         </div>
 
                         {/* ── Quick replies ── */}
-                        <div className='bg-[#f5f0e8] px-4 pb-2 flex gap-2 overflow-x-auto shrink-0' style={{ scrollbarWidth: 'none' }}>
+                        <div className='bg-background px-4 pb-2 flex gap-2 overflow-x-auto shrink-0' style={{ scrollbarWidth: 'none' }}>
                             {QUICK_REPLIES.map((q) => (
                                 <button
                                     key={q}
                                     onClick={() => sendMessage(q)}
-                                    className='shrink-0 text-xs bg-white border border-[#448B3D]/30 text-[#448B3D] font-medium rounded-full px-3 py-1.5 hover:bg-[#448B3D] hover:text-white transition-colors whitespace-nowrap'
+                                    className='shrink-0 text-xs bg-card border border-[#448B3D]/30 text-[#448B3D] font-medium rounded-full px-3 py-1.5 hover:bg-[#448B3D] hover:text-white transition-colors whitespace-nowrap'
                                 >
                                     {q}
                                 </button>
@@ -211,13 +212,13 @@ const AIChatBot = () => {
                         </div>
 
                         {/* ── Input ── */}
-                        <div className='bg-white border-t border-border px-3 py-3 flex items-center gap-2 shrink-0'>
+                        <div className='bg-background border-t border-border px-3 py-3 flex items-center gap-2 shrink-0'>
                             <Input
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
                                 placeholder='Nhập câu hỏi...'
-                                className='flex-1 rounded-xl border-gray-200 bg-gray-50 focus:border-[#448B3D] text-sm h-10'
+                                className='flex-1 rounded-xl border-border bg-muted focus:border-[#448B3D] text-sm h-10'
                             />
                             <button
                                 onClick={() => sendMessage(input)}
