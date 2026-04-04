@@ -19,35 +19,35 @@ const BookingServicePage = () => {
     const SERVICES = [
         {
             id: 'spa',
-            name: 'Pet Spa',
+            name: 'Spa thú cưng',
             icon: '🛁',
             price: 49.99,
             duration: '2 hours',
-            description: 'Premium grooming and spa treatment'
+            description: 'Dịch vụ tắm và spa cao cấp'
         },
         {
             id: 'health',
-            name: 'Health Checkup',
+            name: 'Khám sức khỏe',
             icon: '🏥',
             price: 99.99,
             duration: '1 hour',
-            description: 'Comprehensive health examination'
+            description: 'Kiểm tra sức khỏe toàn diện'
         },
         {
-            id: 'vaccination',
-            name: 'Vaccination',
+            id: 'Tiêm phòng',
+            name: 'Tiêm phòng',
             icon: '💉',
             price: 79.99,
             duration: '30 minutes',
-            description: 'Complete vaccination package'
+            description: 'Gói tiêm phòng đầy đủ'
         },
         {
-            id: 'grooming',
-            name: 'Grooming',
+            id: 'Cắt tỉa lông',
+            name: 'Cắt tỉa lông',
             icon: '✂️',
             price: 39.99,
             duration: '1.5 hours',
-            description: 'Professional grooming service'
+            description: 'Dịch vụ cắt tỉa lông chuyên nghiệp'
         }
     ];
 
@@ -70,11 +70,11 @@ const BookingServicePage = () => {
 
     const handleBooking = () => {
         if (!selectedService || !selectedDate || !selectedTime || !petName) {
-            toast.error('Please fill in all required fields');
+            toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
             return;
         }
         toast.success(
-            "Booking confirmed! We'll send you a confirmation email."
+            "Đặt lịch thành công! Chúng tôi sẽ gửi email xác nhận cho bạn."
         );
         setTimeout(() => navigate('/dashboard'), 2000);
     };
@@ -84,19 +84,19 @@ const BookingServicePage = () => {
             <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
                 <div className='text-center mb-12'>
                     <h1 className='text-4xl font-bold text-foreground mb-4'>
-                        Book a Service
+                        Đặt lịch dịch vụ
                     </h1>
                     <p className='text-lg text-muted-foreground'>
-                        Professional care for your beloved pets
+                        Chăm sóc chuyên nghiệp cho những người bạn yêu quý
                     </p>
                 </div>
 
                 <div className='grid lg:grid-cols-3 gap-8'>
                     <div className='lg:col-span-2 space-y-6'>
-                        {/* Select Service */}
+                        {/* Chọn dịch vụ */}
                         <Card className='p-6 rounded-2xl'>
                             <h2 className='text-xl font-bold text-foreground mb-6'>
-                                Select Service
+                                Chọn dịch vụ
                             </h2>
                             <RadioGroup
                                 value={selectedService}
@@ -108,8 +108,8 @@ const BookingServicePage = () => {
                                             key={service.id}
                                             className={`relative border-2 rounded-xl p-4 cursor-pointer transition-all ${
                                                 selectedService === service.id
-                                                    ? 'border-[#5B9FD8] bg-[#5B9FD8]/5'
-                                                    : 'border-border hover:border-[#5B9FD8]/50'
+                                                    ? 'border-[#448B3D] bg-[#448B3D]/5'
+                                                    : 'border-border hover:border-[#448B3D]/50'
                                             }`}
                                         >
                                             <RadioGroupItem
@@ -131,7 +131,7 @@ const BookingServicePage = () => {
                                                     {service.description}
                                                 </p>
                                                 <div className='flex items-center justify-between'>
-                                                    <span className='text-lg font-bold text-[#5B9FD8]'>
+                                                    <span className='text-lg font-bold text-[#448B3D]'>
                                                         ${service.price}
                                                     </span>
                                                     <span className='text-sm text-muted-foreground'>
@@ -145,15 +145,15 @@ const BookingServicePage = () => {
                             </RadioGroup>
                         </Card>
 
-                        {/* Select Date & Time */}
+                        {/* Chọn ngày & giờ */}
                         <Card className='p-6 rounded-2xl'>
                             <h2 className='text-xl font-bold text-foreground mb-6'>
-                                Select Date & Time
+                                Chọn ngày & giờ
                             </h2>
                             <div className='grid md:grid-cols-2 gap-6'>
                                 <div>
                                     <Label className='mb-3 block'>
-                                        Choose Date
+                                        Chọn ngày
                                     </Label>
                                     <Calendar
                                         mode='single'
@@ -165,7 +165,7 @@ const BookingServicePage = () => {
                                 </div>
                                 <div>
                                     <Label className='mb-3 block'>
-                                        Choose Time
+                                        Chọn giờ
                                     </Label>
                                     <div className='grid grid-cols-2 gap-3'>
                                         {TIME_SLOTS.map((time) => (
@@ -190,31 +190,31 @@ const BookingServicePage = () => {
                             </div>
                         </Card>
 
-                        {/* Pet Information */}
+                        {/* Thông tin thú cưng */}
                         <Card className='p-6 rounded-2xl'>
                             <h2 className='text-xl font-bold text-foreground mb-6'>
-                                Pet Information
+                                Thông tin thú cưng
                             </h2>
                             <div className='space-y-4'>
                                 <div>
-                                    <Label>Pet Name *</Label>
+                                    <Label>Tên thú cưng *</Label>
                                     <Input
                                         value={petName}
                                         onChange={(e) =>
                                             setPetName(e.target.value)
                                         }
-                                        placeholder="Enter your pet's name"
+                                        placeholder="Nhập tên thú cưng của bạn"
                                         className='mt-1 rounded-xl'
                                     />
                                 </div>
                                 <div>
-                                    <Label>Additional Notes (Optional)</Label>
+                                    <Label>Ghi chú thêm (Tùy chọn)</Label>
                                     <Textarea
                                         value={notes}
                                         onChange={(e) =>
                                             setNotes(e.target.value)
                                         }
-                                        placeholder='Any special requirements or concerns...'
+                                        placeholder='Yêu cầu đặc biệt hoặc lưu ý...'
                                         className='mt-1 rounded-xl min-h-[100px]'
                                     />
                                 </div>
@@ -222,11 +222,11 @@ const BookingServicePage = () => {
                         </Card>
                     </div>
 
-                    {/* Booking Summary */}
+                    {/* Tóm tắt đặt lịch */}
                     <div>
                         <Card className='p-6 rounded-2xl sticky top-20'>
                             <h3 className='text-xl font-bold text-foreground mb-6'>
-                                Booking Summary
+                                Tóm tắt đặt lịch
                             </h3>
 
                             <div className='space-y-4 mb-6'>
@@ -294,7 +294,7 @@ const BookingServicePage = () => {
                                 <div className='mb-6'>
                                     <div className='flex justify-between text-lg font-bold text-foreground'>
                                         <span>Total</span>
-                                        <span className='text-[#5B9FD8]'>
+                                        <span className='text-[#448B3D]'>
                                             $
                                             {
                                                 SERVICES.find(
@@ -316,16 +316,16 @@ const BookingServicePage = () => {
                                     !selectedTime ||
                                     !petName
                                 }
-                                className='w-full rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
+                                className='w-full rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white'
                             >
                                 <Check className='w-5 h-5 mr-2' />
-                                Confirm Booking
+                                Xác nhận đặt lịch
                             </Button>
 
                             <div className='mt-4 p-4 rounded-xl bg-[#7FD99E]/10 border border-[#7FD99E]/20'>
                                 <p className='text-xs text-center text-muted-foreground'>
                                     <MapPin className='w-3 h-3 inline mr-1' />
-                                    Service will be provided at our facility
+                                    Dịch vụ sẽ được thực hiện tại cơ sở của chúng tôi
                                 </p>
                             </div>
                         </Card>

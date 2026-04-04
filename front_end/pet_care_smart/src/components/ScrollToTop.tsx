@@ -21,8 +21,8 @@ const ScrollToTop = () => {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    className='fixed bottom-24 right-6 z-40 w-11 h-11 rounded-full bg-[#5B9FD8] text-white shadow-lg flex items-center justify-center hover:bg-[#3D7BA8] transition-colors'
-                    aria-label='Scroll to top'
+                    className='fixed bottom-24 right-6 z-40 w-11 h-11 rounded-full bg-[#448B3D] text-white shadow-lg flex items-center justify-center hover:bg-[#336B2D] transition-colors'
+                    aria-label='Lên đầu trang'
                 >
                     <ChevronUp className='w-5 h-5' />
                 </motion.button>

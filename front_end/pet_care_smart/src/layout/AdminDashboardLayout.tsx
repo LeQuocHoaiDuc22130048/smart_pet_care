@@ -1,8 +1,19 @@
 import AdminHeader from '@/components/AdminHeader';
 import AdminSidebar from '@/components/AdminSidebar';
-import { Outlet } from 'react-router';
+import { useAuth } from '@/context/AuthContext';
+import { Navigate, Outlet } from 'react-router';
 
 const AdminDashboardLayout = () => {
+    const { isAuthenticated, user } = useAuth();
+
+    if (!isAuthenticated) {
+        return <Navigate to='/login' replace />;
+    }
+
+    if (user?.role !== 'admin') {
+        return <Navigate to='/unauthorized' replace />;
+    }
+
     return (
         <div className='min-h-screen flex bg-background'>
             <AdminSidebar />

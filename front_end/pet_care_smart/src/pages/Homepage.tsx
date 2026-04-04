@@ -1,14 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import {
-    Calendar,
-    Heart,
-    ImageIcon,
-    Shield,
-    ShoppingBag,
-    Sparkles,
-    Zap
-} from 'lucide-react';
+import { Calendar, Heart, ImageIcon, Shield, ShoppingBag, Truck, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import HeroSlider from '@/components/HeroSlider';
@@ -16,10 +8,10 @@ import FeaturedProductsSlider from '@/components/FeaturedProductsSlider';
 import TestimonialsSlider from '@/components/TestimonialsSlider';
 
 const fadeInUp = {
-    initial: { opacity: 0, y: 30 },
+    initial: { opacity: 0, y: 24 },
     whileInView: { opacity: 1, y: 0 },
     viewport: { once: true },
-    transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
+    transition: { duration: 0.5 }
 };
 
 const Homepage = () => {
@@ -27,102 +19,86 @@ const Homepage = () => {
 
     const features = [
         {
-            icon: <Sparkles className='w-6 h-6' />,
-            title: 'AI Recommendations',
-            description: "Get personalized product suggestions based on your pet's needs",
-            color: 'from-[#B490F5] to-[#9370DB]'
+            icon: '✅',
+            title: 'Hàng chính hãng',
+            description: 'Tất cả sản phẩm đều có nguồn gốc rõ ràng, an toàn cho vật nuôi của bạn',
+            bg: 'bg-green-50 border-green-200'
         },
         {
-            icon: <ImageIcon className='w-6 h-6' />,
-            title: 'AI Image Search',
-            description: 'Upload a photo to find similar products instantly',
-            color: 'from-[#FFB86F] to-[#FF9A3D]'
+            icon: '🚚',
+            title: 'Giao hàng tận nơi',
+            description: 'Giao hàng đến tận nhà, kể cả vùng nông thôn. Miễn phí đơn từ 500.000đ',
+            bg: 'bg-orange-50 border-orange-200'
         },
         {
-            icon: <Shield className='w-6 h-6' />,
-            title: 'Quality Guaranteed',
-            description: 'All products are verified and safe for your pets',
-            color: 'from-[#7FD99E] to-[#4CAF50]'
+            icon: '💰',
+            title: 'Giá cả phải chăng',
+            description: 'Giá tốt nhất thị trường, nhiều chương trình khuyến mãi cho bà con',
+            bg: 'bg-yellow-50 border-yellow-200'
         },
         {
-            icon: <Zap className='w-6 h-6' />,
-            title: 'Fast Delivery',
-            description: 'Free shipping on orders over $50',
-            color: 'from-[#5B9FD8] to-[#3D7BA8]'
+            icon: '📞',
+            title: 'Tư vấn miễn phí',
+            description: 'Gọi ngay (84) 702 500 551 để được tư vấn chọn sản phẩm phù hợp',
+            bg: 'bg-blue-50 border-blue-200'
         }
     ];
 
     const categories = [
         {
-            name: 'Premium Food',
+            name: '🍖 Thức ăn',
+            desc: 'Thức ăn cho chó, mèo, gia súc',
             image: 'https://images.unsplash.com/photo-1767023023369-96a7c923be0c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkb2clMjBmb29kJTIwYm93bCUyMGhlYWx0aHl8ZW58MXx8fHwxNzcwNzQyNDk0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            count: '500+ Products'
+            count: '500+ sản phẩm'
         },
         {
-            name: 'Toys & Fun',
+            name: '🎾 Đồ chơi & Phụ kiện',
+            desc: 'Vòng cổ, dây dắt, đồ chơi',
             image: 'https://images.unsplash.com/photo-1744608257939-1ecbd90f1320?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjB0b3lzJTIwY29sb3JmdWx8ZW58MXx8fHwxNzcwNzYxMDAwfDA&ixlib=rb-4.1.0&q=80&w=1080',
-            count: '300+ Products'
+            count: '300+ sản phẩm'
         },
         {
-            name: 'Health Care',
+            name: '💊 Thuốc & Sức khỏe',
+            desc: 'Thuốc, vitamin, tiêm phòng',
             image: 'https://images.unsplash.com/photo-1625321171045-1fea4ac688e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2ZXRlcmluYXJpYW4lMjBleGFtaW5pbmclMjBwZXR8ZW58MXx8fHwxNzcwNzM3MjE3fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            count: 'Book Services'
+            count: 'Đặt lịch ngay'
         }
     ];
 
     const services = [
-        {
-            icon: '🛁',
-            title: 'Pet Spa',
-            description: 'Premium grooming and spa treatments',
-            price: '$49.99'
-        },
-        {
-            icon: '💉',
-            title: 'Vaccination',
-            description: 'Complete vaccination packages',
-            price: '$79.99'
-        },
-        {
-            icon: '🏥',
-            title: 'Health Checkup',
-            description: 'Comprehensive health examination',
-            price: '$99.99'
-        }
+        { icon: '🛁', title: 'Tắm & Cắt lông', description: 'Tắm sạch, cắt tỉa lông gọn gàng tại nhà bạn', price: '150.000đ' },
+        { icon: '💉', title: 'Tiêm phòng', description: 'Tiêm đầy đủ các loại vắc-xin cần thiết', price: '200.000đ' },
+        { icon: '🏥', title: 'Khám sức khỏe', description: 'Kiểm tra sức khỏe định kỳ, phát hiện bệnh sớm', price: '250.000đ' }
     ];
 
     return (
         <div className='min-h-screen'>
-            {/* Hero Slider */}
             <HeroSlider />
 
-            {/* Features Section */}
-            <section className='py-20 bg-background'>
+            {/* Lý do chọn chúng tôi */}
+            <section className='py-14 bg-background'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <motion.div {...fadeInUp} className='text-center mb-16'>
-                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-4'>
-                            Why Choose PetCare?
+                    <motion.div {...fadeInUp} className='text-center mb-10'>
+                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-3'>
+                            Tại sao bà con tin chọn PetCare?
                         </h2>
-                        <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
-                            Experience the future of pet care with our AI-powered platform
+                        <p className='text-lg text-muted-foreground'>
+                            Chúng tôi hiểu nhu cầu của người chăn nuôi Việt Nam
                         </p>
                     </motion.div>
-
-                    <div className='grid md:grid-cols-2 lg:grid-cols-4 gap-6'>
-                        {features.map((feature, index) => (
+                    <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-5'>
+                        {features.map((f, i) => (
                             <motion.div
-                                key={index}
-                                initial={{ opacity: 0, y: 30 }}
+                                key={i}
+                                initial={{ opacity: 0, y: 24 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: index * 0.1, duration: 0.5 }}
+                                transition={{ delay: i * 0.1, duration: 0.4 }}
                             >
-                                <Card className='p-6 rounded-2xl border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-card h-full'>
-                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white mb-4`}>
-                                        {feature.icon}
-                                    </div>
-                                    <h3 className='font-semibold text-foreground mb-2'>{feature.title}</h3>
-                                    <p className='text-sm text-muted-foreground'>{feature.description}</p>
+                                <Card className={`p-5 rounded-xl border-2 ${f.bg} h-full`}>
+                                    <div className='text-4xl mb-3'>{f.icon}</div>
+                                    <h3 className='font-bold text-lg text-foreground mb-2'>{f.title}</h3>
+                                    <p className='text-base text-muted-foreground leading-relaxed'>{f.description}</p>
                                 </Card>
                             </motion.div>
                         ))}
@@ -130,94 +106,92 @@ const Homepage = () => {
                 </div>
             </section>
 
-            {/* Featured Products Slider */}
+            {/* Sản phẩm nổi bật */}
             <FeaturedProductsSlider />
 
-            {/* Categories Section */}
-            <section className='py-20 bg-muted/30'>
+            {/* Danh mục */}
+            <section className='py-14 bg-[#448B3D]/5'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <motion.div {...fadeInUp} className='text-center mb-16'>
-                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-4'>
-                            Shop by Category
+                    <motion.div {...fadeInUp} className='text-center mb-10'>
+                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-3'>
+                            Mua theo danh mục
                         </h2>
-                        <p className='text-lg text-muted-foreground'>Find exactly what your pet needs</p>
+                        <p className='text-lg text-muted-foreground'>Tìm đúng sản phẩm bạn cần</p>
                     </motion.div>
-
-                    <div className='grid md:grid-cols-3 gap-8'>
-                        {categories.map((category, index) => (
+                    <div className='grid md:grid-cols-3 gap-6'>
+                        {categories.map((cat, i) => (
                             <motion.div
-                                key={index}
-                                initial={{ opacity: 0, scale: 0.95 }}
+                                key={i}
+                                initial={{ opacity: 0, scale: 0.97 }}
                                 whileInView={{ opacity: 1, scale: 1 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: index * 0.12, duration: 0.5 }}
+                                transition={{ delay: i * 0.1, duration: 0.4 }}
                             >
                                 <Card
-                                    className='group cursor-pointer overflow-hidden rounded-2xl border-border hover:shadow-xl transition-all duration-300 bg-card'
+                                    className='group cursor-pointer overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-lg transition-all duration-300'
                                     onClick={() => navigate('/products')}
                                 >
-                                    <div className='relative h-64 overflow-hidden'>
+                                    <div className='relative h-52 overflow-hidden'>
                                         <img
-                                            src={category.image}
-                                            alt={category.name}
-                                            className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-500'
+                                            src={cat.image}
+                                            alt={cat.name}
+                                            className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500'
                                         />
-                                        <div className='absolute inset-0 bg-gradient-to-t from-black/60 to-transparent' />
-                                        <div className='absolute bottom-0 left-0 right-0 p-6 text-white'>
-                                            <h3 className='text-2xl font-bold mb-1'>{category.name}</h3>
-                                            <p className='text-white/90'>{category.count}</p>
+                                        <div className='absolute inset-0 bg-gradient-to-t from-black/70 to-transparent' />
+                                        <div className='absolute bottom-0 left-0 right-0 p-5 text-white'>
+                                            <h3 className='text-2xl font-bold mb-0.5'>{cat.name}</h3>
+                                            <p className='text-white/85 text-sm'>{cat.desc}</p>
+                                            <p className='text-white/70 text-xs mt-1'>{cat.count}</p>
                                         </div>
                                     </div>
                                 </Card>
                             </motion.div>
                         ))}
                     </div>
-
-                    <motion.div {...fadeInUp} className='text-center mt-12'>
+                    <motion.div {...fadeInUp} className='text-center mt-8'>
                         <Button
                             size='lg'
-                            variant='outline'
                             onClick={() => navigate('/products')}
-                            className='rounded-xl border-2 px-8'
+                            className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-13 px-10 text-lg'
                         >
                             <ShoppingBag className='mr-2 w-5 h-5' />
-                            View All Products
+                            Xem tất cả sản phẩm
                         </Button>
                     </motion.div>
                 </div>
             </section>
 
-            {/* Services Section */}
-            <section className='py-20 bg-background'>
+            {/* Dịch vụ */}
+            <section className='py-14 bg-background'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <motion.div {...fadeInUp} className='text-center mb-16'>
-                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-4'>
-                            Professional Pet Services
+                    <motion.div {...fadeInUp} className='text-center mb-10'>
+                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-3'>
+                            Dịch vụ thú y tại nhà
                         </h2>
-                        <p className='text-lg text-muted-foreground'>Expert care for your beloved pets</p>
+                        <p className='text-lg text-muted-foreground'>
+                            Bác sĩ đến tận nơi — Không cần đi xa
+                        </p>
                     </motion.div>
-
-                    <div className='grid md:grid-cols-3 gap-8'>
-                        {services.map((service, index) => (
+                    <div className='grid md:grid-cols-3 gap-6'>
+                        {services.map((svc, i) => (
                             <motion.div
-                                key={index}
-                                initial={{ opacity: 0, y: 30 }}
+                                key={i}
+                                initial={{ opacity: 0, y: 24 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: index * 0.12, duration: 0.5 }}
-                                whileHover={{ y: -4 }}
+                                transition={{ delay: i * 0.1, duration: 0.4 }}
                             >
-                                <Card className='p-8 rounded-2xl border-border hover:shadow-xl transition-shadow duration-300 bg-card text-center h-full flex flex-col'>
-                                    <div className='text-6xl mb-4'>{service.icon}</div>
-                                    <h3 className='text-xl font-semibold text-foreground mb-2'>{service.title}</h3>
-                                    <p className='text-muted-foreground mb-4 flex-1'>{service.description}</p>
-                                    <div className='text-2xl font-bold text-[#5B9FD8] mb-4'>{service.price}</div>
+                                <Card className='p-7 rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-lg transition-all duration-300 text-center h-full flex flex-col'>
+                                    <div className='text-6xl mb-4'>{svc.icon}</div>
+                                    <h3 className='text-xl font-bold text-foreground mb-2'>{svc.title}</h3>
+                                    <p className='text-base text-muted-foreground mb-4 flex-1 leading-relaxed'>{svc.description}</p>
+                                    <div className='text-2xl font-bold text-[#448B3D] mb-4'>Từ {svc.price}</div>
                                     <Button
                                         onClick={() => navigate('/booking')}
-                                        className='w-full rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
+                                        className='w-full rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-12 text-base'
                                     >
-                                        <Calendar className='mr-2 w-4 h-4' />
-                                        Book Now
+                                        <Calendar className='mr-2 w-5 h-5' />
+                                        Đặt lịch ngay
                                     </Button>
                                 </Card>
                             </motion.div>
@@ -226,17 +200,11 @@ const Homepage = () => {
                 </div>
             </section>
 
-            {/* Testimonials Slider */}
+            {/* Đánh giá khách hàng */}
             <TestimonialsSlider />
 
-            {/* CTA Section */}
-            <motion.section
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className='py-20 bg-gradient-to-br from-[#5B9FD8] to-[#3D7BA8]'
-            >
+            {/* Liên hệ nhanh */}
+            <section className='py-14 bg-[#448B3D]'>
                 <div className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center'>
                     <motion.div
                         initial={{ scale: 0 }}
@@ -244,37 +212,44 @@ const Homepage = () => {
                         viewport={{ once: true }}
                         transition={{ type: 'spring', stiffness: 200, damping: 15 }}
                     >
-                        <Heart className='w-16 h-16 text-white mx-auto mb-6' />
+                        <Heart className='w-14 h-14 text-white mx-auto mb-5' />
                     </motion.div>
-                    <motion.h2
-                        {...fadeInUp}
-                        className='text-3xl sm:text-4xl font-bold text-white mb-6'
-                    >
-                        Ready to Give Your Pet the Best?
-                    </motion.h2>
+                    <h2 className='text-3xl sm:text-4xl font-bold text-white mb-4'>
+                        Cần tư vấn? Gọi ngay cho chúng tôi!
+                    </h2>
                     <p className='text-xl text-white/90 mb-8'>
-                        Join thousands of happy pet parents who trust PetCare
+                        Đội ngũ tư vấn sẵn sàng hỗ trợ bà con từ 7:00 – 18:00 hàng ngày
                     </p>
-                    <div className='flex flex-col sm:flex-row gap-4 justify-center'>
+
+                    {/* Số điện thoại nổi bật */}
+                    <a
+                        href='tel:+84702500551'
+                        className='inline-flex items-center gap-3 bg-white text-[#448B3D] rounded-xl px-8 py-4 text-2xl font-bold hover:bg-gray-100 transition-colors shadow-lg mb-6'
+                    >
+                        <Phone className='w-7 h-7' />
+                        (84) 702 500 551
+                    </a>
+
+                    <div className='flex flex-col sm:flex-row gap-4 justify-center mt-4'>
                         <Button
                             size='lg'
                             onClick={() => navigate('/products')}
-                            className='rounded-xl bg-white text-[#5B9FD8] hover:bg-gray-100 px-8 shadow-lg'
+                            className='rounded-xl bg-white text-[#448B3D] hover:bg-gray-100 font-bold h-13 px-8 text-lg shadow-lg'
                         >
-                            Start Shopping
+                            <ShoppingBag className='mr-2 w-5 h-5' />
+                            Mua sắm ngay
                         </Button>
                         <Button
                             size='lg'
-                            variant='outline'
-                            onClick={() => navigate('/image-search')}
-                            className='rounded-xl bg-white text-[#5B9FD8] hover:bg-gray-100 px-8 shadow-lg'
+                            onClick={() => navigate('/booking')}
+                            className='rounded-xl bg-white text-[#448B3D] hover:bg-gray-100 font-bold h-13 px-8 text-lg shadow-lg'
                         >
-                            <ImageIcon className='mr-2 w-5 h-5' />
-                            Try AI Search
+                            <Calendar className='mr-2 w-5 h-5' />
+                            Đặt lịch dịch vụ
                         </Button>
                     </div>
                 </div>
-            </motion.section>
+            </section>
         </div>
     );
 };

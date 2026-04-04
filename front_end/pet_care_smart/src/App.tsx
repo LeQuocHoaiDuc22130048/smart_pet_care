@@ -6,17 +6,20 @@ import AIChatBot from './components/AIChatBot.tsx';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from './context/ThemeContext.tsx';
 import ScrollToTop from './components/ScrollToTop.tsx';
+import { AuthProvider } from './context/AuthContext.tsx';
 
 function App() {
     return (
         <ErrorBoundary>
             <ThemeProvider>
-                <CartProvider>
-                    <RouterProvider router={routes} />
-                    <AIChatBot />
-                    <ScrollToTop />
-                    <Toaster />
-                </CartProvider>
+                <AuthProvider>
+                    <CartProvider>
+                        <RouterProvider router={routes} />
+                        <AIChatBot />
+                        <ScrollToTop />
+                        <Toaster richColors />
+                    </CartProvider>
+                </AuthProvider>
             </ThemeProvider>
         </ErrorBoundary>
     );
