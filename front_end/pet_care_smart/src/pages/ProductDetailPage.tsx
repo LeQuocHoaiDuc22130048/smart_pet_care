@@ -9,10 +9,13 @@ import {
     Truck,
     Shield,
     ArrowLeft,
-    Sparkles
+    Sparkles,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 // import { toast } from 'sonner';
 
 const ProductDetailPage = () => {
@@ -21,6 +24,24 @@ const ProductDetailPage = () => {
     //   const { addToCart } = useCart();
     const [quantity, setQuantity] = useState(1);
     const [selectedImage, setSelectedImage] = useState(0);
+    const [imgDirection, setImgDirection] = useState(1);
+
+    const goToImage = (index: number) => {
+        setImgDirection(index > selectedImage ? 1 : -1);
+        setSelectedImage(index);
+    };
+
+    const prevImage = () => {
+        const newIdx = (selectedImage - 1 + product.images.length) % product.images.length;
+        setImgDirection(-1);
+        setSelectedImage(newIdx);
+    };
+
+    const nextImage = () => {
+        const newIdx = (selectedImage + 1) % product.images.length;
+        setImgDirection(1);
+        setSelectedImage(newIdx);
+    };
 
     // Mock product data
     const product = {
@@ -91,40 +112,80 @@ const ProductDetailPage = () => {
                 <div className='grid lg:grid-cols-2 gap-12'>
                     {/* Images */}
                     <div>
-                        <div className='relative rounded-2xl overflow-hidden mb-4 bg-white border border-border'>
-                            <img
-                                src={product.images[selectedImage]}
-                                alt={product.name}
-                                className='w-full h-[500px] object-cover'
-                            />
+                        <div className='relative rounded-2xl overflow-hidden mb-4 bg-card border border-border'>
+                            <AnimatePresence mode='wait' custom={imgDirection}>
+                                <motion.img
+                                    key={selectedImage}
+                                    src={product.images[selectedImage]}
+                                    alt={product.name}
+                                    custom={imgDirection}
+                                    variants={{
+                                        enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
+                                        center: { x: 0, opacity: 1 },
+                                        exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 })
+                                    }}
+                                    initial='enter'
+                                    animate='center'
+                                    exit='exit'
+                                    transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                                    className='w-full h-[500px] object-cover'
+                                />
+                            </AnimatePresence>
+
                             {product.aiRecommended && (
-                                <Badge className='absolute top-4 left-4 bg-gradient-to-r from-[#B490F5] to-[#9370DB] text-white border-0'>
+                                <Badge className='absolute top-4 left-4 bg-gradient-to-r from-[#B490F5] to-[#9370DB] text-white border-0 z-10'>
                                     <Sparkles className='w-3 h-3 mr-1' />
                                     AI Recommended
                                 </Badge>
                             )}
                             {product.discount && (
-                                <Badge className='absolute top-4 right-4 bg-[#FFB86F] text-white border-0 text-lg px-3 py-1'>
+                                <Badge className='absolute top-4 right-4 bg-[#FFB86F] text-white border-0 text-lg px-3 py-1 z-10'>
                                     -{product.discount}% OFF
                                 </Badge>
                             )}
+
+                            {product.images.length > 1 && (
+                                <>
+                                    <button
+                                        onClick={prevImage}
+                                        className='absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-white dark:hover:bg-black/60 transition-all shadow-md z-10'
+                                        aria-label='Previous image'
+                                    >
+                                        <ChevronLeft className='w-5 h-5' />
+                                    </button>
+                                    <button
+                                        onClick={nextImage}
+                                        className='absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 dark:bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-white dark:hover:bg-black/60 transition-all shadow-md z-10'
+                                        aria-label='Next image'
+                                    >
+                                        <ChevronRight className='w-5 h-5' />
+                                    </button>
+                                    <div className='absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1.5 z-10'>
+                                        {product.images.map((_, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => goToImage(i)}
+                                                className={`rounded-full transition-all duration-300 ${i === selectedImage ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/50 hover:bg-white/80'}`}
+                                                aria-label={`Image ${i + 1}`}
+                                            />
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
+
                         <div className='grid grid-cols-4 gap-4'>
                             {product.images.map((image, index) => (
                                 <button
                                     key={index}
-                                    onClick={() => setSelectedImage(index)}
+                                    onClick={() => goToImage(index)}
                                     className={`rounded-xl overflow-hidden border-2 transition-all ${
                                         selectedImage === index
-                                            ? 'border-[#5B9FD8]'
+                                            ? 'border-[#5B9FD8] scale-95'
                                             : 'border-border hover:border-[#5B9FD8]/50'
                                     }`}
                                 >
-                                    <img
-                                        src={image}
-                                        alt=''
-                                        className='w-full h-24 object-cover'
-                                    />
+                                    <img src={image} alt='' className='w-full h-24 object-cover' />
                                 </button>
                             ))}
                         </div>

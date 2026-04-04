@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-    ArrowRight,
     Calendar,
     Heart,
     ImageIcon,
@@ -11,6 +10,17 @@ import {
     Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
+import HeroSlider from '@/components/HeroSlider';
+import FeaturedProductsSlider from '@/components/FeaturedProductsSlider';
+import TestimonialsSlider from '@/components/TestimonialsSlider';
+
+const fadeInUp = {
+    initial: { opacity: 0, y: 30 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true },
+    transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
+};
 
 const Homepage = () => {
     const navigate = useNavigate();
@@ -19,8 +29,7 @@ const Homepage = () => {
         {
             icon: <Sparkles className='w-6 h-6' />,
             title: 'AI Recommendations',
-            description:
-                "Get personalized product suggestions based on your pet's needs",
+            description: "Get personalized product suggestions based on your pet's needs",
             color: 'from-[#B490F5] to-[#9370DB]'
         },
         {
@@ -84,169 +93,87 @@ const Homepage = () => {
 
     return (
         <div className='min-h-screen'>
-            {/* Hero Section */}
-            <section className='relative bg-gradient-to-br from-[#5B9FD8]/10 via-[#FFB86F]/10 to-[#B490F5]/10 overflow-hidden'>
-                <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32'>
-                    <div className='grid lg:grid-cols-2 gap-12 items-center'>
-                        <div className='space-y-8'>
-                            <div className='inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-[#5B9FD8]/20'>
-                                <Sparkles className='w-4 h-4 text-[#5B9FD8]' />
-                                <span className='text-sm font-medium text-[#5B9FD8]'>
-                                    AI-Powered Pet Care
-                                </span>
-                            </div>
-
-                            <h1 className='text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight'>
-                                Everything Your Pet Needs,{' '}
-                                <span className='bg-gradient-to-r from-[#5B9FD8] to-[#FFB86F] bg-clip-text text-transparent'>
-                                    All in One Place
-                                </span>
-                            </h1>
-
-                            <p className='text-lg text-muted-foreground max-w-xl'>
-                                Discover premium products, expert services, and
-                                AI-powered recommendations tailored for your
-                                furry friends.
-                            </p>
-
-                            <div className='flex flex-col sm:flex-row gap-4'>
-                                <Button
-                                    size='lg'
-                                    onClick={() => navigate('/products')}
-                                    className='rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white px-8 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all'
-                                >
-                                    Shop Now{' '}
-                                    <ArrowRight className='ml-2 w-5 h-5' />
-                                </Button>
-                                <Button
-                                    size='lg'
-                                    variant='outline'
-                                    onClick={() => navigate('/booking')}
-                                    className='rounded-xl border-2 border-[#5B9FD8] text-[#5B9FD8] hover:bg-[#5B9FD8] hover:text-white px-8'
-                                >
-                                    <Calendar className='mr-2 w-5 h-5' />
-                                    Book Service
-                                </Button>
-                            </div>
-
-                            <div className='flex items-center space-x-8 pt-4'>
-                                <div className='text-center'>
-                                    <div className='text-3xl font-bold text-foreground'>
-                                        50K+
-                                    </div>
-                                    <div className='text-sm text-muted-foreground'>
-                                        Happy Pets
-                                    </div>
-                                </div>
-                                <div className='w-px h-12 bg-border'></div>
-                                <div className='text-center'>
-                                    <div className='text-3xl font-bold text-foreground'>
-                                        1000+
-                                    </div>
-                                    <div className='text-sm text-muted-foreground'>
-                                        Products
-                                    </div>
-                                </div>
-                                <div className='w-px h-12 bg-border'></div>
-                                <div className='text-center'>
-                                    <div className='text-3xl font-bold text-foreground'>
-                                        24/7
-                                    </div>
-                                    <div className='text-sm text-muted-foreground'>
-                                        Support
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className='relative'>
-                            <div className='absolute inset-0 bg-gradient-to-br from-[#5B9FD8] to-[#FFB86F] rounded-3xl blur-3xl opacity-20'></div>
-                            <img
-                                src='https://images.unsplash.com/photo-1511024654425-72f2d89820be?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoYXBweSUyMGdvbGRlbiUyMHJldHJpZXZlciUyMHBsYXlpbmd8ZW58MXx8fHwxNzcwNzg5NjkyfDA&ixlib=rb-4.1.0&q=80&w=1080'
-                                alt='Happy Pet'
-                                className='relative rounded-3xl shadow-2xl w-full h-[500px] object-cover'
-                            />
-                        </div>
-                    </div>
-                </div>
-            </section>
+            {/* Hero Slider */}
+            <HeroSlider />
 
             {/* Features Section */}
             <section className='py-20 bg-background'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <div className='text-center mb-16'>
+                    <motion.div {...fadeInUp} className='text-center mb-16'>
                         <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-4'>
                             Why Choose PetCare?
                         </h2>
                         <p className='text-lg text-muted-foreground max-w-2xl mx-auto'>
-                            Experience the future of pet care with our
-                            AI-powered platform
+                            Experience the future of pet care with our AI-powered platform
                         </p>
-                    </div>
+                    </motion.div>
 
                     <div className='grid md:grid-cols-2 lg:grid-cols-4 gap-6'>
                         {features.map((feature, index) => (
-                            <Card
+                            <motion.div
                                 key={index}
-                                className='p-6 rounded-2xl border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-white'
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: index * 0.1, duration: 0.5 }}
                             >
-                                <div
-                                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white mb-4`}
-                                >
-                                    {feature.icon}
-                                </div>
-                                <h3 className='font-semibold text-foreground mb-2'>
-                                    {feature.title}
-                                </h3>
-                                <p className='text-sm text-muted-foreground'>
-                                    {feature.description}
-                                </p>
-                            </Card>
+                                <Card className='p-6 rounded-2xl border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-card h-full'>
+                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white mb-4`}>
+                                        {feature.icon}
+                                    </div>
+                                    <h3 className='font-semibold text-foreground mb-2'>{feature.title}</h3>
+                                    <p className='text-sm text-muted-foreground'>{feature.description}</p>
+                                </Card>
+                            </motion.div>
                         ))}
                     </div>
                 </div>
             </section>
 
+            {/* Featured Products Slider */}
+            <FeaturedProductsSlider />
+
             {/* Categories Section */}
-            <section className='py-20 bg-background-alt'>
+            <section className='py-20 bg-muted/30'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <div className='text-center mb-16'>
+                    <motion.div {...fadeInUp} className='text-center mb-16'>
                         <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-4'>
                             Shop by Category
                         </h2>
-                        <p className='text-lg text-muted-foreground'>
-                            Find exactly what your pet needs
-                        </p>
-                    </div>
+                        <p className='text-lg text-muted-foreground'>Find exactly what your pet needs</p>
+                    </motion.div>
 
                     <div className='grid md:grid-cols-3 gap-8'>
                         {categories.map((category, index) => (
-                            <Card
+                            <motion.div
                                 key={index}
-                                className='group cursor-pointer overflow-hidden rounded-2xl border-border hover:shadow-xl transition-all duration-300 bg-white'
-                                onClick={() => navigate('/products')}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: index * 0.12, duration: 0.5 }}
                             >
-                                <div className='relative h-64 overflow-hidden'>
-                                    <img
-                                        src={category.image}
-                                        alt={category.name}
-                                        className='w-full h-full object-center group-hover:scale-110 transition-transform duration-500'
-                                    />
-                                    <div className='absolute inset-0 bg-gradient-to-t from-black/60 to-transparent'></div>
-                                    <div className='absolute bottom-0 left-0 right-0 p-6 text-white'>
-                                        <h3 className='text-2xl font-bold mb-1'>
-                                            {category.name}
-                                        </h3>
-                                        <p className='text-white/90'>
-                                            {category.count}
-                                        </p>
+                                <Card
+                                    className='group cursor-pointer overflow-hidden rounded-2xl border-border hover:shadow-xl transition-all duration-300 bg-card'
+                                    onClick={() => navigate('/products')}
+                                >
+                                    <div className='relative h-64 overflow-hidden'>
+                                        <img
+                                            src={category.image}
+                                            alt={category.name}
+                                            className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-500'
+                                        />
+                                        <div className='absolute inset-0 bg-gradient-to-t from-black/60 to-transparent' />
+                                        <div className='absolute bottom-0 left-0 right-0 p-6 text-white'>
+                                            <h3 className='text-2xl font-bold mb-1'>{category.name}</h3>
+                                            <p className='text-white/90'>{category.count}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            </Card>
+                                </Card>
+                            </motion.div>
                         ))}
                     </div>
 
-                    <div className='text-center mt-12'>
+                    <motion.div {...fadeInUp} className='text-center mt-12'>
                         <Button
                             size='lg'
                             variant='outline'
@@ -256,59 +183,75 @@ const Homepage = () => {
                             <ShoppingBag className='mr-2 w-5 h-5' />
                             View All Products
                         </Button>
-                    </div>
+                    </motion.div>
                 </div>
             </section>
 
             {/* Services Section */}
             <section className='py-20 bg-background'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <div className='text-center mb-16'>
+                    <motion.div {...fadeInUp} className='text-center mb-16'>
                         <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-4'>
                             Professional Pet Services
                         </h2>
-                        <p className='text-lg text-muted-foreground'>
-                            Expert care for your beloved pets
-                        </p>
-                    </div>
+                        <p className='text-lg text-muted-foreground'>Expert care for your beloved pets</p>
+                    </motion.div>
 
                     <div className='grid md:grid-cols-3 gap-8'>
                         {services.map((service, index) => (
-                            <Card
+                            <motion.div
                                 key={index}
-                                className='p-8 rounded-2xl border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white text-center'
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: index * 0.12, duration: 0.5 }}
+                                whileHover={{ y: -4 }}
                             >
-                                <div className='text-6xl mb-4'>
-                                    {service.icon}
-                                </div>
-                                <h3 className='text-xl font-semibold text-foreground mb-2'>
-                                    {service.title}
-                                </h3>
-                                <p className='text-muted-foreground mb-4'>
-                                    {service.description}
-                                </p>
-                                <div className='text-2xl font-bold text-[#5B9FD8] mb-4'>
-                                    {service.price}
-                                </div>
-                                <Button
-                                    onClick={() => navigate('/booking')}
-                                    className='w-full rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
-                                >
-                                    Book Now
-                                </Button>
-                            </Card>
+                                <Card className='p-8 rounded-2xl border-border hover:shadow-xl transition-shadow duration-300 bg-card text-center h-full flex flex-col'>
+                                    <div className='text-6xl mb-4'>{service.icon}</div>
+                                    <h3 className='text-xl font-semibold text-foreground mb-2'>{service.title}</h3>
+                                    <p className='text-muted-foreground mb-4 flex-1'>{service.description}</p>
+                                    <div className='text-2xl font-bold text-[#5B9FD8] mb-4'>{service.price}</div>
+                                    <Button
+                                        onClick={() => navigate('/booking')}
+                                        className='w-full rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white'
+                                    >
+                                        <Calendar className='mr-2 w-4 h-4' />
+                                        Book Now
+                                    </Button>
+                                </Card>
+                            </motion.div>
                         ))}
                     </div>
                 </div>
             </section>
 
+            {/* Testimonials Slider */}
+            <TestimonialsSlider />
+
             {/* CTA Section */}
-            <section className='py-20 bg-gradient-to-br from-[#5B9FD8] to-[#3D7BA8]'>
+            <motion.section
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className='py-20 bg-gradient-to-br from-[#5B9FD8] to-[#3D7BA8]'
+            >
                 <div className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center'>
-                    <Heart className='w-16 h-16 text-white mx-auto mb-6' />
-                    <h2 className='text-3xl sm:text-4xl font-bold text-white mb-6'>
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        whileInView={{ scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                    >
+                        <Heart className='w-16 h-16 text-white mx-auto mb-6' />
+                    </motion.div>
+                    <motion.h2
+                        {...fadeInUp}
+                        className='text-3xl sm:text-4xl font-bold text-white mb-6'
+                    >
                         Ready to Give Your Pet the Best?
-                    </h2>
+                    </motion.h2>
                     <p className='text-xl text-white/90 mb-8'>
                         Join thousands of happy pet parents who trust PetCare
                     </p>
@@ -331,7 +274,7 @@ const Homepage = () => {
                         </Button>
                     </div>
                 </div>
-            </section>
+            </motion.section>
         </div>
     );
 };
