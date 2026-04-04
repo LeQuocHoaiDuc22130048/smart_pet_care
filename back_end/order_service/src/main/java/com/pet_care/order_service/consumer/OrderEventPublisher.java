@@ -1,7 +1,6 @@
-package com.pet_care.order_service.event;
+package com.pet_care.order_service.messaging;
 
 import com.pet_care.order_service.configuration.RabbitMQConfig;
-import com.pet_care.order_service.entity.Orders;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;

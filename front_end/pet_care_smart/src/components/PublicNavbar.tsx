@@ -12,6 +12,7 @@ import { Button } from './ui/button';
 import { useCart } from '@/context/CartContext';
 import { Badge } from './ui/badge';
 import ThemeToggle from './theme/ThemeToggle';
+import { motion, AnimatePresence } from 'motion/react';
 
 const PublicNavbar = () => {
     const navigate = useNavigate();
@@ -137,9 +138,16 @@ const PublicNavbar = () => {
                 </div>
 
                 {/* Mobile Menu */}
+                <AnimatePresence>
                 {mobileMenuOpen && (
-                    <div className='md:hidden py-4 border-t border-border'>
-                        <nav className='flex flex-col space-y-2'>
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                        className='md:hidden overflow-hidden border-t border-border'
+                    >
+                        <nav className='flex flex-col space-y-2 py-4'>
                             {navLinks.map((link) => (
                                 <Button
                                     key={link.path}
@@ -158,20 +166,10 @@ const PublicNavbar = () => {
                                     {link.name}
                                 </Button>
                             ))}
-                            {/* {!isAuthenticated && (
-                <Button
-                  onClick={() => {
-                    navigate("/login");
-                    setMobileMenuOpen(false);
-                  }}
-                  className="rounded-xl bg-[#5B9FD8] hover:bg-[#3D7BA8] text-white"
-                >
-                  Sign In
-                </Button>
-              )} */}
                         </nav>
-                    </div>
+                    </motion.div>
                 )}
+                </AnimatePresence>
             </div>
         </header>
     );

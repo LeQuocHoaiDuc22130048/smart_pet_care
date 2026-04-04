@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/error-states/index.tsx';
 import AIChatBot from './components/AIChatBot.tsx';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from './context/ThemeContext.tsx';
+import ScrollToTop from './components/ScrollToTop.tsx';
 
 function App() {
     return (
@@ -13,6 +14,7 @@ function App() {
                 <CartProvider>
                     <RouterProvider router={routes} />
                     <AIChatBot />
+                    <ScrollToTop />
                     <Toaster />
                 </CartProvider>
             </ThemeProvider>

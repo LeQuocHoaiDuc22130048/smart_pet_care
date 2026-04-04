@@ -2,6 +2,7 @@ package com.pet_care.product.controller;
 
 import com.pet_care.product.dto.ApiResponse;
 import com.pet_care.product.dto.request.ReserveStockRequest;
+import com.pet_care.product.dto.request.RollbackStockRequest;
 import com.pet_care.product.service.ProductService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,17 @@ public class ProductInternalController {
 
     @PostMapping("/reserve-stock")
     public ApiResponse<?> reserveStock(@RequestBody List<ReserveStockRequest> requests) {
+        productService.reserveStock(requests);
+        return ApiResponse.builder()
+                .result("Stock reserved successfully")
+                .build();
+    }
 
+    @PostMapping("/rollback-stock")
+    public ApiResponse<?> rollbackStock(@RequestBody List<RollbackStockRequest> requests) {
+        productService.rollbackStock(requests);
+        return ApiResponse.builder()
+                .result("Stock rolled back successfully")
+                .build();
     }
 }
