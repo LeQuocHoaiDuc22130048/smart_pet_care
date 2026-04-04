@@ -62,12 +62,7 @@ const ImageSearchPage = () => {
                             <p className='text-muted-foreground mb-4'>
                                 {uploading ? 'AI đang phân tích hình ảnh của bạn' : uploadedImage ? 'Đang tìm sản phẩm tương tự' : 'Kéo thả hoặc nhấn để chọn ảnh'}
                             </p>
-                            {!uploadedImage && (
-                                <Button className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white'>
-                                    <ImageIcon className='w-4 h-4 mr-2' />
-                                    Chọn ảnh
-                                </Button>
-                            )}
+                            
                         </label>
                     </div>
 

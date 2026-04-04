@@ -76,7 +76,7 @@ const Homepage = () => {
             <HeroSlider />
 
             {/* Lý do chọn chúng tôi */}
-            <section className='py-14 bg-background'>
+            <section className='py-8 sm:py-14 bg-background'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                     <motion.div {...fadeInUp} className='text-center mb-10'>
                         <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-3'>
@@ -110,7 +110,7 @@ const Homepage = () => {
             <FeaturedProductsSlider />
 
             {/* Danh mục */}
-            <section className='py-14 bg-[#448B3D]/5'>
+            <section className='py-8 sm:py-14 bg-[#448B3D]/5'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                     <motion.div {...fadeInUp} className='text-center mb-10'>
                         <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-3'>
@@ -161,7 +161,7 @@ const Homepage = () => {
             </section>
 
             {/* Dịch vụ */}
-            <section className='py-14 bg-background'>
+            <section className='py-8 sm:py-14 bg-background'>
                 <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
                     <motion.div {...fadeInUp} className='text-center mb-10'>
                         <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-3'>
@@ -203,7 +203,7 @@ const Homepage = () => {
             <TestimonialsSlider />
 
             {/* Liên hệ nhanh */}
-            <section className='py-14 bg-[#448B3D]'>
+            <section className='py-8 sm:py-14 bg-[#448B3D]'>
                 <div className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center'>
                     <motion.div
                         initial={{ scale: 0 }}

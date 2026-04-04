@@ -32,17 +32,17 @@ const CheckoutPage = () => {
     return (
         <div className='min-h-screen bg-background py-8'>
             <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
-                <h1 className='text-3xl font-bold text-foreground mb-8'>Thanh toán</h1>
+                <h1 className='text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8'>Thanh toán</h1>
 
                 {/* Progress Steps */}
-                <div className='flex items-center justify-center mb-12'>
-                    <div className='flex items-center space-x-4'>
+                <div className='flex items-center justify-center mb-8 sm:mb-12'>
+                    <div className='flex items-center'>
                         {[1, 2, 3].map((num) => (
                             <div key={num} className='flex items-center'>
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${step >= num ? 'bg-[#448B3D] text-white' : 'bg-muted text-muted-foreground'}`}>
-                                    {step > num ? <Check className='w-5 h-5' /> : num}
+                                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm ${step >= num ? 'bg-[#448B3D] text-white' : 'bg-muted text-muted-foreground'}`}>
+                                    {step > num ? <Check className='w-4 h-4' /> : num}
                                 </div>
-                                {num < 3 && <div className={`w-20 h-1 ${step > num ? 'bg-[#448B3D]' : 'bg-muted'}`} />}
+                                {num < 3 && <div className={`w-10 sm:w-20 h-1 ${step > num ? 'bg-[#448B3D]' : 'bg-muted'}`} />}
                             </div>
                         ))}
                     </div>

@@ -140,7 +140,7 @@ const ProductDetailPage = () => {
                     Quay lại sản phẩm
                 </Button>
 
-                <div className='grid lg:grid-cols-2 gap-12'>
+                <div className='grid lg:grid-cols-2 gap-6 lg:gap-12'>
                     {/* ── Image Slider ── */}
                     <div>
                         <div className='relative rounded-2xl overflow-hidden mb-4 bg-card border border-border'>
@@ -159,7 +159,7 @@ const ProductDetailPage = () => {
                                     animate='center'
                                     exit='exit'
                                     transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-                                    className='w-full h-[500px] object-cover'
+                                    className='w-full h-64 sm:h-80 lg:h-[500px] object-cover'
                                 />
                             </AnimatePresence>
 
@@ -205,7 +205,7 @@ const ProductDetailPage = () => {
                     <div>
                         <div className='mb-4'>
                             <Badge className='mb-2'>{product.category}</Badge>
-                            <h1 className='text-3xl font-bold text-foreground mb-2'>{product.name}</h1>
+                            <h1 className='text-2xl sm:text-3xl font-bold text-foreground mb-2'>{product.name}</h1>
                             <p className='text-sm text-muted-foreground'>Thương hiệu: {product.brand}</p>
                         </div>
 

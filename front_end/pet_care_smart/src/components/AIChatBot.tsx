@@ -89,7 +89,7 @@ const AIChatBot = () => {
                         whileHover={{ scale: 1.08 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setIsOpen(true)}
-                        className='fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#448B3D] hover:bg-[#336B2D] text-white rounded-full shadow-2xl px-5 py-3.5 transition-colors'
+                        className='fixed bottom-4 right-4 z-50 flex items-center gap-2.5 bg-[#448B3D] hover:bg-[#336B2D] text-white rounded-full shadow-2xl px-4 py-3 sm:px-5 sm:py-3.5 transition-colors'
                         aria-label='Mở hỗ trợ'
                     >
                         <div className='relative'>
@@ -110,8 +110,9 @@ const AIChatBot = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 24, scale: 0.95 }}
                         transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                        className='fixed bottom-6 right-6 z-50 w-[360px] sm:w-[380px] flex flex-col rounded-2xl shadow-2xl overflow-hidden border border-border bg-card'
-                        style={{ height: '520px' }}
+                        className='fixed z-50 flex flex-col overflow-hidden border border-border bg-card shadow-2xl
+                            inset-0 rounded-none
+                            sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[380px] sm:h-[520px] sm:rounded-2xl'
                     >
                         {/* ── Header ── */}
                         <div className='bg-[#448B3D] px-4 py-3 flex items-center justify-between shrink-0'>

@@ -143,7 +143,7 @@ const FeaturedProductsSlider = () => {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ delay: index * 0.08, duration: 0.4 }}
-                            className='flex-shrink-0 w-72'
+                            className='flex-shrink-0 w-56 sm:w-64 lg:w-72'
                         >
                             <Card className='group cursor-pointer overflow-hidden rounded-2xl border-border hover:shadow-xl transition-all duration-300 bg-card'>
                                 <div className='relative overflow-hidden'>

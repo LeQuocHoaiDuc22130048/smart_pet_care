@@ -10,7 +10,7 @@ const PublicFooter = () => {
                 <p className='text-white/80 text-base mb-2'>Cần hỗ trợ? Gọi ngay — Miễn phí tư vấn</p>
                 <a
                     href='tel:+84702500551'
-                    className='inline-flex items-center gap-2 text-3xl font-bold text-white hover:text-yellow-300 transition-colors'
+                    className='inline-flex items-center gap-2 text-2xl sm:text-3xl font-bold text-white hover:text-yellow-300 transition-colors'
                 >
                     <Phone className='w-7 h-7' />
                     (84) 702 500 551
