@@ -1,42 +1,42 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, ArrowRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
 const slides = [
     {
         id: 1,
-        badge: '🐾 Chăm sóc vật nuôi tốt nhất',
+        badge: 'Chăm sóc vật nuôi tốt nhất',
         title: 'Tất cả những gì vật nuôi cần,',
         highlight: 'Có ngay tại đây',
         description: 'Thức ăn, thuốc, phụ kiện chất lượng cao. Giao hàng tận nơi, giá cả phải chăng, phù hợp với bà con nông dân.',
         image: 'https://images.unsplash.com/photo-1511024654425-72f2d89820be?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoYXBweSUyMGdvbGRlbiUyMHJldHJpZXZlciUyMHBsYXlpbmd8ZW58MXx8fHwxNzcwNzg5NjkyfDA&ixlib=rb-4.1.0&q=80&w=1080',
         gradient: 'from-[#448B3D]/15 via-[#FFB86F]/10 to-[#7FD99E]/15',
-        cta: { label: '🛒 Mua ngay', path: '/products' },
-        ctaSecondary: { label: '📅 Đặt lịch khám', path: '/booking' }
+        cta: { label: 'Mua ngay', path: '/products' },
+        ctaSecondary: { label: 'Đặt lịch khám', path: '/booking' }
     },
     {
         id: 2,
-        badge: '🔍 Tìm sản phẩm dễ dàng',
+        badge: 'Tìm sản phẩm dễ dàng',
         title: 'Chụp ảnh sản phẩm,',
         highlight: 'Tìm ngay trong giây lát',
         description: 'Không biết tên sản phẩm? Chỉ cần chụp ảnh, chúng tôi sẽ tìm sản phẩm phù hợp cho bạn ngay lập tức.',
         image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkb2clMjBwb3J0cmFpdCUyMGN1dGV8ZW58MXx8fHwxNzcwNzg5NjkyfDA&ixlib=rb-4.1.0&q=80&w=1080',
         gradient: 'from-[#7FD99E]/15 via-[#448B3D]/10 to-[#FFB86F]/15',
-        cta: { label: '📷 Tìm theo ảnh', path: '/image-search' },
-        ctaSecondary: { label: '🛒 Xem sản phẩm', path: '/products' }
+        cta: { label: 'Tìm theo ảnh', path: '/image-search' },
+        ctaSecondary: { label: 'Xem sản phẩm', path: '/products' }
     },
     {
         id: 3,
-        badge: '🏥 Dịch vụ thú y tại nhà',
+        badge: 'Dịch vụ thú y tại nhà',
         title: 'Bác sĩ thú y đến tận nơi,',
         highlight: 'Tiện lợi & Tin cậy',
         description: 'Đặt lịch khám, tiêm phòng, tắm rửa cho vật nuôi ngay tại nhà. Bác sĩ có kinh nghiệm, giá cả hợp lý.',
         image: 'https://images.unsplash.com/photo-1625321171045-1fea4ac688e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2ZXRlcmluYXJpYW4lMjBleGFtaW5pbmclMjBwZXR8ZW58MXx8fHwxNzcwNzM3MjE3fDA&ixlib=rb-4.1.0&q=80&w=1080',
         gradient: 'from-[#FFB86F]/15 via-[#448B3D]/10 to-[#7FD99E]/15',
-        cta: { label: '📅 Đặt lịch ngay', path: '/booking' },
-        ctaSecondary: { label: '📞 Gọi tư vấn', path: '/products' }
+        cta: { label: 'Đặt lịch ngay', path: '/booking' },
+        ctaSecondary: { label: 'Gọi tư vấn', path: '/products' }
     }
 ];
 

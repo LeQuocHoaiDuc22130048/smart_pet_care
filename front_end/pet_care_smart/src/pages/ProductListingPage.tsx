@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { useCart } from '@/context/CartContext';
+import WishlistButton from '@/components/WishlistButton';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Filter, Grid, List, ShoppingCart,
@@ -288,6 +289,12 @@ const ProductListingPage = () => {
                                                     -{product.discount}%
                                                 </Badge>
                                             )}
+                                            <div className='absolute bottom-2 right-2'>
+                                                <WishlistButton
+                                                    item={{ id: product.id, name: product.name, price: product.price, image: product.image, category: product.category, discount: product.discount, rating: product.rating, reviews: product.reviews }}
+                                                    size='sm'
+                                                />
+                                            </div>
                                         </div>
                                         <div className='p-3 sm:p-4 flex flex-col flex-1'>
                                             <p className='text-xs text-muted-foreground mb-0.5'>{product.category}</p>

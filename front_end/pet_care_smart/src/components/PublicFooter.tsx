@@ -19,7 +19,7 @@ const PublicFooter = () => {
             </div>
 
             <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10'>
-                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8'>
                     {/* Thương hiệu */}
                     <div className='space-y-4'>
                         <div className='flex items-center space-x-3'>
@@ -51,6 +51,7 @@ const PublicFooter = () => {
                                 { label: 'Tất cả sản phẩm', path: '/products' },
                                 { label: 'Đặt lịch dịch vụ', path: '/booking' },
                                 { label: 'Tìm theo ảnh', path: '/image-search' },
+                                { label: 'Tin tức & Blog', path: '/blog' },
                                 { label: 'Giỏ hàng', path: '/cart' },
                             ].map((link) => (
                                 <li key={link.path}>
@@ -70,6 +71,25 @@ const PublicFooter = () => {
                                 <li key={s}>
                                     <Link to='/booking' className='text-white/75 hover:text-white transition-colors text-base'>
                                         {s}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Chính sách */}
+                    <div>
+                        <h3 className='font-bold text-lg text-white mb-4'>Chính sách</h3>
+                        <ul className='space-y-3'>
+                            {[
+                                { label: 'Chính sách bảo mật', path: '/chinh-sach-bao-mat' },
+                                { label: 'Đổi trả & Hoàn tiền', path: '/chinh-sach-doi-tra' },
+                                { label: 'Vận chuyển & Giao nhận', path: '/chinh-sach-van-chuyen' },
+                                { label: 'Liên hệ & Hỗ trợ', path: '/lien-he' },
+                            ].map((link) => (
+                                <li key={link.path}>
+                                    <Link to={link.path} className='text-white/75 hover:text-white transition-colors text-base'>
+                                        {link.label}
                                     </Link>
                                 </li>
                             ))}

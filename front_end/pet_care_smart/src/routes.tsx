@@ -15,6 +15,14 @@ import AdminDashboardLayout from './layout/AdminDashboardLayout';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import UserDashboardLayout from './layout/UserDashboardLayout';
 import UserDashboardPage from './pages/UserDashboardPage';
+import BlogPage from './pages/BlogPage';
+import BlogDetailPage from './pages/BlogDetailPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import ReturnPolicyPage from './pages/ReturnPolicyPage';
+import ShippingPolicyPage from './pages/ShippingPolicyPage';
+import ContactPage from './pages/ContactPage';
+
+import FeedbackPage from './pages/FeedbackPage';
 
 export const routes = createBrowserRouter([
     {
@@ -29,7 +37,14 @@ export const routes = createBrowserRouter([
             { path: 'image-search', Component: ImageSearchPage },
             { path: 'cart', Component: CartPage },
             { path: 'checkout', Component: CheckoutPage },
-            { path: 'booking', Component: BookingServicePage }
+            { path: 'booking', Component: BookingServicePage },
+            { path: 'blog', Component: BlogPage },
+            { path: 'blog/:id', Component: BlogDetailPage },
+            { path: 'chinh-sach-bao-mat', Component: PrivacyPolicyPage },
+            { path: 'chinh-sach-doi-tra', Component: ReturnPolicyPage },
+            { path: 'chinh-sach-van-chuyen', Component: ShippingPolicyPage },
+            { path: 'lien-he', Component: ContactPage },
+            { path: 'feedback', Component: FeedbackPage },
         ]
     },
     {
