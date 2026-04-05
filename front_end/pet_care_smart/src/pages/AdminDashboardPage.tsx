@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -96,6 +96,14 @@ const CATEGORIES = ['Thức ăn', 'Đồ chơi', 'Phụ kiện', 'Giường', 'S
 const ORDER_STATUSES = ['Đang xử lý', 'Đang giao', 'Hoàn thành', 'Đã hủy'] as const;
 const BOOKING_STATUSES = ['Chờ xác nhận', 'Đã xác nhận', 'Hoàn thành', 'Đã hủy'] as const;
 
+const ADMIN_TABS = ['overview', 'products', 'orders', 'customers', 'bookings', 'stats', 'settings'] as const;
+type AdminTab = (typeof ADMIN_TABS)[number];
+
+function parseAdminTab(raw: string | null): AdminTab {
+    if (raw && (ADMIN_TABS as readonly string[]).includes(raw)) return raw as AdminTab;
+    return 'overview';
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function orderBadge(s: string) {
     if (s === 'Hoàn thành') return 'bg-green-100 text-green-700 border border-green-300';
@@ -112,6 +120,15 @@ function bookingBadge(s: string) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const AdminDashboardPage = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = parseAdminTab(searchParams.get('tab'));
+
+    const setTab = (value: string) => {
+        const t = parseAdminTab(value);
+        if (t === 'overview') setSearchParams({}, { replace: true });
+        else setSearchParams({ tab: t }, { replace: true });
+    };
+
     const [products, setProducts] = useState<Product[]>(INIT_PRODUCTS);
     const [orders, setOrders] = useState<Order[]>(INIT_ORDERS);
     const [customers, setCustomers] = useState<Customer[]>(INIT_CUSTOMERS);
@@ -197,13 +214,15 @@ const AdminDashboardPage = () => {
                 <p className="text-muted-foreground text-sm mt-1">Quản lý toàn bộ hoạt động kinh doanh</p>
             </div>
 
-            <Tabs defaultValue="overview">
+            <Tabs value={activeTab} onValueChange={setTab}>
                 <TabsList className="mb-6 flex-wrap h-auto gap-1">
                     <TabsTrigger value="overview">Tổng quan</TabsTrigger>
                     <TabsTrigger value="products">Sản phẩm</TabsTrigger>
                     <TabsTrigger value="orders">Đơn hàng</TabsTrigger>
                     <TabsTrigger value="customers">Khách hàng</TabsTrigger>
                     <TabsTrigger value="bookings">Lịch đặt</TabsTrigger>
+                    <TabsTrigger value="stats">Thống kê</TabsTrigger>
+                    <TabsTrigger value="settings">Cài đặt</TabsTrigger>
                 </TabsList>
 
                 {/* ── Tổng quan ── */}
@@ -527,6 +546,46 @@ const AdminDashboardPage = () => {
                             </table>
                             {filteredBookings.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy lịch đặt</p>}
                         </div>
+                    </Card>
+                </TabsContent>
+
+                {/* ── Thống kê (biểu đồ) ── */}
+                <TabsContent value="stats">
+                    <div className="grid lg:grid-cols-2 gap-6">
+                        <Card className="p-5">
+                            <h2 className="font-semibold text-foreground mb-4">Doanh thu theo tháng</h2>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <LineChart data={CHART_DATA}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                                    <YAxis stroke="#6B7280" fontSize={12} />
+                                    <Tooltip />
+                                    <Line type="monotone" dataKey="sales" stroke="#448B3D" strokeWidth={2} dot={false} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </Card>
+                        <Card className="p-5">
+                            <h2 className="font-semibold text-foreground mb-4">Đơn hàng theo tháng</h2>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <BarChart data={CHART_DATA}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                                    <YAxis stroke="#6B7280" fontSize={12} />
+                                    <Tooltip />
+                                    <Bar dataKey="orders" fill="#448B3D" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                {/* ── Cài đặt ── */}
+                <TabsContent value="settings">
+                    <Card className="p-6 max-w-xl">
+                        <h2 className="font-semibold text-foreground mb-2">Cài đặt hệ thống</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Khu vực cấu hình cửa hàng, thông báo và tích hợp sẽ được bổ sung khi kết nối API quản trị.
+                        </p>
                     </Card>
                 </TabsContent>
             </Tabs>
