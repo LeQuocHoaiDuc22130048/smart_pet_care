@@ -6,6 +6,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth, useLogout } from '@/context/AuthContext';
 import { Badge } from './ui/badge';
 import ThemeToggle from './theme/ThemeToggle';
+import NavbarWishlistDropdown from './NavbarWishlistDropdown';
 import { motion, AnimatePresence } from 'motion/react';
 
 const PublicNavbar = () => {
@@ -65,6 +66,8 @@ const PublicNavbar = () => {
                     {/* Actions */}
                     <div className='flex items-center space-x-2'>
                         <ThemeToggle />
+
+                        <NavbarWishlistDropdown />
 
                         {/* Giỏ hàng - nút to, dễ thấy */}
                         <Button

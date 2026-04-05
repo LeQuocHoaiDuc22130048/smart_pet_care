@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -24,8 +25,13 @@ interface Product {
     stock: number; status: 'active' | 'inactive'; image: string;
 }
 interface Order {
-    id: string; customer: string; product: string; amount: string;
-    status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy'; date: string;
+    id: string;
+    customer: string;
+    productId: string;
+    product: string;
+    amount: string;
+    status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy';
+    date: string;
 }
 interface Customer {
     id: string; name: string; email: string; orders: number;
@@ -63,11 +69,11 @@ const INIT_PRODUCTS: Product[] = [
     { id: 'P5', name: 'Đồ chơi thông minh tương tác', category: 'Đồ chơi', price: 44.99, stock: 0, status: 'inactive', image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop' },
 ];
 const INIT_ORDERS: Order[] = [
-    { id: 'ORD-1234', customer: 'Nguyễn Văn A', product: 'Thức ăn chó cao cấp', amount: '$49.99', status: 'Hoàn thành', date: '11/02/2026' },
-    { id: 'ORD-1233', customer: 'Trần Thị B', product: 'Cột cào móng mèo', amount: '$89.99', status: 'Đang xử lý', date: '11/02/2026' },
-    { id: 'ORD-1232', customer: 'Lê Văn C', product: 'Giường thú cưng', amount: '$79.99', status: 'Đang giao', date: '10/02/2026' },
-    { id: 'ORD-1231', customer: 'Phạm Thị D', product: 'Đồ chơi thông minh', amount: '$44.99', status: 'Đang xử lý', date: '09/02/2026' },
-    { id: 'ORD-1230', customer: 'Hoàng Văn E', product: 'Bộ dây dắt chó', amount: '$34.99', status: 'Đã hủy', date: '08/02/2026' },
+    { id: 'ORD-1234', customer: 'Nguyễn Văn A', productId: '1', product: 'Thức ăn chó cao cấp', amount: '$49.99', status: 'Hoàn thành', date: '11/02/2026' },
+    { id: 'ORD-1233', customer: 'Trần Thị B', productId: '2', product: 'Cột cào móng mèo', amount: '$89.99', status: 'Đang xử lý', date: '11/02/2026' },
+    { id: 'ORD-1232', customer: 'Lê Văn C', productId: '4', product: 'Giường thú cưng', amount: '$79.99', status: 'Đang giao', date: '10/02/2026' },
+    { id: 'ORD-1231', customer: 'Phạm Thị D', productId: '5', product: 'Đồ chơi thông minh', amount: '$44.99', status: 'Đang xử lý', date: '09/02/2026' },
+    { id: 'ORD-1230', customer: 'Hoàng Văn E', productId: '3', product: 'Bộ dây dắt chó', amount: '$34.99', status: 'Đã hủy', date: '08/02/2026' },
 ];
 const INIT_CUSTOMERS: Customer[] = [
     { id: 'C1', name: 'Nguyễn Văn An', email: 'user@petcare.vn', orders: 12, spent: '$890', joined: '01/01/2026', status: 'active' },
@@ -90,6 +96,14 @@ const CATEGORIES = ['Thức ăn', 'Đồ chơi', 'Phụ kiện', 'Giường', 'S
 const ORDER_STATUSES = ['Đang xử lý', 'Đang giao', 'Hoàn thành', 'Đã hủy'] as const;
 const BOOKING_STATUSES = ['Chờ xác nhận', 'Đã xác nhận', 'Hoàn thành', 'Đã hủy'] as const;
 
+const ADMIN_TABS = ['overview', 'products', 'orders', 'customers', 'bookings', 'stats', 'settings'] as const;
+type AdminTab = (typeof ADMIN_TABS)[number];
+
+function parseAdminTab(raw: string | null): AdminTab {
+    if (raw && (ADMIN_TABS as readonly string[]).includes(raw)) return raw as AdminTab;
+    return 'overview';
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function orderBadge(s: string) {
     if (s === 'Hoàn thành') return 'bg-green-100 text-green-700 border border-green-300';
@@ -106,6 +120,15 @@ function bookingBadge(s: string) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const AdminDashboardPage = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = parseAdminTab(searchParams.get('tab'));
+
+    const setTab = (value: string) => {
+        const t = parseAdminTab(value);
+        if (t === 'overview') setSearchParams({}, { replace: true });
+        else setSearchParams({ tab: t }, { replace: true });
+    };
+
     const [products, setProducts] = useState<Product[]>(INIT_PRODUCTS);
     const [orders, setOrders] = useState<Order[]>(INIT_ORDERS);
     const [customers, setCustomers] = useState<Customer[]>(INIT_CUSTOMERS);
@@ -191,13 +214,15 @@ const AdminDashboardPage = () => {
                 <p className="text-muted-foreground text-sm mt-1">Quản lý toàn bộ hoạt động kinh doanh</p>
             </div>
 
-            <Tabs defaultValue="overview">
+            <Tabs value={activeTab} onValueChange={setTab}>
                 <TabsList className="mb-6 flex-wrap h-auto gap-1">
                     <TabsTrigger value="overview">Tổng quan</TabsTrigger>
                     <TabsTrigger value="products">Sản phẩm</TabsTrigger>
                     <TabsTrigger value="orders">Đơn hàng</TabsTrigger>
                     <TabsTrigger value="customers">Khách hàng</TabsTrigger>
                     <TabsTrigger value="bookings">Lịch đặt</TabsTrigger>
+                    <TabsTrigger value="stats">Thống kê</TabsTrigger>
+                    <TabsTrigger value="settings">Cài đặt</TabsTrigger>
                 </TabsList>
 
                 {/* ── Tổng quan ── */}
@@ -255,8 +280,14 @@ const AdminDashboardPage = () => {
                             <div className="space-y-3">
                                 {orders.slice(0, 4).map(o => (
                                     <div key={o.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                                        <div>
+                                        <div className="min-w-0 pr-2">
                                             <p className="text-sm font-medium text-foreground">{o.id}</p>
+                                            <Link
+                                                to={`/products/${o.productId}`}
+                                                className="text-xs font-medium text-[#448B3D] hover:underline truncate block max-w-[220px]"
+                                            >
+                                                {o.product}
+                                            </Link>
                                             <p className="text-xs text-muted-foreground">{o.customer} · {o.date}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -377,7 +408,15 @@ const AdminDashboardPage = () => {
                                         <tr key={o.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                             <td className="p-3 font-medium text-foreground">{o.id}</td>
                                             <td className="p-3 text-muted-foreground">{o.customer}</td>
-                                            <td className="p-3 text-muted-foreground max-w-[160px] truncate">{o.product}</td>
+                                            <td className="p-3 max-w-[200px]">
+                                                <Link
+                                                    to={`/products/${o.productId}`}
+                                                    className="text-[#448B3D] font-medium hover:underline truncate block"
+                                                    title={o.product}
+                                                >
+                                                    {o.product}
+                                                </Link>
+                                            </td>
                                             <td className="p-3 font-medium">{o.amount}</td>
                                             <td className="p-3 text-muted-foreground">{o.date}</td>
                                             <td className="p-3">
@@ -507,6 +546,46 @@ const AdminDashboardPage = () => {
                             </table>
                             {filteredBookings.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy lịch đặt</p>}
                         </div>
+                    </Card>
+                </TabsContent>
+
+                {/* ── Thống kê (biểu đồ) ── */}
+                <TabsContent value="stats">
+                    <div className="grid lg:grid-cols-2 gap-6">
+                        <Card className="p-5">
+                            <h2 className="font-semibold text-foreground mb-4">Doanh thu theo tháng</h2>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <LineChart data={CHART_DATA}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                                    <YAxis stroke="#6B7280" fontSize={12} />
+                                    <Tooltip />
+                                    <Line type="monotone" dataKey="sales" stroke="#448B3D" strokeWidth={2} dot={false} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </Card>
+                        <Card className="p-5">
+                            <h2 className="font-semibold text-foreground mb-4">Đơn hàng theo tháng</h2>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <BarChart data={CHART_DATA}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                                    <YAxis stroke="#6B7280" fontSize={12} />
+                                    <Tooltip />
+                                    <Bar dataKey="orders" fill="#448B3D" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                {/* ── Cài đặt ── */}
+                <TabsContent value="settings">
+                    <Card className="p-6 max-w-xl">
+                        <h2 className="font-semibold text-foreground mb-2">Cài đặt hệ thống</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Khu vực cấu hình cửa hàng, thông báo và tích hợp sẽ được bổ sung khi kết nối API quản trị.
+                        </p>
                     </Card>
                 </TabsContent>
             </Tabs>

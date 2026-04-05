@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,14 +14,20 @@ import {
 } from '@/components/ui/select';
 import {
     Package, Calendar, ShoppingBag, TrendingUp, Clock,
-    Plus, Pencil, Trash2, X, PawPrint,
+    Plus, Pencil, Trash2, X, PawPrint, Sun, Moon, Settings, Sparkles, User as UserIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserOrder {
-    id: string; product: string; image: string;
-    date: string; status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy'; total: string;
+    id: string;
+    productId: string;
+    product: string;
+    image: string;
+    date: string;
+    status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy';
+    total: string;
 }
 interface UserBooking {
     id: string; service: string; pet: string;
@@ -51,9 +58,9 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const INIT_ORDERS: UserOrder[] = [
-    { id: 'ORD-001', product: 'Thức ăn chó hữu cơ cao cấp', image: 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=80&h=80&fit=crop', date: '08/02/2026', status: 'Hoàn thành', total: '$49.99' },
-    { id: 'ORD-002', product: 'Cột cào móng mèo cao cấp', image: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=80&h=80&fit=crop', date: '05/02/2026', status: 'Đang giao', total: '$89.99' },
-    { id: 'ORD-003', product: 'Bộ dây dắt & vòng cổ chó', image: 'https://images.unsplash.com/photo-1600277971170-8a7d75fb1bd9?w=80&h=80&fit=crop', date: '01/02/2026', status: 'Đang xử lý', total: '$34.99' },
+    { id: 'ORD-001', productId: '1', product: 'Thức ăn chó hữu cơ cao cấp', image: 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=80&h=80&fit=crop', date: '08/02/2026', status: 'Hoàn thành', total: '$49.99' },
+    { id: 'ORD-002', productId: '2', product: 'Cột cào móng mèo cao cấp', image: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=80&h=80&fit=crop', date: '05/02/2026', status: 'Đang giao', total: '$89.99' },
+    { id: 'ORD-003', productId: '3', product: 'Bộ dây dắt & vòng cổ chó', image: 'https://images.unsplash.com/photo-1600277971170-8a7d75fb1bd9?w=80&h=80&fit=crop', date: '01/02/2026', status: 'Đang xử lý', total: '$34.99' },
 ];
 const INIT_BOOKINGS: UserBooking[] = [
     { id: 'BK-001', service: 'Spa thú cưng', pet: 'Max', date: '15/02/2026', time: '10:00', status: 'Đã xác nhận' },
@@ -66,24 +73,41 @@ const INIT_PETS: Pet[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function orderBadge(s: string) {
-    if (s === 'Hoàn thành') return 'bg-green-100 text-green-700 border-0';
-    if (s === 'Đang giao') return 'bg-blue-100 text-blue-700 border-0';
-    if (s === 'Đã hủy') return 'bg-red-100 text-red-700 border-0';
-    return 'bg-orange-100 text-orange-700 border-0';
+    if (s === 'Hoàn thành') return 'bg-green-100 text-green-800 border-0 dark:bg-green-950/60 dark:text-green-300';
+    if (s === 'Đang giao') return 'bg-blue-100 text-blue-800 border-0 dark:bg-blue-950/60 dark:text-blue-300';
+    if (s === 'Đã hủy') return 'bg-red-100 text-red-800 border-0 dark:bg-red-950/60 dark:text-red-300';
+    return 'bg-orange-100 text-orange-800 border-0 dark:bg-orange-950/50 dark:text-orange-300';
 }
 function bookingBadge(s: string) {
-    if (s === 'Hoàn thành') return 'bg-green-100 text-green-700 border-0';
-    if (s === 'Đã xác nhận') return 'bg-blue-100 text-blue-700 border-0';
-    if (s === 'Đã hủy') return 'bg-red-100 text-red-700 border-0';
-    return 'bg-orange-100 text-orange-700 border-0';
+    if (s === 'Hoàn thành') return 'bg-green-100 text-green-800 border-0 dark:bg-green-950/60 dark:text-green-300';
+    if (s === 'Đã xác nhận') return 'bg-blue-100 text-blue-800 border-0 dark:bg-blue-950/60 dark:text-blue-300';
+    if (s === 'Đã hủy') return 'bg-red-100 text-red-800 border-0 dark:bg-red-950/60 dark:text-red-300';
+    return 'bg-orange-100 text-orange-800 border-0 dark:bg-orange-950/50 dark:text-orange-300';
 }
 
 const SPECIES = ['Chó', 'Mèo', 'Khác'] as const;
+
+const DASH_TABS = ['overview', 'orders', 'bookings', 'pets', 'profile', 'settings'] as const;
+type DashTab = (typeof DASH_TABS)[number];
+
+function parseDashTab(raw: string | null): DashTab {
+    if (raw && (DASH_TABS as readonly string[]).includes(raw)) return raw as DashTab;
+    return 'overview';
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const UserDashboardPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { theme, setTheme } = useTheme();
+    const activeTab = parseDashTab(searchParams.get('tab'));
+
+    const setTab = (value: string) => {
+        const t = parseDashTab(value);
+        if (t === 'overview') setSearchParams({});
+        else setSearchParams({ tab: t });
+    };
 
     const [orders, setOrders] = useState<UserOrder[]>(INIT_ORDERS);
     const [bookings, setBookings] = useState<UserBooking[]>(INIT_BOOKINGS);
@@ -137,51 +161,133 @@ const UserDashboardPage = () => {
     };
 
     return (
-        <div className="max-w-5xl">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-foreground">Xin chào, {user?.name ?? 'bạn'} 👋</h1>
-                <p className="text-muted-foreground text-sm mt-1">Quản lý đơn hàng, lịch đặt và thú cưng của bạn</p>
-            </div>
+        <div className="max-w-5xl mx-auto">
+            {/* Hero */}
+            <section className="relative overflow-hidden rounded-2xl border border-border bg-linear-to-br from-[#448B3D]/15 via-card to-muted/40 dark:from-[#448B3D]/25 dark:via-card dark:to-muted/20 p-6 sm:p-8 mb-8 shadow-sm">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#448B3D]/20 blur-3xl dark:bg-[#448B3D]/30" />
+                <div className="pointer-events-none absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-[#448B3D]/10 blur-2xl" />
+                <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-4 min-w-0">
+                        <div className="relative shrink-0">
+                            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border-4 border-background shadow-lg overflow-hidden bg-[#448B3D]/15 flex items-center justify-center">
+                                {user?.avatar ? (
+                                    <img src={user.avatar} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                    <UserIcon className="h-8 w-8 sm:h-10 sm:w-10 text-[#448B3D]" />
+                                )}
+                            </div>
+                            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#448B3D] text-white shadow-md">
+                                <Sparkles className="h-3.5 w-3.5" />
+                            </span>
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-sm font-medium text-[#448B3D] dark:text-[#7CB878]">Trang cá nhân</p>
+                            <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight truncate">
+                                Xin chào, {user?.name ?? 'bạn'}
+                            </h1>
+                            <p className="text-muted-foreground text-sm mt-1 truncate">{user?.email ?? 'Quản lý đơn hàng, lịch và thú cưng'}</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                        <Button variant="outline" className="rounded-xl border-[#448B3D]/40 hover:bg-[#448B3D]/10" onClick={() => navigate('/products')}>
+                            <ShoppingBag className="w-4 h-4 mr-2" />
+                            Mua sắm
+                        </Button>
+                        <Button className="rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={() => navigate('/booking')}>
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Đặt lịch
+                        </Button>
+                    </div>
+                </div>
+            </section>
 
-            <Tabs defaultValue="overview">
-                <TabsList className="mb-6 flex-wrap h-auto gap-1">
-                    <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-                    <TabsTrigger value="orders">Đơn hàng</TabsTrigger>
-                    <TabsTrigger value="bookings">Lịch đặt</TabsTrigger>
-                    <TabsTrigger value="pets">Thú cưng</TabsTrigger>
-                    <TabsTrigger value="profile">Hồ sơ</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setTab} className="w-full">
+                <TabsList className="mb-8 flex h-auto w-full flex-wrap justify-start gap-1.5 rounded-2xl bg-muted/70 p-1.5 border border-border">
+                    <TabsTrigger
+                        value="overview"
+                        className="rounded-xl px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-[#448B3D] data-[state=active]:shadow-sm dark:data-[state=active]:text-[#7CB878]"
+                    >
+                        Tổng quan
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="orders"
+                        className="rounded-xl px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-[#448B3D] data-[state=active]:shadow-sm dark:data-[state=active]:text-[#7CB878]"
+                    >
+                        Đơn hàng
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="bookings"
+                        className="rounded-xl px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-[#448B3D] data-[state=active]:shadow-sm dark:data-[state=active]:text-[#7CB878]"
+                    >
+                        Lịch đặt
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="pets"
+                        className="rounded-xl px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-[#448B3D] data-[state=active]:shadow-sm dark:data-[state=active]:text-[#7CB878]"
+                    >
+                        Thú cưng
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="profile"
+                        className="rounded-xl px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-[#448B3D] data-[state=active]:shadow-sm dark:data-[state=active]:text-[#7CB878]"
+                    >
+                        Hồ sơ
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="settings"
+                        className="rounded-xl px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-[#448B3D] data-[state=active]:shadow-sm dark:data-[state=active]:text-[#7CB878]"
+                    >
+                        Cài đặt
+                    </TabsTrigger>
                 </TabsList>
 
                 {/* ── Tổng quan ── */}
-                <TabsContent value="overview">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <TabsContent value="overview" className="space-y-6 outline-none">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         {[
-                            { icon: Package, label: 'Tổng đơn hàng', value: String(orders.length), color: 'bg-[#448B3D]' },
-                            { icon: Calendar, label: 'Lịch đặt', value: String(bookings.length), color: 'bg-blue-500' },
-                            { icon: PawPrint, label: 'Thú cưng', value: String(pets.length), color: 'bg-orange-400' },
-                            { icon: TrendingUp, label: 'Tổng chi tiêu', value: '$174.97', color: 'bg-purple-500' },
+                            { icon: Package, label: 'Tổng đơn hàng', value: String(orders.length), color: 'bg-[#448B3D]', ring: 'ring-[#448B3D]/20' },
+                            { icon: Calendar, label: 'Lịch đặt', value: String(bookings.length), color: 'bg-blue-500', ring: 'ring-blue-500/20' },
+                            { icon: PawPrint, label: 'Thú cưng', value: String(pets.length), color: 'bg-orange-500', ring: 'ring-orange-500/20' },
+                            { icon: TrendingUp, label: 'Tổng chi tiêu', value: '$174.97', color: 'bg-violet-500', ring: 'ring-violet-500/20' },
                         ].map(stat => (
-                            <Card key={stat.label} className="p-4">
-                                <div className={`w-9 h-9 rounded-lg ${stat.color} flex items-center justify-center mb-3`}>
-                                    <stat.icon className="w-4 h-4 text-white" />
+                            <Card
+                                key={stat.label}
+                                className={cn(
+                                    'relative overflow-hidden border-border/80 p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md',
+                                    'bg-card/80 backdrop-blur-sm'
+                                )}
+                            >
+                                <div className={cn('absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-15 blur-2xl', stat.color)} />
+                                <div className={cn('mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-md ring-4', stat.color, stat.ring)}>
+                                    <stat.icon className="h-5 w-5" />
                                 </div>
-                                <p className="text-xs text-muted-foreground">{stat.label}</p>
-                                <p className="text-xl font-bold text-foreground">{stat.value}</p>
+                                <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
+                                <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{stat.value}</p>
                             </Card>
                         ))}
                     </div>
 
-                    <div className="grid lg:grid-cols-2 gap-6 mb-6">
-                        <Card className="p-5">
-                            <h2 className="font-semibold text-foreground mb-4">Đơn hàng gần đây</h2>
+                    <div className="grid lg:grid-cols-2 gap-6">
+                        <Card className="border-border/80 p-5 sm:p-6 shadow-sm">
+                            <div className="mb-4 flex items-center gap-2">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#448B3D]/15 text-[#448B3D] dark:text-[#7CB878]">
+                                    <Package className="h-4 w-4" />
+                                </div>
+                                <h2 className="font-semibold text-foreground">Đơn hàng gần đây</h2>
+                            </div>
                             <div className="space-y-3">
                                 {orders.slice(0, 2).map(o => (
                                     <div key={o.id} className="flex items-center gap-3">
-                                        <img src={o.image} alt={o.product} className="w-12 h-12 rounded-lg object-cover shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-foreground truncate">{o.product}</p>
-                                            <p className="text-xs text-muted-foreground">{o.id} · {o.date}</p>
-                                        </div>
+                                        <Link
+                                            to={`/products/${o.productId}`}
+                                            className="flex flex-1 min-w-0 items-center gap-3 rounded-lg -m-1 p-1 hover:bg-muted/70 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#448B3D] focus-visible:ring-offset-2"
+                                        >
+                                            <img src={o.image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">{o.product}</p>
+                                                <p className="text-xs text-muted-foreground">{o.id} · {o.date}</p>
+                                            </div>
+                                        </Link>
                                         <div className="text-right shrink-0">
                                             <p className="text-sm font-semibold">{o.total}</p>
                                             <Badge className={`text-xs ${orderBadge(o.status)}`}>{o.status}</Badge>
@@ -190,11 +296,16 @@ const UserDashboardPage = () => {
                                 ))}
                             </div>
                         </Card>
-                        <Card className="p-5">
-                            <h2 className="font-semibold text-foreground mb-4">Lịch đặt sắp tới</h2>
+                        <Card className="border-border/80 p-5 sm:p-6 shadow-sm">
+                            <div className="mb-4 flex items-center gap-2">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                                    <Calendar className="h-4 w-4" />
+                                </div>
+                                <h2 className="font-semibold text-foreground">Lịch đặt sắp tới</h2>
+                            </div>
                             <div className="space-y-3">
                                 {bookings.slice(0, 2).map(b => (
-                                    <div key={b.id} className="flex items-center justify-between p-3 rounded-xl border border-border">
+                                    <div key={b.id} className="flex items-center justify-between rounded-xl border border-border/80 bg-muted/30 p-3 dark:bg-muted/20">
                                         <div>
                                             <p className="text-sm font-medium text-foreground">{b.service}</p>
                                             <p className="text-xs text-muted-foreground">{b.pet} · {b.date} {b.time}</p>
@@ -207,36 +318,66 @@ const UserDashboardPage = () => {
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-4">
-                        <Card className="p-5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/products')}>
-                            <ShoppingBag className="w-7 h-7 text-[#448B3D] mb-2" />
-                            <p className="font-semibold text-foreground">Mua sắm</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Khám phá sản phẩm thú cưng</p>
-                        </Card>
-                        <Card className="p-5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/booking')}>
-                            <Calendar className="w-7 h-7 text-blue-500 mb-2" />
-                            <p className="font-semibold text-foreground">Đặt lịch</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Lên lịch dịch vụ cho thú cưng</p>
-                        </Card>
-                        <Card className="p-5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/image-search')}>
-                            <TrendingUp className="w-7 h-7 text-purple-500 mb-2" />
-                            <p className="font-semibold text-foreground">Tìm kiếm AI</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Tìm sản phẩm bằng hình ảnh</p>
-                        </Card>
+                        {[
+                            {
+                                icon: ShoppingBag,
+                                title: 'Mua sắm',
+                                desc: 'Khám phá sản phẩm thú cưng',
+                                onClick: () => navigate('/products'),
+                                gradient: 'from-[#448B3D]/20 to-transparent dark:from-[#448B3D]/30',
+                                iconClass: 'text-[#448B3D] dark:text-[#7CB878]',
+                            },
+                            {
+                                icon: Calendar,
+                                title: 'Đặt lịch',
+                                desc: 'Lên lịch dịch vụ cho thú cưng',
+                                onClick: () => navigate('/booking'),
+                                gradient: 'from-blue-500/20 to-transparent dark:from-blue-500/25',
+                                iconClass: 'text-blue-600 dark:text-blue-400',
+                            },
+                            {
+                                icon: TrendingUp,
+                                title: 'Tìm kiếm AI',
+                                desc: 'Tìm sản phẩm bằng hình ảnh',
+                                onClick: () => navigate('/image-search'),
+                                gradient: 'from-violet-500/20 to-transparent dark:from-violet-500/25',
+                                iconClass: 'text-violet-600 dark:text-violet-400',
+                            },
+                        ].map((tile) => (
+                            <Card
+                                key={tile.title}
+                                role="button"
+                                tabIndex={0}
+                                onClick={tile.onClick}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tile.onClick(); } }}
+                                className="group relative cursor-pointer overflow-hidden border-border/80 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[#448B3D]/30"
+                            >
+                                <div className={cn('pointer-events-none absolute inset-0 bg-linear-to-br opacity-0 transition-opacity group-hover:opacity-100', tile.gradient)} />
+                                <tile.icon className={cn('relative mb-3 h-8 w-8', tile.iconClass)} />
+                                <p className="relative font-semibold text-foreground">{tile.title}</p>
+                                <p className="relative text-xs text-muted-foreground mt-1 leading-relaxed">{tile.desc}</p>
+                            </Card>
+                        ))}
                     </div>
                 </TabsContent>
 
                 {/* ── Đơn hàng ── */}
-                <TabsContent value="orders">
+                <TabsContent value="orders" className="space-y-4 outline-none">
                     <div className="space-y-3">
                         {orders.map(o => (
-                            <Card key={o.id} className="p-4">
+                            <Card key={o.id} className="border-border/80 p-4 shadow-sm transition-shadow hover:shadow-md">
                                 <div className="flex items-center gap-4">
-                                    <img src={o.image} alt={o.product} className="w-16 h-16 rounded-xl object-cover shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-foreground truncate">{o.product}</p>
-                                        <p className="text-sm text-muted-foreground mt-0.5">{o.id} · {o.date}</p>
-                                        <Badge className={`text-xs mt-1 ${orderBadge(o.status)}`}>{o.status}</Badge>
-                                    </div>
+                                    <Link
+                                        to={`/products/${o.productId}`}
+                                        className="group flex flex-1 min-w-0 items-center gap-4 rounded-xl -m-1 p-1 hover:bg-muted/70 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#448B3D] focus-visible:ring-offset-2"
+                                    >
+                                        <img src={o.image} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-foreground truncate underline-offset-2 group-hover:underline">{o.product}</p>
+                                            <p className="text-sm text-muted-foreground mt-0.5">{o.id} · {o.date}</p>
+                                            <Badge className={`text-xs mt-1 ${orderBadge(o.status)}`}>{o.status}</Badge>
+                                        </div>
+                                    </Link>
                                     <div className="text-right shrink-0 flex flex-col items-end gap-2">
                                         <p className="font-semibold text-foreground">{o.total}</p>
                                         {o.status === 'Đang xử lý' && (
@@ -253,14 +394,14 @@ const UserDashboardPage = () => {
                 </TabsContent>
 
                 {/* ── Lịch đặt ── */}
-                <TabsContent value="bookings">
+                <TabsContent value="bookings" className="space-y-4 outline-none">
                     <div className="space-y-3">
                         {bookings.map(b => (
-                            <Card key={b.id} className="p-4">
+                            <Card key={b.id} className="border-border/80 p-4 shadow-sm transition-shadow hover:shadow-md">
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-[#448B3D]/10 flex items-center justify-center shrink-0">
-                                            <Calendar className="w-5 h-5 text-[#448B3D]" />
+                                        <div className="w-12 h-12 rounded-xl bg-[#448B3D]/15 flex items-center justify-center shrink-0 text-[#448B3D] dark:bg-[#448B3D]/25 dark:text-[#7CB878]">
+                                            <Calendar className="w-5 h-5" />
                                         </div>
                                         <div>
                                             <p className="font-medium text-foreground">{b.service}</p>
@@ -287,7 +428,7 @@ const UserDashboardPage = () => {
                 </TabsContent>
 
                 {/* ── Thú cưng ── */}
-                <TabsContent value="pets">
+                <TabsContent value="pets" className="space-y-4 outline-none">
                     <div className="flex justify-end mb-4">
                         <Button onClick={openAddPet} className="bg-[#448B3D] hover:bg-[#336B2D] text-white">
                             <Plus className="w-4 h-4" /> Thêm thú cưng
@@ -295,11 +436,11 @@ const UserDashboardPage = () => {
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                         {pets.map(p => (
-                            <Card key={p.id} className="p-5">
+                            <Card key={p.id} className="border-border/80 p-5 shadow-sm transition-shadow hover:shadow-md">
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
-                                            <PawPrint className="w-5 h-5 text-orange-500" />
+                                        <div className="w-11 h-11 rounded-xl bg-orange-100 dark:bg-orange-950/50 flex items-center justify-center ring-2 ring-orange-200/50 dark:ring-orange-900/50">
+                                            <PawPrint className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                                         </div>
                                         <div>
                                             <p className="font-semibold text-foreground">{p.name}</p>
@@ -327,9 +468,14 @@ const UserDashboardPage = () => {
                 </TabsContent>
 
                 {/* ── Hồ sơ ── */}
-                <TabsContent value="profile">
-                    <Card className="p-6 max-w-lg">
-                        <h2 className="font-semibold text-foreground mb-5">Thông tin cá nhân</h2>
+                <TabsContent value="profile" className="outline-none">
+                    <Card className="max-w-lg border-border/80 p-6 shadow-md">
+                        <div className="mb-5 flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#448B3D]/15 text-[#448B3D] dark:text-[#7CB878]">
+                                <UserIcon className="h-5 w-5" />
+                            </div>
+                            <h2 className="text-lg font-bold text-foreground">Thông tin cá nhân</h2>
+                        </div>
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="prof-name">Họ và tên</Label>
@@ -355,6 +501,62 @@ const UserDashboardPage = () => {
                             <Button className="w-full bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={saveProfile}>
                                 Lưu thay đổi
                             </Button>
+                        </div>
+                    </Card>
+                </TabsContent>
+
+                {/* ── Cài đặt ── */}
+                <TabsContent value="settings" className="outline-none">
+                    <Card className="max-w-xl overflow-hidden border-border/80 shadow-md">
+                        <div className="border-b border-border bg-linear-to-r from-[#448B3D]/12 via-transparent to-violet-500/5 px-6 py-5 dark:from-[#448B3D]/25">
+                            <div className="flex items-start gap-4">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#448B3D]/15 text-[#448B3D] shadow-sm dark:bg-[#448B3D]/25 dark:text-[#7CB878]">
+                                    <Settings className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-foreground">Cài đặt giao diện</h2>
+                                    <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                                        Chọn chế độ sáng hoặc tối. Tùy chọn được lưu trên trình duyệt và áp dụng cho toàn bộ PetCare.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm font-semibold text-foreground">Chế độ hiển thị</p>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setTheme('light')}
+                                    className={cn(
+                                        'flex flex-col items-center gap-3 rounded-2xl border-2 p-6 text-center transition-all',
+                                        theme === 'light'
+                                            ? 'border-[#448B3D] bg-[#448B3D]/10 shadow-sm dark:bg-[#448B3D]/20'
+                                            : 'border-border bg-muted/30 hover:border-[#448B3D]/40 hover:bg-muted/50'
+                                    )}
+                                >
+                                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
+                                        <Sun className="h-7 w-7" />
+                                    </span>
+                                    <span className="font-semibold text-foreground">Sáng</span>
+                                    <span className="text-xs text-muted-foreground">Nền sáng, phù hợp ban ngày</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setTheme('dark')}
+                                    className={cn(
+                                        'flex flex-col items-center gap-3 rounded-2xl border-2 p-6 text-center transition-all',
+                                        theme === 'dark'
+                                            ? 'border-[#448B3D] bg-[#448B3D]/10 shadow-sm dark:bg-[#448B3D]/25'
+                                            : 'border-border bg-muted/30 hover:border-[#448B3D]/40 hover:bg-muted/50'
+                                    )}
+                                >
+                                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-slate-100 dark:bg-slate-950 dark:text-slate-200">
+                                        <Moon className="h-7 w-7" />
+                                    </span>
+                                    <span className="font-semibold text-foreground">Tối</span>
+                                    <span className="text-xs text-muted-foreground">Giảm chói, phù hợp buổi tối</span>
+                                </button>
+                            </div>
                         </div>
                     </Card>
                 </TabsContent>
