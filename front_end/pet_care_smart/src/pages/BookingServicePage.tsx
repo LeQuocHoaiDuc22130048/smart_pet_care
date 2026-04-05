@@ -3,11 +3,15 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, Phone, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Check, Phone, ChevronRight, ChevronLeft, Star, MessageSquarePlus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
+import FeedbackForm from '@/components/feedback/FeedbackForm';
+import FeedbackCard from '@/components/feedback/FeedbackCard';
+import RatingSummary from '@/components/feedback/RatingSummary';
+import { useFeedback } from '@/context/FeedbackContext';
 
 const SERVICES = [
     { id: 'spa', icon: '🛁', name: 'Tắm & Cắt lông', desc: 'Tắm sạch, cắt tỉa gọn gàng', price: '150.000đ', duration: '~2 giờ' },
@@ -46,7 +50,9 @@ const STEPS = ['Chọn dịch vụ', 'Chọn ngày & giờ', 'Thông tin', 'Xác
 
 const BookingServicePage = () => {
     const navigate = useNavigate();
+    const { getByService, avgRating } = useFeedback();
     const [step, setStep] = useState(0);
+    // step 4 = màn hình hoàn thành + feedback
     const [selectedService, setSelectedService] = useState('');
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTime, setSelectedTime] = useState('');
@@ -54,6 +60,8 @@ const BookingServicePage = () => {
     const [petType, setPetType] = useState('');
     const [phone, setPhone] = useState('');
     const [notes, setNotes] = useState('');
+    const [showFbForm, setShowFbForm] = useState(false);
+    const [fbDone, setFbDone] = useState(false);
 
     const availableDates = getAvailableDates();
     const service = SERVICES.find(s => s.id === selectedService);
@@ -68,7 +76,7 @@ const BookingServicePage = () => {
 
     const handleConfirm = () => {
         toast.success('🎉 Đặt lịch thành công! Chúng tôi sẽ gọi xác nhận cho bạn sớm nhất.');
-        setTimeout(() => navigate('/'), 2500);
+        setStep(4); // chuyển sang màn hình hoàn thành
     };
 
     const formatDate = (d: Date) =>
@@ -94,8 +102,8 @@ const BookingServicePage = () => {
                         <div key={i} className='flex items-center flex-1'>
                             <div className='flex flex-col items-center'>
                                 <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all ${i < step ? 'bg-[#448B3D] text-white' :
-                                        i === step ? 'bg-[#448B3D] text-white ring-4 ring-[#448B3D]/20' :
-                                            'bg-muted text-muted-foreground'
+                                    i === step ? 'bg-[#448B3D] text-white ring-4 ring-[#448B3D]/20' :
+                                        'bg-muted text-muted-foreground'
                                     }`}>
                                     {i < step ? <Check className='w-4 h-4' /> : i + 1}
                                 </div>
@@ -130,8 +138,8 @@ const BookingServicePage = () => {
                                             key={svc.id}
                                             onClick={() => setSelectedService(svc.id)}
                                             className={`text-left p-5 rounded-xl border-2 transition-all ${selectedService === svc.id
-                                                    ? 'border-[#448B3D] bg-[#448B3D]/8 shadow-md'
-                                                    : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
+                                                ? 'border-[#448B3D] bg-[#448B3D]/8 shadow-md'
+                                                : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
                                                 }`}
                                         >
                                             <div className='text-4xl mb-3'>{svc.icon}</div>
@@ -168,8 +176,8 @@ const BookingServicePage = () => {
                                                     key={i}
                                                     onClick={() => setSelectedDate(d)}
                                                     className={`flex flex-col items-center py-3 px-2 rounded-xl border-2 transition-all ${isSelected
-                                                            ? 'border-[#448B3D] bg-[#448B3D] text-white shadow-md'
-                                                            : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
+                                                        ? 'border-[#448B3D] bg-[#448B3D] text-white shadow-md'
+                                                        : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
                                                         }`}
                                                 >
                                                     <span className={`text-xs font-medium ${isSelected ? 'text-white/80' : 'text-muted-foreground'}`}>
@@ -196,8 +204,8 @@ const BookingServicePage = () => {
                                                     key={slot.id}
                                                     onClick={() => setSelectedTime(slot.id)}
                                                     className={`flex flex-col items-center py-4 rounded-xl border-2 transition-all ${isSelected
-                                                            ? 'border-[#448B3D] bg-[#448B3D] text-white shadow-md'
-                                                            : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
+                                                        ? 'border-[#448B3D] bg-[#448B3D] text-white shadow-md'
+                                                        : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
                                                         }`}
                                                 >
                                                     <span className='text-xl font-bold'>{slot.label}</span>
@@ -240,8 +248,8 @@ const BookingServicePage = () => {
                                                     key={type}
                                                     onClick={() => setPetType(type)}
                                                     className={`py-3 rounded-xl border-2 font-semibold text-sm transition-all ${petType === type
-                                                            ? 'border-[#448B3D] bg-[#448B3D] text-white'
-                                                            : 'border-border hover:border-[#448B3D]/50'
+                                                        ? 'border-[#448B3D] bg-[#448B3D] text-white'
+                                                        : 'border-border hover:border-[#448B3D]/50'
                                                         }`}
                                                 >
                                                     {type}
@@ -323,33 +331,219 @@ const BookingServicePage = () => {
                     </motion.div>
                 </AnimatePresence>
 
-                {/* Navigation buttons */}
-                <div className='flex gap-3 mt-6'>
-                    {step > 0 && (
-                        <Button
-                            variant='outline'
-                            size='lg'
-                            onClick={() => setStep(s => s - 1)}
-                            className='flex-1 rounded-xl h-13 text-base font-semibold'
-                        >
-                            <ChevronLeft className='w-5 h-5 mr-1' />
-                            Quay lại
-                        </Button>
-                    )}
-                    {step < 3 && (
-                        <Button
-                            size='lg'
-                            onClick={() => setStep(s => s + 1)}
-                            disabled={!canNext()}
-                            className='flex-1 rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-13 text-base disabled:opacity-50'
-                        >
-                            Tiếp theo
-                            <ChevronRight className='w-5 h-5 ml-1' />
-                        </Button>
-                    )}
-                </div>
+                {/* Navigation buttons — ẩn ở step 4 */}
+                {step < 4 && (
+                    <div className='flex gap-3 mt-6'>
+                        {step > 0 && (
+                            <Button
+                                variant='outline'
+                                size='lg'
+                                onClick={() => setStep(s => s - 1)}
+                                className='flex-1 rounded-xl h-13 text-base font-semibold'
+                            >
+                                <ChevronLeft className='w-5 h-5 mr-1' />
+                                Quay lại
+                            </Button>
+                        )}
+                        {step < 3 && (
+                            <Button
+                                size='lg'
+                                onClick={() => setStep(s => s + 1)}
+                                disabled={!canNext()}
+                                className='flex-1 rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-13 text-base disabled:opacity-50'
+                            >
+                                Tiếp theo
+                                <ChevronRight className='w-5 h-5 ml-1' />
+                            </Button>
+                        )}
+                    </div>
+                )}
+
+                {/* ── BƯỚC 4: Hoàn thành + Feedback ── */}
+                {step === 4 && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className='space-y-6'
+                    >
+                        {/* Thành công */}
+                        <Card className='p-6 sm:p-8 rounded-2xl text-center border-2 border-[#448B3D]/30 bg-[#448B3D]/5'>
+                            <div className='w-16 h-16 rounded-full bg-[#448B3D] flex items-center justify-center mx-auto mb-4'>
+                                <Check className='w-8 h-8 text-white' />
+                            </div>
+                            <h2 className='text-2xl font-bold text-foreground mb-2'>Đặt lịch thành công! 🎉</h2>
+                            <p className='text-muted-foreground mb-1'>
+                                Chúng tôi sẽ gọi xác nhận đến <strong>{phone}</strong> trong vòng 30 phút.
+                            </p>
+                            {service && (
+                                <p className='text-sm text-muted-foreground'>
+                                    {service.icon} <strong>{service.name}</strong> cho <strong>{petName}</strong>
+                                    {selectedDate && ` · ${formatDate(selectedDate)}`}
+                                    {timeSlot && ` · ${timeSlot.label}`}
+                                </p>
+                            )}
+                            <div className='flex flex-col sm:flex-row gap-3 justify-center mt-6'>
+                                <Button onClick={() => navigate('/')} variant='outline' className='rounded-xl'>
+                                    Về trang chủ
+                                </Button>
+                                <Button onClick={() => navigate('/booking')} className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white'>
+                                    Đặt lịch khác
+                                </Button>
+                            </div>
+                        </Card>
+
+                        {/* Feedback dịch vụ vừa đặt */}
+                        {!fbDone ? (
+                            <Card className='p-5 sm:p-6 rounded-2xl border-2 border-border'>
+                                <div className='flex items-start justify-between mb-4 flex-wrap gap-2'>
+                                    <div>
+                                        <h3 className='font-bold text-lg text-foreground'>
+                                            Bạn đã từng dùng dịch vụ này?
+                                        </h3>
+                                        <p className='text-sm text-muted-foreground mt-0.5'>
+                                            Chia sẻ trải nghiệm để giúp bà con khác tham khảo
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowFbForm(v => !v)}
+                                        className='flex items-center gap-1.5 text-sm font-semibold text-[#448B3D] hover:underline'
+                                    >
+                                        <MessageSquarePlus className='w-4 h-4' />
+                                        {showFbForm ? 'Đóng' : 'Viết đánh giá'}
+                                    </button>
+                                </div>
+
+                                <AnimatePresence>
+                                    {showFbForm && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={{ duration: 0.22 }}
+                                            className='overflow-hidden'
+                                        >
+                                            <FeedbackForm
+                                                type='service'
+                                                serviceId={selectedService}
+                                                serviceName={service?.name}
+                                                onSuccess={() => { setShowFbForm(false); setFbDone(true); }}
+                                            />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </Card>
+                        ) : (
+                            <div className='text-center py-4'>
+                                <p className='text-[#448B3D] font-semibold'>✅ Cảm ơn bạn đã gửi đánh giá!</p>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
 
             </div>
+
+            {/* ── Đánh giá dịch vụ (hiển thị bên dưới trang) ── */}
+            {step < 4 && (
+                <div className='max-w-2xl mx-auto px-4 sm:px-6 pb-12'>
+                    <div className='border-t border-border pt-10 mt-4'>
+                        <h2 className='text-2xl font-bold text-foreground mb-2'>
+                            Đánh giá từ khách hàng
+                        </h2>
+
+                        {/* Tabs dịch vụ */}
+                        <div className='flex flex-wrap gap-2 mb-6'>
+                            {SERVICES.map(svc => {
+                                const svcFbs = getByService(svc.id);
+                                const avg = avgRating(svcFbs);
+                                return (
+                                    <button
+                                        key={svc.id}
+                                        onClick={() => setSelectedService(svc.id)}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${selectedService === svc.id
+                                                ? 'border-[#448B3D] bg-[#448B3D]/8 text-[#448B3D]'
+                                                : 'border-border hover:border-[#448B3D]/40'
+                                            }`}
+                                    >
+                                        <span>{svc.icon}</span>
+                                        <span>{svc.name}</span>
+                                        {svcFbs.length > 0 && (
+                                            <span className='flex items-center gap-0.5 text-yellow-500'>
+                                                <Star className='w-3 h-3 fill-yellow-400' />
+                                                {avg.toFixed(1)}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {selectedService && (() => {
+                            const svcFbs = getByService(selectedService);
+                            const svc = SERVICES.find(s => s.id === selectedService);
+                            return (
+                                <div className='space-y-5'>
+                                    {svcFbs.length > 0 && (
+                                        <RatingSummary feedbacks={svcFbs} avgRating={avgRating(svcFbs)} />
+                                    )}
+
+                                    {svcFbs.length === 0 ? (
+                                        <div className='text-center py-8'>
+                                            <p className='text-3xl mb-2'>💬</p>
+                                            <p className='font-semibold text-foreground'>Chưa có đánh giá cho dịch vụ này</p>
+                                            <p className='text-sm text-muted-foreground mt-1'>Đặt lịch và chia sẻ trải nghiệm của bạn!</p>
+                                        </div>
+                                    ) : (
+                                        <div className='space-y-4'>
+                                            {svcFbs.map(fb => (
+                                                <FeedbackCard key={fb.id} feedback={fb} />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Nút viết đánh giá cho dịch vụ này */}
+                                    <div>
+                                        <button
+                                            onClick={() => setShowFbForm(v => !v)}
+                                            className='flex items-center gap-2 text-sm font-semibold text-[#448B3D] hover:underline'
+                                        >
+                                            <MessageSquarePlus className='w-4 h-4' />
+                                            {showFbForm ? 'Đóng form' : `Viết đánh giá cho "${svc?.name}"`}
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {showFbForm && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    transition={{ duration: 0.22 }}
+                                                    className='overflow-hidden mt-4'
+                                                >
+                                                    <Card className='p-5 rounded-2xl border-2 border-[#448B3D]/20'>
+                                                        <FeedbackForm
+                                                            type='service'
+                                                            serviceId={selectedService}
+                                                            serviceName={svc?.name}
+                                                            onSuccess={() => setShowFbForm(false)}
+                                                        />
+                                                    </Card>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {!selectedService && (
+                            <p className='text-muted-foreground text-sm text-center py-6'>
+                                Chọn một dịch vụ ở trên để xem đánh giá
+                            </p>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

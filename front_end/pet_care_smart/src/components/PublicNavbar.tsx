@@ -19,7 +19,9 @@ const PublicNavbar = () => {
     const navLinks = [
         { name: 'Sản phẩm', path: '/products' },
         { name: 'Đặt lịch', path: '/booking' },
+        { name: 'Tin tức', path: '/blog' },
         { name: 'Tìm theo ảnh', path: '/image-search' },
+        { name: 'Liên hệ', path: '/lien-he' },
     ];
 
     return (

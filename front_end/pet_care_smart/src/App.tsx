@@ -7,18 +7,24 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from './context/ThemeContext.tsx';
 import ScrollToTop from './components/ScrollToTop.tsx';
 import { AuthProvider } from './context/AuthContext.tsx';
+import { FeedbackProvider } from './context/FeedbackContext.tsx';
+import { WishlistProvider } from './context/WishlistContext.tsx';
 
 function App() {
     return (
         <ErrorBoundary>
             <ThemeProvider>
                 <AuthProvider>
-                    <CartProvider>
-                        <RouterProvider router={routes} />
-                        <AIChatBot />
-                        <ScrollToTop />
-                        <Toaster richColors />
-                    </CartProvider>
+                    <FeedbackProvider>
+                        <WishlistProvider>
+                            <CartProvider>
+                                <RouterProvider router={routes} />
+                                <AIChatBot />
+                                <ScrollToTop />
+                                <Toaster richColors />
+                            </CartProvider>
+                        </WishlistProvider>
+                    </FeedbackProvider>
                 </AuthProvider>
             </ThemeProvider>
         </ErrorBoundary>

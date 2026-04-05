@@ -3,9 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCart } from '@/context/CartContext';
+import { useFeedback } from '@/context/FeedbackContext';
+import FeedbackCard from '@/components/feedback/FeedbackCard';
+import FeedbackForm from '@/components/feedback/FeedbackForm';
+import RatingSummary from '@/components/feedback/RatingSummary';
 import {
     ShoppingCart, Heart, Star, Truck, Shield,
-    ArrowLeft, Sparkles, ChevronLeft, ChevronRight
+    ArrowLeft, Sparkles, ChevronLeft, ChevronRight, MessageSquarePlus
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -89,6 +93,8 @@ const ProductDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { addToCart } = useCart();
+    const { getByProduct, avgRating } = useFeedback();
+    const [showFeedbackForm, setShowFeedbackForm] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [selectedImage, setSelectedImage] = useState(0);
     const [imgDirection, setImgDirection] = useState(1);
@@ -309,6 +315,90 @@ const ProductDetailPage = () => {
                             </TabsContent>
                         </Tabs>
                     </div>
+                </div>
+
+                {/* ── Đánh giá sản phẩm ── */}
+                <div className='mt-12 pt-10 border-t border-border'>
+                    <div className='flex items-center justify-between mb-6 flex-wrap gap-3'>
+                        <div>
+                            <h2 className='text-2xl font-bold text-foreground'>Đánh giá sản phẩm</h2>
+                            {(() => {
+                                const pFbs = getByProduct(product.id);
+                                const avg = avgRating(pFbs);
+                                return pFbs.length > 0 ? (
+                                    <div className='flex items-center gap-2 mt-1'>
+                                        <div className='flex gap-0.5'>
+                                            {[1, 2, 3, 4, 5].map(i => (
+                                                <Star key={i} className={`w-4 h-4 ${i <= Math.round(avg) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                            ))}
+                                        </div>
+                                        <span className='font-semibold text-[#448B3D]'>{avg.toFixed(1)}</span>
+                                        <span className='text-sm text-muted-foreground'>({pFbs.length} đánh giá)</span>
+                                    </div>
+                                ) : (
+                                    <p className='text-sm text-muted-foreground mt-1'>Chưa có đánh giá nào</p>
+                                );
+                            })()}
+                        </div>
+                        <Button
+                            onClick={() => setShowFeedbackForm(v => !v)}
+                            className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white gap-2'
+                        >
+                            <MessageSquarePlus className='w-4 h-4' />
+                            {showFeedbackForm ? 'Đóng' : 'Viết đánh giá'}
+                        </Button>
+                    </div>
+
+                    {/* Rating summary */}
+                    {(() => {
+                        const pFbs = getByProduct(product.id);
+                        return pFbs.length > 0 ? (
+                            <RatingSummary feedbacks={pFbs} avgRating={avgRating(pFbs)} />
+                        ) : null;
+                    })()}
+
+                    {/* Form */}
+                    <AnimatePresence>
+                        {showFeedbackForm && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.25 }}
+                                className='overflow-hidden mt-6'
+                            >
+                                <Card className='p-5 sm:p-6 rounded-2xl border-2 border-[#448B3D]/20'>
+                                    <h3 className='font-bold text-lg text-foreground mb-4'>
+                                        Đánh giá: {product.name}
+                                    </h3>
+                                    <FeedbackForm
+                                        type='product'
+                                        productId={product.id}
+                                        productName={product.name}
+                                        onSuccess={() => setShowFeedbackForm(false)}
+                                    />
+                                </Card>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Danh sách đánh giá */}
+                    {(() => {
+                        const pFbs = getByProduct(product.id);
+                        return pFbs.length === 0 ? (
+                            <div className='text-center py-10 mt-6'>
+                                <p className='text-4xl mb-3'>💬</p>
+                                <p className='font-semibold text-foreground'>Chưa có đánh giá nào</p>
+                                <p className='text-sm text-muted-foreground mt-1'>Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+                            </div>
+                        ) : (
+                            <div className='space-y-4 mt-6'>
+                                {pFbs.map(fb => (
+                                    <FeedbackCard key={fb.id} feedback={fb} />
+                                ))}
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
         </div>
