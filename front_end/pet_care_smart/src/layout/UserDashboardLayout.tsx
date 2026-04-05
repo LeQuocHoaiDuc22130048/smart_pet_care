@@ -30,7 +30,7 @@ const UserDashboardLayout = () => {
                     <span className='font-bold text-foreground'>PetCare</span>
                 </header>
 
-                <main className='flex-1 p-4 sm:p-6 lg:p-8'>
+                <main className='flex-1 bg-muted/25 p-4 dark:bg-muted/15 sm:p-6 lg:p-8'>
                     <Outlet />
                 </main>
             </div>
