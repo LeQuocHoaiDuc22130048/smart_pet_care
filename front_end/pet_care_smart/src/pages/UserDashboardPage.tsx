@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,8 +19,13 @@ import { toast } from 'sonner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserOrder {
-    id: string; product: string; image: string;
-    date: string; status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy'; total: string;
+    id: string;
+    productId: string;
+    product: string;
+    image: string;
+    date: string;
+    status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy';
+    total: string;
 }
 interface UserBooking {
     id: string; service: string; pet: string;
@@ -51,9 +56,9 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const INIT_ORDERS: UserOrder[] = [
-    { id: 'ORD-001', product: 'Thức ăn chó hữu cơ cao cấp', image: 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=80&h=80&fit=crop', date: '08/02/2026', status: 'Hoàn thành', total: '$49.99' },
-    { id: 'ORD-002', product: 'Cột cào móng mèo cao cấp', image: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=80&h=80&fit=crop', date: '05/02/2026', status: 'Đang giao', total: '$89.99' },
-    { id: 'ORD-003', product: 'Bộ dây dắt & vòng cổ chó', image: 'https://images.unsplash.com/photo-1600277971170-8a7d75fb1bd9?w=80&h=80&fit=crop', date: '01/02/2026', status: 'Đang xử lý', total: '$34.99' },
+    { id: 'ORD-001', productId: '1', product: 'Thức ăn chó hữu cơ cao cấp', image: 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=80&h=80&fit=crop', date: '08/02/2026', status: 'Hoàn thành', total: '$49.99' },
+    { id: 'ORD-002', productId: '2', product: 'Cột cào móng mèo cao cấp', image: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=80&h=80&fit=crop', date: '05/02/2026', status: 'Đang giao', total: '$89.99' },
+    { id: 'ORD-003', productId: '3', product: 'Bộ dây dắt & vòng cổ chó', image: 'https://images.unsplash.com/photo-1600277971170-8a7d75fb1bd9?w=80&h=80&fit=crop', date: '01/02/2026', status: 'Đang xử lý', total: '$34.99' },
 ];
 const INIT_BOOKINGS: UserBooking[] = [
     { id: 'BK-001', service: 'Spa thú cưng', pet: 'Max', date: '15/02/2026', time: '10:00', status: 'Đã xác nhận' },
@@ -177,11 +182,16 @@ const UserDashboardPage = () => {
                             <div className="space-y-3">
                                 {orders.slice(0, 2).map(o => (
                                     <div key={o.id} className="flex items-center gap-3">
-                                        <img src={o.image} alt={o.product} className="w-12 h-12 rounded-lg object-cover shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-foreground truncate">{o.product}</p>
-                                            <p className="text-xs text-muted-foreground">{o.id} · {o.date}</p>
-                                        </div>
+                                        <Link
+                                            to={`/products/${o.productId}`}
+                                            className="flex flex-1 min-w-0 items-center gap-3 rounded-lg -m-1 p-1 hover:bg-muted/70 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#448B3D] focus-visible:ring-offset-2"
+                                        >
+                                            <img src={o.image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">{o.product}</p>
+                                                <p className="text-xs text-muted-foreground">{o.id} · {o.date}</p>
+                                            </div>
+                                        </Link>
                                         <div className="text-right shrink-0">
                                             <p className="text-sm font-semibold">{o.total}</p>
                                             <Badge className={`text-xs ${orderBadge(o.status)}`}>{o.status}</Badge>
@@ -231,12 +241,17 @@ const UserDashboardPage = () => {
                         {orders.map(o => (
                             <Card key={o.id} className="p-4">
                                 <div className="flex items-center gap-4">
-                                    <img src={o.image} alt={o.product} className="w-16 h-16 rounded-xl object-cover shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-foreground truncate">{o.product}</p>
-                                        <p className="text-sm text-muted-foreground mt-0.5">{o.id} · {o.date}</p>
-                                        <Badge className={`text-xs mt-1 ${orderBadge(o.status)}`}>{o.status}</Badge>
-                                    </div>
+                                    <Link
+                                        to={`/products/${o.productId}`}
+                                        className="group flex flex-1 min-w-0 items-center gap-4 rounded-xl -m-1 p-1 hover:bg-muted/70 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#448B3D] focus-visible:ring-offset-2"
+                                    >
+                                        <img src={o.image} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-foreground truncate underline-offset-2 group-hover:underline">{o.product}</p>
+                                            <p className="text-sm text-muted-foreground mt-0.5">{o.id} · {o.date}</p>
+                                            <Badge className={`text-xs mt-1 ${orderBadge(o.status)}`}>{o.status}</Badge>
+                                        </div>
+                                    </Link>
                                     <div className="text-right shrink-0 flex flex-col items-end gap-2">
                                         <p className="font-semibold text-foreground">{o.total}</p>
                                         {o.status === 'Đang xử lý' && (

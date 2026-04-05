@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -24,8 +25,13 @@ interface Product {
     stock: number; status: 'active' | 'inactive'; image: string;
 }
 interface Order {
-    id: string; customer: string; product: string; amount: string;
-    status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy'; date: string;
+    id: string;
+    customer: string;
+    productId: string;
+    product: string;
+    amount: string;
+    status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy';
+    date: string;
 }
 interface Customer {
     id: string; name: string; email: string; orders: number;
@@ -63,11 +69,11 @@ const INIT_PRODUCTS: Product[] = [
     { id: 'P5', name: 'Đồ chơi thông minh tương tác', category: 'Đồ chơi', price: 44.99, stock: 0, status: 'inactive', image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop' },
 ];
 const INIT_ORDERS: Order[] = [
-    { id: 'ORD-1234', customer: 'Nguyễn Văn A', product: 'Thức ăn chó cao cấp', amount: '$49.99', status: 'Hoàn thành', date: '11/02/2026' },
-    { id: 'ORD-1233', customer: 'Trần Thị B', product: 'Cột cào móng mèo', amount: '$89.99', status: 'Đang xử lý', date: '11/02/2026' },
-    { id: 'ORD-1232', customer: 'Lê Văn C', product: 'Giường thú cưng', amount: '$79.99', status: 'Đang giao', date: '10/02/2026' },
-    { id: 'ORD-1231', customer: 'Phạm Thị D', product: 'Đồ chơi thông minh', amount: '$44.99', status: 'Đang xử lý', date: '09/02/2026' },
-    { id: 'ORD-1230', customer: 'Hoàng Văn E', product: 'Bộ dây dắt chó', amount: '$34.99', status: 'Đã hủy', date: '08/02/2026' },
+    { id: 'ORD-1234', customer: 'Nguyễn Văn A', productId: '1', product: 'Thức ăn chó cao cấp', amount: '$49.99', status: 'Hoàn thành', date: '11/02/2026' },
+    { id: 'ORD-1233', customer: 'Trần Thị B', productId: '2', product: 'Cột cào móng mèo', amount: '$89.99', status: 'Đang xử lý', date: '11/02/2026' },
+    { id: 'ORD-1232', customer: 'Lê Văn C', productId: '4', product: 'Giường thú cưng', amount: '$79.99', status: 'Đang giao', date: '10/02/2026' },
+    { id: 'ORD-1231', customer: 'Phạm Thị D', productId: '5', product: 'Đồ chơi thông minh', amount: '$44.99', status: 'Đang xử lý', date: '09/02/2026' },
+    { id: 'ORD-1230', customer: 'Hoàng Văn E', productId: '3', product: 'Bộ dây dắt chó', amount: '$34.99', status: 'Đã hủy', date: '08/02/2026' },
 ];
 const INIT_CUSTOMERS: Customer[] = [
     { id: 'C1', name: 'Nguyễn Văn An', email: 'user@petcare.vn', orders: 12, spent: '$890', joined: '01/01/2026', status: 'active' },
@@ -255,8 +261,14 @@ const AdminDashboardPage = () => {
                             <div className="space-y-3">
                                 {orders.slice(0, 4).map(o => (
                                     <div key={o.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                                        <div>
+                                        <div className="min-w-0 pr-2">
                                             <p className="text-sm font-medium text-foreground">{o.id}</p>
+                                            <Link
+                                                to={`/products/${o.productId}`}
+                                                className="text-xs font-medium text-[#448B3D] hover:underline truncate block max-w-[220px]"
+                                            >
+                                                {o.product}
+                                            </Link>
                                             <p className="text-xs text-muted-foreground">{o.customer} · {o.date}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -377,7 +389,15 @@ const AdminDashboardPage = () => {
                                         <tr key={o.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                             <td className="p-3 font-medium text-foreground">{o.id}</td>
                                             <td className="p-3 text-muted-foreground">{o.customer}</td>
-                                            <td className="p-3 text-muted-foreground max-w-[160px] truncate">{o.product}</td>
+                                            <td className="p-3 max-w-[200px]">
+                                                <Link
+                                                    to={`/products/${o.productId}`}
+                                                    className="text-[#448B3D] font-medium hover:underline truncate block"
+                                                    title={o.product}
+                                                >
+                                                    {o.product}
+                                                </Link>
+                                            </td>
                                             <td className="p-3 font-medium">{o.amount}</td>
                                             <td className="p-3 text-muted-foreground">{o.date}</td>
                                             <td className="p-3">
