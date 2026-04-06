@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
-import { useTheme } from '@/context/ThemeContext';
+import { DashboardThemeSettings } from '@/components/dashboard/DashboardThemeSettings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import {
     Package, Calendar, ShoppingBag, TrendingUp, Clock,
-    Plus, Pencil, Trash2, X, PawPrint, Sun, Moon, Settings, Sparkles, User as UserIcon,
+    Plus, Pencil, Trash2, X, PawPrint, Settings, Sparkles, User as UserIcon, Camera,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -97,10 +97,9 @@ function parseDashTab(raw: string | null): DashTab {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const UserDashboardPage = () => {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { theme, setTheme } = useTheme();
     const activeTab = parseDashTab(searchParams.get('tab'));
 
     const setTab = (value: string) => {
@@ -120,6 +119,15 @@ const UserDashboardPage = () => {
 
     // Profile form
     const [profile, setProfile] = useState({ name: user?.name ?? '', phone: '0901234567', address: '123 Đường Lê Lợi, TP.HCM', bio: 'Yêu thú cưng từ nhỏ' });
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => updateUser({ avatar: ev.target?.result as string });
+        reader.readAsDataURL(file);
+    };
 
     const cancelOrder = (id: string) => {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Đã hủy' } : o));
@@ -157,6 +165,7 @@ const UserDashboardPage = () => {
     };
 
     const saveProfile = () => {
+        updateUser({ name: profile.name });
         toast.success('Đã cập nhật hồ sơ thành công');
     };
 
@@ -477,6 +486,38 @@ const UserDashboardPage = () => {
                             <h2 className="text-lg font-bold text-foreground">Thông tin cá nhân</h2>
                         </div>
                         <div className="space-y-4">
+                            {/* Avatar */}
+                            <div className="flex items-center gap-4 pb-4 border-b border-border">
+                                <div className="relative shrink-0">
+                                    <div className="w-20 h-20 rounded-full overflow-hidden bg-[#448B3D]/15 ring-2 ring-[#448B3D]/30 flex items-center justify-center">
+                                        {user?.avatar
+                                            ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                            : <UserIcon className="w-8 h-8 text-[#448B3D]" />
+                                        }
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => avatarInputRef.current?.click()}
+                                        className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#448B3D] hover:bg-[#336B2D] text-white flex items-center justify-center shadow-md transition-colors"
+                                        title="Đổi ảnh đại diện"
+                                    >
+                                        <Camera className="w-3.5 h-3.5" />
+                                    </button>
+                                    <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-foreground">{user?.name}</p>
+                                    <p className="text-sm text-muted-foreground">{user?.email}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => avatarInputRef.current?.click()}
+                                        className="text-xs text-[#448B3D] hover:underline mt-1 font-medium"
+                                    >
+                                        Thay đổi ảnh đại diện
+                                    </button>
+                                </div>
+                            </div>
+
                             <div>
                                 <Label htmlFor="prof-name">Họ và tên</Label>
                                 <Input id="prof-name" className="mt-1" value={profile.name} onChange={e => setProfile(f => ({ ...f, name: e.target.value }))} />
@@ -516,47 +557,13 @@ const UserDashboardPage = () => {
                                 <div>
                                     <h2 className="text-lg font-bold text-foreground">Cài đặt giao diện</h2>
                                     <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                                        Chọn chế độ sáng hoặc tối. Tùy chọn được lưu trên trình duyệt và áp dụng cho toàn bộ PetCare.
+                                        Chế độ sáng, tối hoặc theo hệ thống. Tuỳ chọn được lưu trên trình duyệt và áp dụng cho toàn bộ PetCare.
                                     </p>
                                 </div>
                             </div>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <p className="text-sm font-semibold text-foreground">Chế độ hiển thị</p>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setTheme('light')}
-                                    className={cn(
-                                        'flex flex-col items-center gap-3 rounded-2xl border-2 p-6 text-center transition-all',
-                                        theme === 'light'
-                                            ? 'border-[#448B3D] bg-[#448B3D]/10 shadow-sm dark:bg-[#448B3D]/20'
-                                            : 'border-border bg-muted/30 hover:border-[#448B3D]/40 hover:bg-muted/50'
-                                    )}
-                                >
-                                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
-                                        <Sun className="h-7 w-7" />
-                                    </span>
-                                    <span className="font-semibold text-foreground">Sáng</span>
-                                    <span className="text-xs text-muted-foreground">Nền sáng, phù hợp ban ngày</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setTheme('dark')}
-                                    className={cn(
-                                        'flex flex-col items-center gap-3 rounded-2xl border-2 p-6 text-center transition-all',
-                                        theme === 'dark'
-                                            ? 'border-[#448B3D] bg-[#448B3D]/10 shadow-sm dark:bg-[#448B3D]/25'
-                                            : 'border-border bg-muted/30 hover:border-[#448B3D]/40 hover:bg-muted/50'
-                                    )}
-                                >
-                                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-slate-100 dark:bg-slate-950 dark:text-slate-200">
-                                        <Moon className="h-7 w-7" />
-                                    </span>
-                                    <span className="font-semibold text-foreground">Tối</span>
-                                    <span className="text-xs text-muted-foreground">Giảm chói, phù hợp buổi tối</span>
-                                </button>
-                            </div>
+                        <div className="p-6">
+                            <DashboardThemeSettings />
                         </div>
                     </Card>
                 </TabsContent>

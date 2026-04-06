@@ -15,6 +15,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     login: (email: string, password: string) => boolean;
     logout: () => void;
+    updateUser: (data: Partial<Pick<User, 'name' | 'email' | 'avatar'>>) => void;
 }
 
 // ─── Mock accounts ────────────────────────────────────────────────────────────
@@ -58,9 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
     };
 
+    const updateUser = (data: Partial<Pick<User, 'name' | 'email' | 'avatar'>>) => {
+        setUser(prev => prev ? { ...prev, ...data } : prev);
+    };
+
     return (
         <AuthContext.Provider
-            value={{ user, isAuthenticated: !!user, login, logout }}
+            value={{ user, isAuthenticated: !!user, login, logout, updateUser }}
         >
             {children}
         </AuthContext.Provider>
