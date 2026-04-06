@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { useTheme } from '@/context/ThemeContext';
 
 const ThemeToggle = () => {
-    const { theme, toggleTheme } = useTheme();
+    const { resolvedTheme, toggleTheme } = useTheme();
 
     return (
         <Button
@@ -12,14 +12,14 @@ const ThemeToggle = () => {
             size='icon'
             onClick={toggleTheme}
             className='rounded-full relative overflow-hidden'
-            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            aria-label={resolvedTheme === 'light' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng'}
         >
             <motion.div
                 initial={false}
                 animate={{
-                    scale: theme === 'light' ? 1 : 0,
-                    opacity: theme === 'light' ? 1 : 0,
-                    rotate: theme === 'light' ? 0 : 180
+                    scale: resolvedTheme === 'light' ? 1 : 0,
+                    opacity: resolvedTheme === 'light' ? 1 : 0,
+                    rotate: resolvedTheme === 'light' ? 0 : 180
                 }}
                 transition={{ duration: 0.3 }}
                 className='absolute'
@@ -29,9 +29,9 @@ const ThemeToggle = () => {
             <motion.div
                 initial={false}
                 animate={{
-                    scale: theme === 'dark' ? 1 : 0,
-                    opacity: theme === 'dark' ? 1 : 0,
-                    rotate: theme === 'dark' ? 0 : -180
+                    scale: resolvedTheme === 'dark' ? 1 : 0,
+                    opacity: resolvedTheme === 'dark' ? 1 : 0,
+                    rotate: resolvedTheme === 'dark' ? 0 : -180
                 }}
                 transition={{ duration: 0.3 }}
                 className='absolute'
