@@ -17,8 +17,8 @@ public interface ProductClient {
     ApiResponse<ProductResponse> getProductById(@PathVariable String id);
 
     @PostMapping("/internal/products/reserve-stock")
-    ApiResponse<?> reserveStock(List<ReserveStockRequest> requests);
+    void reserveStock(List<ReserveStockRequest> requests);
 
     @PostMapping("/internal/products/rollback-stock")
-    ApiResponse<?> rollbackStock(List<RollbackStockRequest> requests);
+    void rollbackStock(List<RollbackStockRequest> requests);
 }

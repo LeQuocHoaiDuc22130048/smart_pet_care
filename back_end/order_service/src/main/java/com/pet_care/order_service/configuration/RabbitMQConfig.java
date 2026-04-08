@@ -16,26 +16,24 @@ public class RabbitMQConfig {
 
     public static final String ORDER_EXCHANGE = "order.exchange";
 
-    public static final String ORDER_CREATED_QUEUE = "order.created.queue";
-
-    public static final String ORDER_CREATED_KEY = "order.created";
+    public static final String ORDER_QUEUE = "order.queue";
 
     @Bean
-    public TopicExchange orderExchange() {
+    public TopicExchange exchange() {
         return new TopicExchange(ORDER_EXCHANGE);
     }
 
     @Bean
     public Queue orderQueue() {
-        return new Queue(ORDER_CREATED_QUEUE);
+        return new Queue(ORDER_QUEUE);
     }
 
     @Bean
     public Binding binding() {
         return BindingBuilder
                 .bind(orderQueue())
-                .to(orderExchange())
-                .with(ORDER_CREATED_KEY);
+                .to(exchange())
+                .with("#");
     }
 
     //    JSON converter

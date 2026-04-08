@@ -21,7 +21,9 @@ public enum ErrorCode {
     UNAUTHENTICATED(1006, "unauthenticated", HttpStatus.UNAUTHORIZED),
 
     ORDER_NOT_FOUND(3001, "Order not found", HttpStatus.NOT_FOUND),
-    ORDER_STATUS_INVALID(3002, "Order status invalid", HttpStatus.BAD_REQUEST)
+    ORDER_STATUS_INVALID(3002, "Order status invalid", HttpStatus.BAD_REQUEST),
+
+    INVALID_PAYMENT_STATUS(4001, "Invalid payment status", HttpStatus.BAD_REQUEST)
     ;
 
     private int code;

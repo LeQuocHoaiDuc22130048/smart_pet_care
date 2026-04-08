@@ -5,11 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentStatusRequest {
+public class PaymentRequest {
     String orderId;
-    String status;
+    BigDecimal amount;
+    String userId;
 }

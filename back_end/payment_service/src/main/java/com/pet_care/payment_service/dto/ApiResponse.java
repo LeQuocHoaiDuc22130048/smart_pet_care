@@ -1,4 +1,4 @@
-package com.pet_care.order_service.dto;
+package com.pet_care.payment_service.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;

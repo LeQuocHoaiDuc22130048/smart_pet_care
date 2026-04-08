@@ -1,19 +1,16 @@
-package com.hoaiduc.identity.exception;
+package com.pet_care.payment_service.exception;
 
-import java.util.Map;
-import java.util.Objects;
-
+import com.pet_care.payment_service.dto.ApiResponse;
 import jakarta.validation.ConstraintViolation;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import com.hoaiduc.identity.dto.request.ApiResponse;
-
-import lombok.extern.slf4j.Slf4j;
+import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @ControllerAdvice

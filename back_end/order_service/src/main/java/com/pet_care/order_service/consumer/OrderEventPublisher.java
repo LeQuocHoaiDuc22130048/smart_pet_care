@@ -1,12 +1,15 @@
-package com.pet_care.order_service.messaging;
+package com.pet_care.order_service.consumer;
 
-import com.pet_care.order_service.configuration.RabbitMQConfig;
+import com.pet_care.order_service.messaging.BaseEvent;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -15,14 +18,14 @@ import org.springframework.stereotype.Service;
 public class OrderEventPublisher {
     RabbitTemplate rabbitTemplate;
 
-    public void publishOrderCreated(OrderCreatedEvent event) {
+    public void publish(String routingKey, Object data) {
 
-        rabbitTemplate.convertAndSend(
-                RabbitMQConfig.ORDER_EXCHANGE,
-                RabbitMQConfig.ORDER_CREATED_KEY,
-                event
-        );
+        BaseEvent<Object> event = new BaseEvent<>();
+        event.setEventId(UUID.randomUUID().toString());
+        event.setType(routingKey);
+        event.setTimestamp(LocalDateTime.now());
+        event.setData(data);
 
-        log.info("Published order created event: {}", event);
+        rabbitTemplate.convertAndSend("order.exchange", routingKey, event);
     }
 }

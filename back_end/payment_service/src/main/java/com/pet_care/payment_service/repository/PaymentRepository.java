@@ -1,4 +1,12 @@
 package com.pet_care.payment_service.repository;
 
-public interface PaymentRepository {
+import com.pet_care.payment_service.entity.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, String> {
+    Optional<Payment> findByOrderId(String orderId);
 }
