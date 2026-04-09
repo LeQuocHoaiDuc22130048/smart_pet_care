@@ -14,10 +14,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
+    // Order events
     public static final String ORDER_EXCHANGE = "order.exchange";
-
     public static final String ORDER_QUEUE = "order.queue";
 
+    // Payment events (listening)
+    public static final String PAYMENT_EXCHANGE = "payment.exchange";
+    public static final String PAYMENT_SUCCESS_QUEUE = "payment.success.queue";
+    public static final String PAYMENT_FAILED_QUEUE = "payment.failed.queue";
+    public static final String PAYMENT_SUCCESS_KEY = "payment.success";
+    public static final String PAYMENT_FAILED_KEY = "payment.failed";
+
+    // Order Exchange & Queue
     @Bean
     public TopicExchange exchange() {
         return new TopicExchange(ORDER_EXCHANGE);
@@ -36,7 +44,39 @@ public class RabbitMQConfig {
                 .with("#");
     }
 
-    //    JSON converter
+    // Payment Exchange & Queues (Order Service listening)
+    @Bean
+    public TopicExchange paymentExchange() {
+        return new TopicExchange(PAYMENT_EXCHANGE);
+    }
+
+    @Bean
+    public Queue paymentSuccessQueue() {
+        return new Queue(PAYMENT_SUCCESS_QUEUE);
+    }
+
+    @Bean
+    public Queue paymentFailedQueue() {
+        return new Queue(PAYMENT_FAILED_QUEUE);
+    }
+
+    @Bean
+    public Binding paymentSuccessBinding() {
+        return BindingBuilder
+                .bind(paymentSuccessQueue())
+                .to(paymentExchange())
+                .with(PAYMENT_SUCCESS_KEY);
+    }
+
+    @Bean
+    public Binding paymentFailedBinding() {
+        return BindingBuilder
+                .bind(paymentFailedQueue())
+                .to(paymentExchange())
+                .with(PAYMENT_FAILED_KEY);
+    }
+
+    // JSON converter
     @Bean
     public MessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();

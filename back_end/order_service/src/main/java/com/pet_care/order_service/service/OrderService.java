@@ -185,4 +185,28 @@ public class OrderService {
         order.setStatus(OrderStatus.FAILED);
         orderRepository.save(order);
     }
+
+    /**
+     * Cập nhật trạng thái đơn hàng từ payment event
+     */
+    @Transactional
+    public void updateOrderStatusFromPayment(String orderId, String status) {
+        Orders order = getOrder(orderId);
+        OrderStatus newStatus = OrderStatus.valueOf(status);
+        order.setStatus(newStatus);
+        orderRepository.save(order);
+        log.info("Updated order {} status to {}", orderId, newStatus);
+    }
+
+    /**
+     * Hủy đơn hàng khi thanh toán thất bại
+     */
+    @Transactional
+    public void cancelOrderDueToPaymentFailure(String orderId) {
+        Orders order = getOrder(orderId);
+        publishRollbackEvent(order);
+        order.setStatus(OrderStatus.PAYMENT_FAILED);
+        orderRepository.save(order);
+        log.info("Cancelled order {} due to payment failure", orderId);
+    }
 }
