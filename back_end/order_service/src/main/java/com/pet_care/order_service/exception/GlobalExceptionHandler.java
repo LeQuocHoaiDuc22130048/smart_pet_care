@@ -1,6 +1,6 @@
 package com.pet_care.order_service.exception;
 
-import com.pet_care.product.dto.ApiResponse;
+import com.pet_care.order_service.dto.ApiResponse;
 import jakarta.validation.ConstraintViolation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

@@ -1,1 +1,52 @@
-spring.application.name=payment_service
+server:
+  port: 8084
+  servlet:
+    context-path: /pet_care_payment
+
+spring:
+  application:
+    name: payment_service
+  datasource:
+      url: "jdbc:mysql://localhost:3306/pet_care_payment?createDatabaseIfNotExist=true"
+      driver-class-name: "com.mysql.cj.jdbc.Driver"
+      username: root
+      password: root
+  jpa:
+        hibernate:
+            ddl-auto: update
+        show-sql: true
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    template:
+      exchange: payment.exchange
+      routing-key: payment.success
+      default-receive-queue: payment.success.queue
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:8080/pet_care_identity"
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      orderService:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+
+  retry:
+    instances:
+      orderService:
+        maxAttempts: 3
+        waitDuration: 2s
+
+services:
+  order:
+    url: http://localhost:8083/pet_care_order

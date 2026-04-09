@@ -1,6 +1,6 @@
-package com.pet_care.product.event;
+package com.pet_care.product.messaging;
 
-import com.pet_care.order_service.dto.request.ReserveStockRequest;
+import com.pet_care.product.dto.request.ReserveStockRequest;
 import lombok.Data;
 
 import java.util.List;

@@ -1,6 +1,5 @@
-package com.pet_care.product.event;
+package com.pet_care.product.messaging;
 
-import com.pet_care.product.messaging.BaseEvent;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -22,6 +21,6 @@ public class EventPublisher {
         event.setTimestamp(LocalDateTime.now());
         event.setData(data);
 
-        rabbitTemplate.convertAndSend(routingKey, event);
+        rabbitTemplate.convertAndSend("order.exchange",routingKey, event);
     }
 }

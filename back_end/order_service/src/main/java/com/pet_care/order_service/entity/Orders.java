@@ -31,6 +31,8 @@ public class Orders {
 
     LocalDateTime createdAt;
 
+    LocalDateTime updatedAt;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     List<OrderItem> items;
 }

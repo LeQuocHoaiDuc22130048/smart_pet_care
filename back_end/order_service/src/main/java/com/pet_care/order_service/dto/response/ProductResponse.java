@@ -1,6 +1,5 @@
 package com.pet_care.order_service.dto.response;
 
-import com.pet_care.product.dto.response.CategoryResponseCreateProduct;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

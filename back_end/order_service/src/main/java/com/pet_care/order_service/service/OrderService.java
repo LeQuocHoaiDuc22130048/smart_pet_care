@@ -10,9 +10,9 @@ import com.pet_care.order_service.dto.response.ProductResponse;
 import com.pet_care.order_service.entity.OrderItem;
 import com.pet_care.order_service.entity.Orders;
 import com.pet_care.order_service.enums.OrderStatus;
-import com.pet_care.order_service.event.OrderCreatedEvent;
-import com.pet_care.order_service.event.OrderEventPublisher;
-import com.pet_care.order_service.event.OrderItemEvent;
+import com.pet_care.order_service.messaging.OrderCreatedEvent;
+import com.pet_care.order_service.consumer.OrderEventPublisher;
+import com.pet_care.order_service.messaging.OrderItemEvent;
 import com.pet_care.order_service.exception.AppException;
 import com.pet_care.order_service.exception.ErrorCode;
 import com.pet_care.order_service.mapper.OrderMapper;
@@ -48,8 +48,6 @@ public class OrderService {
 
         Orders orders = getOrCreateOrder(userId);
 
-        reserveStock(request);
-
         Map<String, OrderItem> existingItems = orders.getItems()
                 .stream()
                 .collect(Collectors.toMap(OrderItem::getProductId, Function.identity()));
@@ -70,7 +68,7 @@ public class OrderService {
 
         Orders savedOrder = orderRepository.save(orders);
 
-        publishOrderEvent(savedOrder);
+        publishReserveStockEvent(savedOrder);
 
         return orderMapper.toOrderResponse(savedOrder);
     }
@@ -81,33 +79,40 @@ public class OrderService {
 
         if (orders.getStatus() == OrderStatus.CANCELLED) return;
 
-        rollbackStock(orders);
+        publishRollbackEvent(orders);
+    }
+
+    @Transactional
+    public void updatePaymentStatus(String orderId, String status) {
+        Orders orders = getOrder(orderId);
+
+        if (orders.getStatus() == OrderStatus.PAID) return;
+
+        switch (status) {
+            case "PAID":
+                orders.setStatus(OrderStatus.PAID);
+                break;
+            case "FAILED":
+                orders.setStatus(OrderStatus.FAILED);
+                break;
+            default:
+                throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+        orderRepository.save(orders);
     }
 
     // call product service to rollback stock for the order items
-    private void rollbackStock(Orders orders) {
-        List<RollbackStockRequest> requests = orders.getItems().stream()
+    private void publishRollbackEvent(Orders orders) {
+        List<RollbackStockRequest> items = orders.getItems().stream()
                 .map(i -> RollbackStockRequest.builder()
                         .productId(i.getProductId())
                         .quantity(i.getQuantity())
                         .build()).toList();
-        productClient.rollbackStock(requests);
-    }
-
-    // call product service to reserve stock for the order items
-    private void reserveStock(CreateOrderRequest request) {
-        List<ReserveStockRequest> stockRequests = request.getItems().stream()
-                .map(i -> {
-                    ReserveStockRequest stockReq = new ReserveStockRequest();
-                    stockReq.setProductId(i.getProductId());
-                    stockReq.setQuantity(i.getQuantity());
-                    return stockReq;
-                }).toList();
-        productClient.reserveStock(stockRequests);
+        orderEventPublisher.publish("stock.rollback", items);
     }
 
     // publish order event to rabbitmq
-    private void publishOrderEvent(Orders savedOrder) {
+    private void publishReserveStockEvent(Orders savedOrder) {
         List<OrderItemEvent> itemEvents = savedOrder.getItems()
                 .stream()
                 .map(i -> OrderItemEvent.builder()
@@ -122,7 +127,7 @@ public class OrderService {
                 .items(itemEvents)
                 .build();
 
-        orderEventPublisher.publishOrderCreated(event);
+        orderEventPublisher.publish("stock.reserve", event);
     }
 
     // calculate total price of the order
@@ -149,8 +154,7 @@ public class OrderService {
 
         List<OrderStatus> editableStatuses = List.of(
                 OrderStatus.PENDING,
-                OrderStatus.PAID,
-                OrderStatus.CREATED
+                OrderStatus.PAID
         );
 
         return orderRepository.findFirstByUserIdAndStatusIn(userId, editableStatuses)
@@ -173,5 +177,36 @@ public class OrderService {
         int newQuantity = item.getQuantity() + addedQuantity;
         item.setQuantity(newQuantity);
         item.setPrice(price.multiply(BigDecimal.valueOf(addedQuantity)));
+    }
+
+    @Transactional
+    public void handlePaymentFailed(Orders order) {
+        publishRollbackEvent(order);
+        order.setStatus(OrderStatus.FAILED);
+        orderRepository.save(order);
+    }
+
+    /**
+     * Cập nhật trạng thái đơn hàng từ payment event
+     */
+    @Transactional
+    public void updateOrderStatusFromPayment(String orderId, String status) {
+        Orders order = getOrder(orderId);
+        OrderStatus newStatus = OrderStatus.valueOf(status);
+        order.setStatus(newStatus);
+        orderRepository.save(order);
+        log.info("Updated order {} status to {}", orderId, newStatus);
+    }
+
+    /**
+     * Hủy đơn hàng khi thanh toán thất bại
+     */
+    @Transactional
+    public void cancelOrderDueToPaymentFailure(String orderId) {
+        Orders order = getOrder(orderId);
+        publishRollbackEvent(order);
+        order.setStatus(OrderStatus.PAYMENT_FAILED);
+        orderRepository.save(order);
+        log.info("Cancelled order {} due to payment failure", orderId);
     }
 }

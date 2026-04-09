@@ -8,7 +8,7 @@
         <version>3.5.6</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.hoaiduc</groupId>
+    <groupId>com.pet_care</groupId>
     <artifactId>identity_service</artifactId>
     <version>0.9-SNAPSHOT</version>
     <name>identity</name>
@@ -115,6 +115,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2023.0.1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <build>
@@ -195,7 +202,7 @@
                 <version>${spotless.version}</version>
                 <configuration>
                     <java>
-                        <removeUnusedImports />
+                        <removeUnusedImports/>
                         <toggleOffOn/>
                         <trimTrailingWhitespace/>
                         <endWithNewline/>

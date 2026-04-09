@@ -2,7 +2,7 @@ package com.pet_care.order_service.configuration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pet_care.order_service.exception.ErrorCode;
-import com.pet_care.product.dto.ApiResponse;
+import com.pet_care.order_service.dto.ApiResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

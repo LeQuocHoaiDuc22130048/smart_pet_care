@@ -1,4 +1,4 @@
-package com.pet_care.order_service.event;
+package com.pet_care.order_service.messaging;
 
 import lombok.AccessLevel;
 import lombok.Data;

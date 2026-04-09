@@ -1,4 +1,4 @@
-package com.pet_care.order_service.event;
+package com.pet_care.order_service.messaging;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -8,6 +8,7 @@ import java.util.List;
 
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@Builder
 public class OrderCreatedEvent {
 
     String orderId;
