@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.pet_care.identity.constant.PredefinedRole;
+import com.pet_care.identity.event.UserCreatedEvent;
+import com.pet_care.identity.publisher.UserEventPublisher;
 import com.pet_care.identity.dto.request.UserCreationRequest;
 import com.pet_care.identity.dto.request.UserUpdateRequest;
 import com.pet_care.identity.dto.response.UserResponse;
@@ -37,6 +39,7 @@ public class UserService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     RoleRepository roleRepository;
+    UserEventPublisher userEventPublisher;
 
     public UserResponse createUser(UserCreationRequest request) {
 
@@ -52,6 +55,15 @@ public class UserService {
         } catch (DataIntegrityViolationException e) {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
+
+        // Publish event sang RabbitMQ — user_service sẽ lắng nghe và tạo profile
+        userEventPublisher.publishUserCreated(UserCreatedEvent.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .birthday(user.getBirthDate())
+                .build());
 
         return userMapper.toUserResponse(user);
     }

@@ -6,6 +6,11 @@ server:
 spring:
   application:
     name: identity_service
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
   datasource:
     url: "jdbc:mysql://localhost:3306/pet_care_identity?createDatabaseIfNotExist=true"
     driver-class-name: "com.mysql.cj.jdbc.Driver"
@@ -23,3 +28,15 @@ jwt:
   signerKey: "cnGDY/xuGdmN0zD9ktlVWVA8/Vki3ep0ZiDNJC++DHFSIerOdQJNH4epcyEy+YZR"
   valid-duration: 3600 # in seconds
   refreshable-duration: 36000 # in seconds
+
+services:
+  user-service:
+    url: http://localhost:8082/pet_care_user
+
+logging:
+  level:
+    com.pet_care.identity: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss} [%highlight(%-5level)] [identity_service] %cyan(%logger{36}) - %msg%n"
