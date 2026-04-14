@@ -8,7 +8,6 @@ import java.util.StringJoiner;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -44,6 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthenticationService {
     UserRepository userRepository;
     InvalidatedTokenRepository tokenRepository;
+    PasswordEncoder passwordEncoder;
 
     @NonFinal
     @Value("${jwt.signerKey}")
@@ -57,16 +57,12 @@ public class AuthenticationService {
     @Value("${jwt.refreshable-duration}")
     protected long REFRESH_DURATION;
 
-    //    check authenticate
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        log.info("SignerKey: {}", SIGNER_KEY);
-
         var user = userRepository
                 .findByUsername(request.getUsername())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
-        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
+        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
         if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         var token = generateToken(user);
@@ -85,7 +81,7 @@ public class AuthenticationService {
 
             tokenRepository.save(invalidedToken);
         } catch (AppException e) {
-            log.info("token already expired");
+            log.info("Token already expired, logout is a no-op");
         }
     }
 
@@ -109,6 +105,7 @@ public class AuthenticationService {
 
         if (tokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID()))
             throw new AppException(ErrorCode.UNAUTHENTICATED);
+
         return signedJWT;
     }
 
@@ -120,25 +117,22 @@ public class AuthenticationService {
 
         InvalidedToken invalidedToken =
                 InvalidedToken.builder().id(jit).expiryTime(expiryTime).build();
-
         tokenRepository.save(invalidedToken);
 
         var username = signedJWT.getJWTClaimsSet().getSubject();
-
-        var user =
-                userRepository.findByUsername(username).orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+        var user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
         var token = generateToken(user);
         return AuthenticationResponse.builder().token(token).authenticated(true).build();
     }
 
-    // generate token
     private String generateToken(User user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
                 .subject(user.getUsername())
-                .issuer("Hoaiduc")
+                .issuer("PetCareSmart")
                 .issueTime(new Date())
                 .expirationTime(new Date(
                         Instant.now().plus(VALID_DURATION, ChronoUnit.SECONDS).toEpochMilli()))
@@ -166,7 +160,6 @@ public class AuthenticationService {
         } catch (AppException e) {
             isValid = false;
         }
-
         return IntrospectResponse.builder().valid(isValid).build();
     }
 

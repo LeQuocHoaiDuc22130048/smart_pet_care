@@ -39,7 +39,9 @@ spring:
 logging:
   level:
     com.pet_care.user_service: DEBUG
-    org.springframework.security: INFO
-    org.springframework.web: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.apache.catalina: WARN
+    org.apache.tomcat: WARN
   pattern:
     console: "%d{HH:mm:ss} [%highlight(%-5level)] [user_service] %cyan(%logger{36}) - %msg%n"

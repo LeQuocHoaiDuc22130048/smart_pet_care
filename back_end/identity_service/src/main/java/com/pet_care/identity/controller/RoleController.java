@@ -2,9 +2,10 @@ package com.pet_care.identity.controller;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.pet_care.identity.dto.request.ApiResponse;
+import com.pet_care.identity.dto.response.ApiResponse;
 import com.pet_care.identity.dto.request.RoleRequest;
 import com.pet_care.identity.dto.response.RoleResponse;
 import com.pet_care.identity.service.RoleService;
@@ -23,6 +24,7 @@ public class RoleController {
     RoleService roleService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     ApiResponse<RoleResponse> create(@RequestBody RoleRequest request) {
         return ApiResponse.<RoleResponse>builder()
                 .result(roleService.create(request))
@@ -30,6 +32,7 @@ public class RoleController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     ApiResponse<List<RoleResponse>> getAll() {
         return ApiResponse.<List<RoleResponse>>builder()
                 .result(roleService.getAll())
@@ -37,6 +40,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{role}")
+    @PreAuthorize("hasRole('ADMIN')")
     ApiResponse<Void> delete(@PathVariable String role) {
         roleService.delete(role);
         return ApiResponse.<Void>builder().build();

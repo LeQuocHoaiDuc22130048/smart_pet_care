@@ -1,14 +1,17 @@
 package com.pet_care.identity.entity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 import jakarta.persistence.*;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
+@Table(name = "users")
 @Getter
 @Setter
 @Builder
@@ -28,6 +31,13 @@ public class User {
     String lastName;
     LocalDate birthDate;
 
-    @ManyToMany()
+    @Builder.Default
+    Boolean isActive = true;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    LocalDateTime createdAt;
+
+    @ManyToMany
     Set<Role> roles;
 }

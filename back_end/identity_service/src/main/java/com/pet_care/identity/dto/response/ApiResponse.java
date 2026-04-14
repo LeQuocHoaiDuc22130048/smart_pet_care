@@ -1,4 +1,4 @@
-package com.pet_care.identity.dto.request;
+package com.pet_care.identity.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
