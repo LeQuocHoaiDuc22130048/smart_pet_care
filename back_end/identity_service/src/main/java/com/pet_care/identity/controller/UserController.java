@@ -4,10 +4,9 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import com.pet_care.identity.dto.request.ApiResponse;
+import com.pet_care.identity.dto.response.ApiResponse;
 import com.pet_care.identity.dto.request.UserCreationRequest;
 import com.pet_care.identity.dto.request.UserUpdateRequest;
 import com.pet_care.identity.dto.response.UserResponse;
@@ -35,11 +34,6 @@ public class UserController {
 
     @GetMapping
     public ApiResponse<List<UserResponse>> getUsers() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        log.info("username:{}", authentication.getName());
-        authentication.getAuthorities().forEach(grantedAuthority -> log.info("grantedAuthority:{}", grantedAuthority));
-
         return ApiResponse.<List<UserResponse>>builder()
                 .result(userService.getUsers())
                 .build();

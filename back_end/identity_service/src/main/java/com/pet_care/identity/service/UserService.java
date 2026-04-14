@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.pet_care.identity.constant.PredefinedRole;
+import com.pet_care.identity.event.UserCreatedEvent;
+import com.pet_care.identity.publisher.UserEventPublisher;
 import com.pet_care.identity.dto.request.UserCreationRequest;
 import com.pet_care.identity.dto.request.UserUpdateRequest;
 import com.pet_care.identity.dto.response.UserResponse;
@@ -37,9 +39,9 @@ public class UserService {
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
     RoleRepository roleRepository;
+    UserEventPublisher userEventPublisher;
 
     public UserResponse createUser(UserCreationRequest request) {
-
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
@@ -52,6 +54,14 @@ public class UserService {
         } catch (DataIntegrityViolationException e) {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
+
+        userEventPublisher.publishUserCreated(UserCreatedEvent.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .birthday(user.getBirthDate())
+                .build());
 
         return userMapper.toUserResponse(user);
     }
@@ -66,27 +76,39 @@ public class UserService {
     public UserResponse getUser(String id) {
         log.info("In method getUser(String)");
         return userMapper.toUserResponse(
-                userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found")));
+                userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED)));
     }
 
     public UserResponse getMyInfo() {
-        var contextHolder = SecurityContextHolder.getContext();
-        String name = contextHolder.getAuthentication().getName();
-
-        User user = userRepository.findByUsername(name).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        String name = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(name)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         return userMapper.toUserResponse(user);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.name")
     public UserResponse updateUser(String userId, UserUpdateRequest request) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         userMapper.updateUser(user, request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        var roles = roleRepository.findAllById(request.getRoles());
-        user.setRoles(new HashSet<>(roles));
+
+        // Chỉ ADMIN mới được phép thay đổi roles
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin && request.getRoles() != null) {
+            var roles = roleRepository.findAllById(request.getRoles());
+            user.setRoles(new HashSet<>(roles));
+        }
+
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteUser(String userId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         userRepository.deleteById(userId);
     }
 }

@@ -2,6 +2,7 @@ package com.pet_care.identity.configuration;
 
 import java.util.HashSet;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,20 +27,20 @@ import lombok.extern.slf4j.Slf4j;
 public class ApplicationInitConfig {
 
     @NonFinal
-    static final String ADMIN_USER_NAME = "admin";
+    @Value("${app.admin.username:admin}")
+    String adminUsername;
 
     @NonFinal
-    static final String ADMIN_PASSWORD = "admin";
+    @Value("${app.admin.password}")
+    String adminPassword;
 
     PasswordEncoder passwordEncoder;
 
     @Bean
-    //    @ConditionalOnProperty(prefix = "spring", value = "datasource.driverClassName", havingValue =
-    // "com.mysql.cj.jdbc.Driver")
     ApplicationRunner applicationRunner(UserRepository userRepository, RoleRepository roleRepository) {
         log.info("Init application....");
         return args -> {
-            if (userRepository.findByUsername(ADMIN_USER_NAME).isEmpty()) {
+            if (userRepository.findByUsername(adminUsername).isEmpty()) {
                 roleRepository.save(Role.builder()
                         .name(PredefinedRole.USER_ROLE)
                         .description("User role")
@@ -54,15 +55,15 @@ public class ApplicationInitConfig {
                 roles.add(adminRole);
 
                 User user = User.builder()
-                        .username(ADMIN_USER_NAME)
-                        .password(passwordEncoder.encode(ADMIN_PASSWORD))
+                        .username(adminUsername)
+                        .password(passwordEncoder.encode(adminPassword))
                         .roles(roles)
                         .build();
 
                 userRepository.save(user);
-                log.warn("admin user has been created with default password: admin, please change it");
+                log.warn("Admin user '{}' has been created with default password. Please change it immediately!", adminUsername);
             }
-            log.info("Application initialization completed .....");
+            log.info("Application initialization completed.");
         };
     }
 }

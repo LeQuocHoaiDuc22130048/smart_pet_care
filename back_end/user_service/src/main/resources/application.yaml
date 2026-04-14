@@ -1,0 +1,47 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /pet_care_user
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:demo}
+  api-key: ${CLOUDINARY_API_KEY:demo}
+  api-secret: ${CLOUDINARY_API_SECRET:demo}
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:your-256-bit-secret-key-here-change-in-production}
+
+spring:
+  application:
+    name: user_service
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  datasource:
+    url: "jdbc:mysql://localhost:3306/pet_care_user?createDatabaseIfNotExist=true"
+    driver-class-name: "com.mysql.cj.jdbc.Driver"
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+logging:
+  level:
+    com.pet_care.user_service: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.apache.catalina: WARN
+    org.apache.tomcat: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%highlight(%-5level)] [user_service] %cyan(%logger{36}) - %msg%n"

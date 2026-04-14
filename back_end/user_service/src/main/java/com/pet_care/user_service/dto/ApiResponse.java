@@ -1,7 +1,6 @@
-package com.pet_care.identity.dto.request;
+package com.pet_care.user_service.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
