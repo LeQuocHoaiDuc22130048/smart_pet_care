@@ -24,7 +24,7 @@ import java.util.Map;
 public class StockEventConsumer {
     OrderRepository orderRepository;
     OrderEventPublisher orderEventPublisher;
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper; // inject bean thay vì new ObjectMapper()
 
     @RabbitListener(queues = "order.queue")
     public void consume(BaseEvent<?> event) {
