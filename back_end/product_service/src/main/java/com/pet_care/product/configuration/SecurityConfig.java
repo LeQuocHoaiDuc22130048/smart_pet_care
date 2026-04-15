@@ -16,15 +16,6 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_ENDPOINTS = {
-            "/products/**",
-            "/products/*/images",
-            "/products/search",
-            "/categories/**",
-            "products/search",
-            "/products?categoryId=&minPrice=&maxPrice=",
-    };
-
     private final CustomJwtDecoder customJwtDecoder;
 
     public SecurityConfig(CustomJwtDecoder customJwtDecoder) {
@@ -36,10 +27,19 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Public: đọc sản phẩm và danh mục không cần đăng nhập
+                        .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").permitAll()
+                        // Admin only: tạo/sửa/xóa sản phẩm
                         .requestMatchers(HttpMethod.POST, "/products").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/products/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/products/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.GET, PUBLIC_ENDPOINTS).permitAll()
+                        // Admin only: tạo/sửa/xóa danh mục
+                        .requestMatchers(HttpMethod.POST, "/categories").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/categories/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/categories/**").hasAuthority("ROLE_ADMIN")
+                        // Internal endpoints: yêu cầu xác thực (gọi từ service khác qua JWT)
+                        .requestMatchers("/internal/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

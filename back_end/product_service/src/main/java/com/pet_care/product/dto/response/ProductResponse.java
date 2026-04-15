@@ -1,5 +1,7 @@
 package com.pet_care.product.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.pet_care.product.enums.ProductStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +22,21 @@ public class ProductResponse {
     String description;
     BigDecimal price;
     Integer stockQuantity;
+    ProductStatus status;
     Set<CategoryResponseCreateProduct> category;
+    List<ImageResponse> images;
+
+    @JsonFormat(
+            shape = JsonFormat.Shape.STRING,
+            pattern = "dd-MM-yyyy HH:mm:ss",
+            timezone = "Asia/Ho_Chi_Minh"
+    )
     LocalDateTime createdAt;
+
+    @JsonFormat(
+            shape = JsonFormat.Shape.STRING,
+            pattern = "dd-MM-yyyy HH:mm:ss",
+            timezone = "Asia/Ho_Chi_Minh"
+    )
+    LocalDateTime updatedAt;
 }

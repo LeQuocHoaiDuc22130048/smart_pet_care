@@ -25,15 +25,14 @@ import java.util.List;
 public class ProductController {
 
     ProductService productService;
+    ObjectMapper objectMapper; // inject bean, không new mỗi request
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE )
-    public ApiResponse<ProductResponse> createProduct(@RequestParam("request") String requestJson,
-                                                      @RequestParam("images") List<MultipartFile> images) throws IOException {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ProductResponse> createProduct(
+            @RequestParam("request") String requestJson,
+            @RequestParam("images") List<MultipartFile> images) throws IOException {
 
-        ObjectMapper mapper = new ObjectMapper();
-        ProductCreationRequest request = mapper.readValue(requestJson, ProductCreationRequest.class);
-        log.info(requestJson);
-        log.info(String.valueOf(images.size()));
+        ProductCreationRequest request = objectMapper.readValue(requestJson, ProductCreationRequest.class);
         return ApiResponse.<ProductResponse>builder()
                 .result(productService.createProduct(request, images))
                 .build();
@@ -54,10 +53,12 @@ public class ProductController {
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<ProductResponse> updateProduct(@PathVariable String id, @RequestParam("request") String requestJson,
-                                                      @RequestParam(value = "images", required = false) List<MultipartFile> images) throws IOException {
-        ProductUpdateRequest request = new ObjectMapper().readValue(requestJson, ProductUpdateRequest.class);
+    public ApiResponse<ProductResponse> updateProduct(
+            @PathVariable String id,
+            @RequestParam("request") String requestJson,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images) throws IOException {
 
+        ProductUpdateRequest request = objectMapper.readValue(requestJson, ProductUpdateRequest.class);
         return ApiResponse.<ProductResponse>builder()
                 .result(productService.updateProduct(id, request, images))
                 .build();
