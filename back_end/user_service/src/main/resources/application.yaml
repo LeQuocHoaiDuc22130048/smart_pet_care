@@ -4,12 +4,12 @@ server:
     context-path: /pet_care_user
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:demo}
-  api-key: ${CLOUDINARY_API_KEY:demo}
-  api-secret: ${CLOUDINARY_API_SECRET:demo}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 jwt:
-  signerKey: ${JWT_SIGNER_KEY:your-256-bit-secret-key-here-change-in-production}
+  signerKey: ${JWT_SIGNER_KEY}
 
 spring:
   application:
@@ -20,17 +20,18 @@ spring:
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
   datasource:
-    url: "jdbc:mysql://localhost:3306/pet_care_user?createDatabaseIfNotExist=true"
+    url: ${DB_URL:jdbc:mysql://localhost:3306/pet_care_user?createDatabaseIfNotExist=true}
     driver-class-name: "com.mysql.cj.jdbc.Driver"
-    username: root
-    password: root
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
+    open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.MySQLDialect
   servlet:
     multipart:
       max-file-size: 10MB
