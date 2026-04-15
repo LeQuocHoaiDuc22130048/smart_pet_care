@@ -53,7 +53,7 @@ public class UserProfileService {
         if (request.getBirthday() != null) profile.setBirthday(request.getBirthday());
         if (request.getPhone() != null) profile.setPhone(request.getPhone());
 
-        UserProfile saved = userProfileRepository.save(profile);
+        UserProfile saved = userProfileRepository.saveAndFlush(profile);
 
         if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
             imageAsyncService.uploadUserAvatarAsync(saved.getId(),

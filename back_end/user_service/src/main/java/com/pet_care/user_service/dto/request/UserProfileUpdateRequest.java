@@ -1,5 +1,6 @@
 package com.pet_care.user_service.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,10 +15,10 @@ import java.time.LocalDate;
 @Builder
 public class UserProfileUpdateRequest {
 
-    // multipart field name: firstName
+    @JsonAlias("first_name")
     private String firstName;
 
-    // multipart field name: lastName
+    @JsonAlias("last_name")
     private String lastName;
 
     private String email;
@@ -27,4 +28,13 @@ public class UserProfileUpdateRequest {
     private String phone;
 
     private MultipartFile avatar;
+
+    // Setter alias cho multipart/form-data binding
+    public void setFirst_name(String value) {
+        this.firstName = value;
+    }
+
+    public void setLast_name(String value) {
+        this.lastName = value;
+    }
 }

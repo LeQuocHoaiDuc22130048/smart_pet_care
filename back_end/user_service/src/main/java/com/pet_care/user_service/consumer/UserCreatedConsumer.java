@@ -39,7 +39,7 @@ public class UserCreatedConsumer {
                 .syncedAt(LocalDateTime.now())
                 .build();
 
-        userProfileRepository.save(profile);
+        userProfileRepository.saveAndFlush(profile);
         log.info("Profile created for userId: {}", event.getUserId());
     }
 }

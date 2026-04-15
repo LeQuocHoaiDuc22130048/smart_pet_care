@@ -55,7 +55,8 @@ public class PetService {
         Pet pet = petMapper.toPet(request);
         pet.setUserId(userId);
 
-        Pet saved = petRepository.save(pet);
+        // saveAndFlush để Hibernate flush ngay, @CreationTimestamp được set trước khi map response
+        Pet saved = petRepository.saveAndFlush(pet);
 
         if (request.getImage() != null && !request.getImage().isEmpty()) {
             imageAsyncService.uploadPetImageAsync(saved.getId(),
@@ -76,7 +77,7 @@ public class PetService {
         }
 
         petMapper.updatePet(pet, request);
-        Pet saved = petRepository.save(pet);
+        Pet saved = petRepository.saveAndFlush(pet);
 
         if (request.getImage() != null && !request.getImage().isEmpty()) {
             imageAsyncService.uploadPetImageAsync(saved.getId(),
