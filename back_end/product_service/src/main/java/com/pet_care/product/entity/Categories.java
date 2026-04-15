@@ -33,4 +33,9 @@ public class Categories {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

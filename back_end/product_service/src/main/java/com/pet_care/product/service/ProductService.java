@@ -1,5 +1,6 @@
 package com.pet_care.product.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pet_care.product.dto.ImageUploadData;
 import com.pet_care.product.dto.request.ProductCreationRequest;
 import com.pet_care.product.dto.request.ProductUpdateRequest;
@@ -7,11 +8,14 @@ import com.pet_care.product.dto.request.ReserveStockRequest;
 import com.pet_care.product.dto.request.RollbackStockRequest;
 import com.pet_care.product.dto.response.ProductResponse;
 import com.pet_care.product.entity.Categories;
+import com.pet_care.product.entity.InventoryLog;
 import com.pet_care.product.entity.Products;
+import com.pet_care.product.enums.InventoryChangeType;
 import com.pet_care.product.exception.AppException;
 import com.pet_care.product.exception.ErrorCode;
 import com.pet_care.product.mapper.ProductMapper;
 import com.pet_care.product.repository.CategoryRepository;
+import com.pet_care.product.repository.InventoryLogRepository;
 import com.pet_care.product.repository.ProductImageRepository;
 import com.pet_care.product.repository.ProductRepository;
 import lombok.AccessLevel;
@@ -27,7 +31,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,27 +41,28 @@ import java.util.Set;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ProductService {
+
     ProductMapper productMapper;
     ProductRepository productRepository;
     CategoryRepository categoryRepository;
     ImageAsyncService imageAsyncService;
     ProductImageRepository productImageRepository;
+    InventoryLogRepository inventoryLogRepository;
+    ObjectMapper objectMapper; // inject bean, không new mỗi request
 
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ProductResponse createProduct(ProductCreationRequest request, List<MultipartFile> images) throws IOException {
-        Products products = productMapper.toProduct(request);
-
-        Set<Categories> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryId()));
-
-        if (categories.isEmpty()) throw new AppException(ErrorCode.CATEGORY_NOT_FOUND);
-
-        if (request.getPrimaryImageIndex() >= images.size())
-            throw new AppException(ErrorCode.PRIMARY_IMAGE_INDEX_INVALID);
-
         if (productRepository.existsByProductName(request.getProductName()))
             throw new AppException(ErrorCode.PRODUCT_NAME_EXISTED);
 
+        if (request.getPrimaryImageIndex() == null || request.getPrimaryImageIndex() >= images.size())
+            throw new AppException(ErrorCode.PRIMARY_IMAGE_INDEX_INVALID);
+
+        Set<Categories> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryId()));
+        if (categories.isEmpty()) throw new AppException(ErrorCode.CATEGORY_NOT_FOUND);
+
+        Products products = productMapper.toProduct(request);
         products.setCategories(categories);
 
         try {
@@ -67,164 +71,144 @@ public class ProductService {
             throw new AppException(ErrorCode.PRODUCT_NAME_EXISTED);
         }
 
-        List<ImageUploadData> uploadDataList = new ArrayList<>();
+        // Khởi tạo list rỗng để response không trả null cho images
+        // Ảnh thực sẽ được cập nhật async sau khi upload Cloudinary xong
+        products.setImages(new ArrayList<>());
 
+        List<ImageUploadData> uploadDataList = new ArrayList<>();
         for (int i = 0; i < images.size(); i++) {
-            uploadDataList.add(
-                    new ImageUploadData(
-                            images.get(i).getBytes(),
-                            i == request.getPrimaryImageIndex()
-                    )
-            );
+            uploadDataList.add(new ImageUploadData(
+                    images.get(i).getBytes(),
+                    i == request.getPrimaryImageIndex()
+            ));
         }
 
-        imageAsyncService.uploadImageAsync(
-                products,
-                uploadDataList
+        final Products savedProduct = products;
+        final List<ImageUploadData> finalUploadList = uploadDataList;
+        // Upload ảnh sau khi transaction commit để tránh upload thành công nhưng DB rollback
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCommit() {
+                        imageAsyncService.uploadImageAsync(savedProduct, finalUploadList);
+                    }
+                }
         );
 
         return productMapper.toProductResponse(products);
     }
 
     public List<ProductResponse> getAllProducts() {
-        List<Products> products = productRepository.findAll();
-        return products.stream()
+        return productRepository.findAll().stream()
                 .map(productMapper::toProductResponse)
                 .toList();
     }
 
     public ProductResponse getProductById(String productId) {
-        Products product = productRepository.findById(productId).orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+        Products product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
         return productMapper.toProductResponse(product);
     }
 
-
-    //    UPDATE PRODUCT STARTS HERE
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    public ProductResponse updateProduct(
-            String productId,
-            ProductUpdateRequest request,
-            List<MultipartFile> images
-    ) throws IOException {
-
+    public ProductResponse updateProduct(String productId, ProductUpdateRequest request, List<MultipartFile> images) throws IOException {
         Products product = productRepository.findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        updateProductFields(product, request);
+        if (request.getProductName() != null) product.setProductName(request.getProductName());
+        if (request.getDescription() != null) product.setDescription(request.getDescription());
+        if (request.getPrice() != null) product.setPrice(request.getPrice());
+        if (request.getStockQuantity() != null) product.setStockQuantity(request.getStockQuantity());
+        if (request.getStatus() != null) product.setStatus(request.getStatus());
 
-        updateProductCategories(product, request);
+        // Cập nhật categories chỉ 1 lần (fix duplicate logic cũ)
+        if (request.getCategoryId() != null && !request.getCategoryId().isEmpty()) {
+            Set<Categories> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryId()));
+            product.setCategories(categories);
+        }
 
-        boolean hasNewImages = images != null && !images.isEmpty();
+        if (images != null && !images.isEmpty()) {
+            int primaryIndex = request.getPrimaryImageIndex() != null ? request.getPrimaryImageIndex() : 0;
+            if (primaryIndex < 0 || primaryIndex >= images.size())
+                throw new AppException(ErrorCode.PRIMARY_IMAGE_INDEX_INVALID);
 
+            List<ImageUploadData> uploadDataList = new ArrayList<>();
+            for (int i = 0; i < images.size(); i++) {
+                uploadDataList.add(new ImageUploadData(images.get(i).getBytes(), i == primaryIndex));
+            }
 
-        if (hasNewImages) {
-            processProductImages(product, request, images);
+            final Products savedProduct = product;
+            final List<ImageUploadData> finalList = uploadDataList;
+            // Xóa ảnh cũ và upload ảnh mới SAU KHI transaction commit
+            // Tránh trường hợp: xóa ảnh cũ thành công → upload mới thất bại → sản phẩm mất ảnh
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronizationAdapter() {
+                        @Override
+                        public void afterCommit() {
+                            productImageRepository.deleteByProduct(savedProduct);
+                            imageAsyncService.uploadImageAsync(savedProduct, finalList);
+                        }
+                    }
+            );
         }
 
         return productMapper.toProductResponse(productRepository.save(product));
     }
 
-    private void processProductImages(Products product, ProductUpdateRequest request, List<MultipartFile> images) throws IOException {
-        int primaryImageIndex = request.getPrimaryImageIndex() != null
-                ? request.getPrimaryImageIndex()
-                : 0;
-
-        if (primaryImageIndex < 0 || primaryImageIndex >= images.size()) {
-            throw new AppException(ErrorCode.PRIMARY_IMAGE_INDEX_INVALID);
-        }
-
-        productImageRepository.deleteByProduct(product);
-
-        List<ImageUploadData> uploadDataList = new ArrayList<>();
-        for (int i = 0; i < images.size(); i++) {
-            uploadDataList.add(
-                    new ImageUploadData(
-                            images.get(i).getBytes(),
-                            i == primaryImageIndex
-                    )
-            );
-        }
-
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronizationAdapter() {
-                    @Override
-                    public void afterCommit() {
-                        imageAsyncService.uploadImageAsync(product, uploadDataList);
-                    }
-                }
-        );
-    }
-
-    private void updateProductCategories(Products product, ProductUpdateRequest request) {
-        if (request.getCategoryId() != null && !request.getCategoryId().isEmpty()) {
-            Set<Categories> categories = new HashSet<>(
-                    categoryRepository.findAllById(request.getCategoryId())
-            );
-            product.setCategories(categories);
-        }
-    }
-
-
-    private void updateProductFields(Products product, ProductUpdateRequest request) {
-        if (request.getProductName() != null) {
-            product.setProductName(request.getProductName());
-        }
-        if (request.getDescription() != null) {
-            product.setDescription(request.getDescription());
-        }
-        if (request.getPrice() != null) {
-            product.setPrice(request.getPrice());
-        }
-        if (request.getStockQuantity() != null) {
-            product.setStockQuantity(request.getStockQuantity());
-        }
-        if (request.getStatus() != null) {
-            product.setStatus(request.getStatus());
-        }
-
-        if (request.getCategoryId() != null) {
-            product.setCategories(
-                    new HashSet<>(categoryRepository.findAllById(request.getCategoryId()))
-            );
-        }
-    }
-    //    UPDATE PRODUCT ENDS HERE
-
-    //    DELETE PRODUCT
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteProduct(String productId) {
-        Products product = productRepository.findById(productId).orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
-
+        Products product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
         productRepository.delete(product);
     }
 
-    //    RESERVE STOCK
+    /**
+     * Trừ tồn kho khi đặt hàng.
+     * Dùng PESSIMISTIC_WRITE (SELECT FOR UPDATE) để tránh oversell khi nhiều request đồng thời.
+     * Ghi InventoryLog để audit trail.
+     */
     @Transactional
     public void reserveStock(List<ReserveStockRequest> requests) {
         for (ReserveStockRequest request : requests) {
-            Products products = productRepository.findById(request.getProductId())
+            Products product = productRepository.findByIdForUpdate(request.getProductId())
                     .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-            if (products.getStockQuantity() < request.getQuantity()) {
+            if (product.getStockQuantity() < request.getQuantity())
                 throw new AppException(ErrorCode.NOT_ENOUGH_PRODUCT_STOCK);
-            }
 
-            products.setStockQuantity(products.getStockQuantity() - request.getQuantity());
-            productRepository.save(products);
+            product.setStockQuantity(product.getStockQuantity() - request.getQuantity());
+            productRepository.save(product);
+
+            inventoryLogRepository.save(InventoryLog.builder()
+                    .productId(product.getId())
+                    .changeType(InventoryChangeType.OUT)
+                    .quantity(request.getQuantity())
+                    .reason("Stock reserved for order")
+                    .build());
         }
     }
 
-    //ROLLBACK STOCK
+    /**
+     * Hoàn trả tồn kho khi hủy đơn.
+     * Ghi InventoryLog để audit trail.
+     */
     @Transactional
     public void rollbackStock(List<RollbackStockRequest> requests) {
         for (RollbackStockRequest request : requests) {
-            Products products = productRepository.findById(request.getProductId())
+            Products product = productRepository.findByIdForUpdate(request.getProductId())
                     .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-            products.setStockQuantity(products.getStockQuantity() + request.getQuantity());
-            productRepository.save(products);
+            product.setStockQuantity(product.getStockQuantity() + request.getQuantity());
+            productRepository.save(product);
+
+            inventoryLogRepository.save(InventoryLog.builder()
+                    .productId(product.getId())
+                    .changeType(InventoryChangeType.IN)
+                    .quantity(request.getQuantity())
+                    .reason("Stock rolled back due to order cancellation")
+                    .build());
         }
     }
 }

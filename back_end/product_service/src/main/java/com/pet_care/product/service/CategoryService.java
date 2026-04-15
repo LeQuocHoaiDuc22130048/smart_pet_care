@@ -29,12 +29,12 @@ public class CategoryService {
 
     @PreAuthorize("hasRole('ADMIN')")
     public CategoryResponse createCategory(CategoryCreationRequest request) {
-        Categories categories = categoryMapper.toCategory(request);
+        if (categoryRepository.existsByCategoryName(request.getCategoryName())) {
+            throw new AppException(ErrorCode.CATEGORY_EXISTED);
+        }
 
+        Categories categories = categoryMapper.toCategory(request);
         try {
-            if (categoryRepository.existsByCategoryName((request.getCategoryName()))) {
-                throw new AppException(ErrorCode.CATEGORY_EXISTED);
-            }
             categories = categoryRepository.save(categories);
         } catch (DataIntegrityViolationException e) {
             throw new AppException(ErrorCode.CATEGORY_EXISTED);
@@ -58,14 +58,16 @@ public class CategoryService {
 
     @PreAuthorize("hasRole('ADMIN')")
     public CategoryResponse updateCategory(String id, CategoryUpdateRequest request) {
-        Categories categories = categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
+        Categories categories = categoryRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
         categoryMapper.updateCategory(categories, request);
         return categoryMapper.toCategoryResponse(categoryRepository.save(categories));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteCategory(String categoryId) {
-        Categories categories = categoryRepository.findById(categoryId).orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
+        Categories categories = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
         if (categoryRepository.existsProductByCategoryId(categoryId)) {
             throw new AppException(ErrorCode.CATEGORY_IS_USED);
         }
