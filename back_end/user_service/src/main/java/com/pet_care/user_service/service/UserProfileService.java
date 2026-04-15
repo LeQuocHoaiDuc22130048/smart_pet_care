@@ -1,7 +1,6 @@
 package com.pet_care.user_service.service;
 
 import com.pet_care.user_service.dto.ImageUploadData;
-import com.pet_care.user_service.dto.request.UserProfileInitRequest;
 import com.pet_care.user_service.dto.request.UserProfileUpdateRequest;
 import com.pet_care.user_service.dto.response.UserProfileResponse;
 import com.pet_care.user_service.entity.UserProfile;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -29,32 +27,6 @@ public class UserProfileService {
     UserProfileRepository userProfileRepository;
     ImageAsyncService imageAsyncService;
     UserProfileMapper mapper;
-
-    @Transactional
-    public UserProfileResponse initializeOrUpdateProfile(UserProfileInitRequest request) {
-        log.info("Initializing/Updating profile for user: {}", request.getUserId());
-
-        UserProfile profile = userProfileRepository.findById(request.getUserId())
-                .orElse(new UserProfile());
-
-        if (profile.getId() == null) {
-            profile.setId(request.getUserId());
-        }
-
-        profile.setUsername(request.getUsername());
-        profile.setFirstName(request.getFirstName());
-        profile.setLastName(request.getLastName());
-        profile.setEmail(request.getEmail());
-        profile.setBirthday(request.getBirthday());
-        profile.setSyncedAt(LocalDateTime.now());
-
-        if (profile.getPhone() == null) {
-            profile.setPhone("");
-        }
-
-        UserProfile saved = userProfileRepository.save(profile);
-        return mapper.toUserProfileResponse(saved);
-    }
 
     public UserProfileResponse getMyProfile() {
         String userId = getCurrentUserId();

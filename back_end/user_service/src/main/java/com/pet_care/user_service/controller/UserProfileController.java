@@ -1,7 +1,6 @@
 package com.pet_care.user_service.controller;
 
 import com.pet_care.user_service.dto.ApiResponse;
-import com.pet_care.user_service.dto.request.UserProfileInitRequest;
 import com.pet_care.user_service.dto.request.UserProfileUpdateRequest;
 import com.pet_care.user_service.dto.response.UserProfileResponse;
 import com.pet_care.user_service.service.UserProfileService;
@@ -19,14 +18,6 @@ import java.io.IOException;
 public class UserProfileController {
 
     UserProfileService userProfileService;
-
-    // Internal endpoint: called by identity_service after user registration
-    @PostMapping("/init")
-    public ApiResponse<UserProfileResponse> initProfile(@RequestBody UserProfileInitRequest request) {
-        return ApiResponse.<UserProfileResponse>builder()
-                .result(userProfileService.initializeOrUpdateProfile(request))
-                .build();
-    }
 
     @GetMapping("/me")
     public ApiResponse<UserProfileResponse> getMyProfile() {
