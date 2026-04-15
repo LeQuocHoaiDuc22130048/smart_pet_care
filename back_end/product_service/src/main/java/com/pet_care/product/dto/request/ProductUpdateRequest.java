@@ -2,6 +2,7 @@ package com.pet_care.product.dto.request;
 
 import com.pet_care.product.enums.ProductStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,7 +29,7 @@ public class ProductUpdateRequest {
 
     ProductStatus status;
 
-    @NotBlank
+    @NotEmpty(message = "At least one category is required")
     Set<String> categoryId;
 
     Integer primaryImageIndex;

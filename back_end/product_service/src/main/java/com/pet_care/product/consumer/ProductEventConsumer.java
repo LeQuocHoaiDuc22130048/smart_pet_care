@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 public class ProductEventConsumer {
     ProductService productService;
     EventPublisher eventPublisher;
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper; // inject bean thay vì new ObjectMapper()
 
     @RabbitListener(queues = "product.queue")
     public void consume(BaseEvent<?> event) {

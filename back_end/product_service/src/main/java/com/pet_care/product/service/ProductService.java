@@ -71,6 +71,10 @@ public class ProductService {
             throw new AppException(ErrorCode.PRODUCT_NAME_EXISTED);
         }
 
+        // Khởi tạo list rỗng để response không trả null cho images
+        // Ảnh thực sẽ được cập nhật async sau khi upload Cloudinary xong
+        products.setImages(new ArrayList<>());
+
         List<ImageUploadData> uploadDataList = new ArrayList<>();
         for (int i = 0; i < images.size(); i++) {
             uploadDataList.add(new ImageUploadData(
@@ -129,8 +133,6 @@ public class ProductService {
             if (primaryIndex < 0 || primaryIndex >= images.size())
                 throw new AppException(ErrorCode.PRIMARY_IMAGE_INDEX_INVALID);
 
-            productImageRepository.deleteByProduct(product);
-
             List<ImageUploadData> uploadDataList = new ArrayList<>();
             for (int i = 0; i < images.size(); i++) {
                 uploadDataList.add(new ImageUploadData(images.get(i).getBytes(), i == primaryIndex));
@@ -138,10 +140,13 @@ public class ProductService {
 
             final Products savedProduct = product;
             final List<ImageUploadData> finalList = uploadDataList;
+            // Xóa ảnh cũ và upload ảnh mới SAU KHI transaction commit
+            // Tránh trường hợp: xóa ảnh cũ thành công → upload mới thất bại → sản phẩm mất ảnh
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronizationAdapter() {
                         @Override
                         public void afterCommit() {
+                            productImageRepository.deleteByProduct(savedProduct);
                             imageAsyncService.uploadImageAsync(savedProduct, finalList);
                         }
                     }
