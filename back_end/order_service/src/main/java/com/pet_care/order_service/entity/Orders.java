@@ -28,6 +28,7 @@ public class Orders {
     String shippingAddress;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     OrderStatus status;
 
     LocalDateTime createdAt;
