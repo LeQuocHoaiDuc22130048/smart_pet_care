@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -53,7 +52,6 @@ public class PetService {
 
         Pet pet = petMapper.toPet(request);
         pet.setUserId(userId);
-        pet.setCreatedAt(LocalDateTime.now());
 
         Pet saved = petRepository.save(pet);
 
