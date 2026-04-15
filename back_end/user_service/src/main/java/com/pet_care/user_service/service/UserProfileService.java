@@ -29,8 +29,8 @@ public class UserProfileService {
     UserProfileMapper mapper;
 
     public UserProfileResponse getMyProfile() {
-        String userId = getCurrentUserId();
-        UserProfile profile = userProfileRepository.findById(userId)
+        String username = getCurrentUsername();
+        UserProfile profile = userProfileRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
         return mapper.toUserProfileResponse(profile);
     }
@@ -43,8 +43,8 @@ public class UserProfileService {
 
     @Transactional
     public UserProfileResponse updateMyProfile(UserProfileUpdateRequest request) throws IOException {
-        String userId = getCurrentUserId();
-        UserProfile profile = userProfileRepository.findById(userId)
+        String username = getCurrentUsername();
+        UserProfile profile = userProfileRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
 
         if (request.getFirstName() != null) profile.setFirstName(request.getFirstName());
@@ -56,14 +56,14 @@ public class UserProfileService {
         UserProfile saved = userProfileRepository.save(profile);
 
         if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
-            imageAsyncService.uploadUserAvatarAsync(userId,
+            imageAsyncService.uploadUserAvatarAsync(saved.getId(),
                     ImageUploadData.builder().image(request.getAvatar().getBytes()).build());
         }
 
         return mapper.toUserProfileResponse(saved);
     }
 
-    private String getCurrentUserId() {
+    private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }

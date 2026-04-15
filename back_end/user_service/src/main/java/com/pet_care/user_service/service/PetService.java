@@ -8,6 +8,7 @@ import com.pet_care.user_service.exception.AppException;
 import com.pet_care.user_service.exception.ErrorCode;
 import com.pet_care.user_service.mapper.PetMapper;
 import com.pet_care.user_service.repository.PetRepository;
+import com.pet_care.user_service.repository.UserProfileRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -28,16 +29,17 @@ public class PetService {
     PetRepository petRepository;
     PetMapper petMapper;
     ImageAsyncService imageAsyncService;
+    UserProfileRepository userProfileRepository;
 
     public List<PetResponse> getMyPets() {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
         return petRepository.findByUserId(userId).stream()
                 .map(petMapper::toPetResponse)
                 .toList();
     }
 
     public PetResponse getPetById(String petId) {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
         Pet pet = petRepository.findById(petId)
                 .orElseThrow(() -> new AppException(ErrorCode.PET_NOT_FOUND));
         if (!pet.getUserId().equals(userId)) {
@@ -48,7 +50,7 @@ public class PetService {
 
     @Transactional
     public PetResponse createPet(PetRequest request) throws IOException {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
 
         Pet pet = petMapper.toPet(request);
         pet.setUserId(userId);
@@ -65,7 +67,7 @@ public class PetService {
 
     @Transactional
     public PetResponse updatePet(String petId, PetRequest request) throws IOException {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
         Pet pet = petRepository.findById(petId)
                 .orElseThrow(() -> new AppException(ErrorCode.PET_NOT_FOUND));
 
@@ -85,7 +87,7 @@ public class PetService {
     }
 
     public void deletePet(String petId) {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
         Pet pet = petRepository.findById(petId)
                 .orElseThrow(() -> new AppException(ErrorCode.PET_NOT_FOUND));
 
@@ -96,7 +98,11 @@ public class PetService {
         petRepository.delete(pet);
     }
 
-    private String getCurrentUserId() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
+    /** JWT sub = username → lấy userId (UUID) từ UserProfile */
+    private String getMyUserId() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userProfileRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND))
+                .getId();
     }
 }

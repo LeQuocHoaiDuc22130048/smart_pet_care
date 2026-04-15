@@ -7,6 +7,7 @@ import com.pet_care.user_service.exception.AppException;
 import com.pet_care.user_service.exception.ErrorCode;
 import com.pet_care.user_service.mapper.UserAddressMapper;
 import com.pet_care.user_service.repository.UserAddressRepository;
+import com.pet_care.user_service.repository.UserProfileRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -25,9 +26,10 @@ public class UserAddressService {
 
     UserAddressRepository userAddressRepository;
     UserAddressMapper userAddressMapper;
+    UserProfileRepository userProfileRepository;
 
     public List<UserAddressResponse> getMyAddresses() {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
         return userAddressRepository.findByUserId(userId).stream()
                 .map(userAddressMapper::toUserAddressResponse)
                 .toList();
@@ -35,9 +37,8 @@ public class UserAddressService {
 
     @Transactional
     public UserAddressResponse createAddress(UserAddressRequest request) {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
 
-        // Nếu đây là địa chỉ mặc định, bỏ mặc định của địa chỉ cũ
         if (Boolean.TRUE.equals(request.getIsDefault())) {
             clearDefaultAddress(userId);
         }
@@ -50,7 +51,7 @@ public class UserAddressService {
 
     @Transactional
     public UserAddressResponse updateAddress(String addressId, UserAddressRequest request) {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
         UserAddress address = userAddressRepository.findById(addressId)
                 .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_FOUND));
 
@@ -67,7 +68,7 @@ public class UserAddressService {
     }
 
     public void deleteAddress(String addressId) {
-        String userId = getCurrentUserId();
+        String userId = getMyUserId();
         UserAddress address = userAddressRepository.findById(addressId)
                 .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_FOUND));
 
@@ -86,7 +87,11 @@ public class UserAddressService {
                 });
     }
 
-    private String getCurrentUserId() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
+    /** JWT sub = username → lấy userId (UUID) từ UserProfile */
+    private String getMyUserId() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userProfileRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND))
+                .getId();
     }
 }
