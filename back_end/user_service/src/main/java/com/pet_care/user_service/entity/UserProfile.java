@@ -3,6 +3,7 @@ package com.pet_care.user_service.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Table(name = "user_profiles")
@@ -29,7 +30,7 @@ public class UserProfile {
     @Column(unique = true)
     private String email;
 
-    private LocalDateTime birthday;
+    private LocalDate birthday;
 
     @Column(length = 10)
     String phone;

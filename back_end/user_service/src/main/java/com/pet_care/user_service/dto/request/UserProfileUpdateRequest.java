@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -23,7 +23,7 @@ public class UserProfileUpdateRequest {
 
     private String email;
 
-    private LocalDateTime birthday;
+    private LocalDate birthday;
 
     private String phone;
 
