@@ -91,10 +91,17 @@ public class OrderService {
     }
 
     @Transactional
-    public void updatePaymentStatus(String orderId, String status) {
+    public OrderResponse updatePaymentStatus(String orderId, String status) {
         Orders orders = getOrder(orderId);
 
-        if (orders.getStatus() == OrderStatus.PAID) return;
+        // Không cho phép cập nhật nếu đã ở trạng thái cuối
+        if (orders.getStatus() == OrderStatus.PAID ||
+            orders.getStatus() == OrderStatus.CANCELLED ||
+            orders.getStatus() == OrderStatus.PAYMENT_FAILED) {
+            log.warn("Order {} already in terminal status {}, ignoring payment update",
+                    orderId, orders.getStatus());
+            return orderMapper.toOrderResponse(orders);
+        }
 
         switch (status) {
             case "PAID":
@@ -106,7 +113,7 @@ public class OrderService {
             default:
                 throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
-        orderRepository.save(orders);
+        return orderMapper.toOrderResponse(orderRepository.save(orders));
     }
 
     @Transactional

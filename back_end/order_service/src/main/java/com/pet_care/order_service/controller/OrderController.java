@@ -29,10 +29,10 @@ public class OrderController {
     }
 
     @PostMapping("/payment-status")
-    public void updatePaymentStatus(@RequestBody PaymentStatusRequest request) {
-        // Endpoint này chỉ nên được gọi từ payment_service nội bộ
-        // Đã được bảo vệ bởi JWT authentication ở SecurityConfig
-        orderService.updatePaymentStatus(request.getOrderId(), request.getStatus());
+    public ApiResponse<OrderResponse> updatePaymentStatus(@RequestBody PaymentStatusRequest request) {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.updatePaymentStatus(request.getOrderId(), request.getStatus()))
+                .build();
     }
 
     @GetMapping("/my")
