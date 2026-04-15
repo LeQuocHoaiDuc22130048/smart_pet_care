@@ -1,0 +1,33 @@
+server:
+  port: 8084
+  servlet:
+    context-path: /pet_care_cart
+
+spring:
+  application:
+    name: cart_service
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/pet_care_cart?createDatabaseIfNotExist=true}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY}
+
+services:
+  product-service:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8081/pet_care_product}
+
+logging:
+  level:
+    com.pet_care.cart: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%highlight(%-5level)] [cart_service] %cyan(%logger{36}) - %msg%n"
