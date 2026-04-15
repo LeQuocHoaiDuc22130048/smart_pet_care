@@ -13,7 +13,8 @@ public enum ErrorCode {
 
     ORDER_NOT_FOUND(3001, "Order not found", HttpStatus.NOT_FOUND),
     ORDER_STATUS_INVALID(3002, "Order status invalid", HttpStatus.BAD_REQUEST),
-    PRODUCT_NOT_FOUND(3003, "Product not found", HttpStatus.NOT_FOUND),
+    ORDER_ALREADY_TERMINAL(3003, "Order is already in a terminal status and cannot be updated", HttpStatus.BAD_REQUEST),
+    PRODUCT_NOT_FOUND(3004, "Product not found", HttpStatus.NOT_FOUND),
 
     INVALID_PAYMENT_STATUS(4001, "Invalid payment status", HttpStatus.BAD_REQUEST);
 

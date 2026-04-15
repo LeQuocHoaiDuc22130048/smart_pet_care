@@ -98,9 +98,7 @@ public class OrderService {
         if (orders.getStatus() == OrderStatus.PAID ||
             orders.getStatus() == OrderStatus.CANCELLED ||
             orders.getStatus() == OrderStatus.PAYMENT_FAILED) {
-            log.warn("Order {} already in terminal status {}, ignoring payment update",
-                    orderId, orders.getStatus());
-            return orderMapper.toOrderResponse(orders);
+            throw new AppException(ErrorCode.ORDER_ALREADY_TERMINAL);
         }
 
         switch (status) {
