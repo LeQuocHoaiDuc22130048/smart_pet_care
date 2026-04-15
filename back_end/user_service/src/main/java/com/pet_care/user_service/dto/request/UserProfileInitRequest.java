@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -29,5 +29,5 @@ public class UserProfileInitRequest {
     private String email;
 
     @JsonProperty("birthday")
-    private LocalDateTime birthday;
+    private LocalDate birthday;
 }

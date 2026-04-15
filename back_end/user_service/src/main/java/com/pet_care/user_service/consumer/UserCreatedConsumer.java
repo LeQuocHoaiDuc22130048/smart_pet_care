@@ -34,14 +34,12 @@ public class UserCreatedConsumer {
                 .firstName(event.getFirstName())
                 .lastName(event.getLastName())
                 .email(event.getEmail())
-                .birthday(event.getBirthday() != null
-                        ? event.getBirthday().atStartOfDay()
-                        : null)
+                .birthday(event.getBirthday())
                 .phone("")
                 .syncedAt(LocalDateTime.now())
                 .build();
 
-        userProfileRepository.save(profile);
+        userProfileRepository.saveAndFlush(profile);
         log.info("Profile created for userId: {}", event.getUserId());
     }
 }

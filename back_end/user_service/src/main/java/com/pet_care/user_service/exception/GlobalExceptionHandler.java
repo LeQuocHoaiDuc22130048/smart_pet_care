@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
-        log.error("Unhandled exception", e);
+        log.error("Unhandled exception: {}", e.getMessage(), e);
         ErrorCode errorCode = ErrorCode.UNCATEGORIZED_EXCEPTION;
         return ResponseEntity.status(errorCode.getStatus())
                 .body(ApiResponse.<Void>builder()

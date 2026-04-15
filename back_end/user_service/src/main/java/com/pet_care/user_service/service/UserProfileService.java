@@ -1,7 +1,6 @@
 package com.pet_care.user_service.service;
 
 import com.pet_care.user_service.dto.ImageUploadData;
-import com.pet_care.user_service.dto.request.UserProfileInitRequest;
 import com.pet_care.user_service.dto.request.UserProfileUpdateRequest;
 import com.pet_care.user_service.dto.response.UserProfileResponse;
 import com.pet_care.user_service.entity.UserProfile;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -30,35 +28,9 @@ public class UserProfileService {
     ImageAsyncService imageAsyncService;
     UserProfileMapper mapper;
 
-    @Transactional
-    public UserProfileResponse initializeOrUpdateProfile(UserProfileInitRequest request) {
-        log.info("Initializing/Updating profile for user: {}", request.getUserId());
-
-        UserProfile profile = userProfileRepository.findById(request.getUserId())
-                .orElse(new UserProfile());
-
-        if (profile.getId() == null) {
-            profile.setId(request.getUserId());
-        }
-
-        profile.setUsername(request.getUsername());
-        profile.setFirstName(request.getFirstName());
-        profile.setLastName(request.getLastName());
-        profile.setEmail(request.getEmail());
-        profile.setBirthday(request.getBirthday());
-        profile.setSyncedAt(LocalDateTime.now());
-
-        if (profile.getPhone() == null) {
-            profile.setPhone("");
-        }
-
-        UserProfile saved = userProfileRepository.save(profile);
-        return mapper.toUserProfileResponse(saved);
-    }
-
     public UserProfileResponse getMyProfile() {
-        String userId = getCurrentUserId();
-        UserProfile profile = userProfileRepository.findById(userId)
+        String username = getCurrentUsername();
+        UserProfile profile = userProfileRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
         return mapper.toUserProfileResponse(profile);
     }
@@ -71,8 +43,8 @@ public class UserProfileService {
 
     @Transactional
     public UserProfileResponse updateMyProfile(UserProfileUpdateRequest request) throws IOException {
-        String userId = getCurrentUserId();
-        UserProfile profile = userProfileRepository.findById(userId)
+        String username = getCurrentUsername();
+        UserProfile profile = userProfileRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
 
         if (request.getFirstName() != null) profile.setFirstName(request.getFirstName());
@@ -81,17 +53,17 @@ public class UserProfileService {
         if (request.getBirthday() != null) profile.setBirthday(request.getBirthday());
         if (request.getPhone() != null) profile.setPhone(request.getPhone());
 
-        UserProfile saved = userProfileRepository.save(profile);
+        UserProfile saved = userProfileRepository.saveAndFlush(profile);
 
         if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
-            imageAsyncService.uploadUserAvatarAsync(userId,
+            imageAsyncService.uploadUserAvatarAsync(saved.getId(),
                     ImageUploadData.builder().image(request.getAvatar().getBytes()).build());
         }
 
         return mapper.toUserProfileResponse(saved);
     }
 
-    private String getCurrentUserId() {
+    private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }

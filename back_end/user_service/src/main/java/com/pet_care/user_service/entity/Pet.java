@@ -4,6 +4,8 @@ import com.pet_care.user_service.enums.Gender;
 import com.pet_care.user_service.enums.PetSpecies;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.LocalDateTime;
 
 @Table(name = "pets")
@@ -37,5 +39,8 @@ public class Pet {
     Boolean isNeutered;
     String healthNotes;
     String imageUrl;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     LocalDateTime createdAt;
 }

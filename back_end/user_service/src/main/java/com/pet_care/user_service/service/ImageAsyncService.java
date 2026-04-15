@@ -12,8 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,10 +29,9 @@ public class ImageAsyncService {
             String avatarUrl = cloudinaryService.uploadUserAvatar(imageData.getImage());
 
             UserProfile user = userProfileRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
 
             user.setAvatarUrl(avatarUrl);
-            user.setUpdatedAt(LocalDateTime.now());
             userProfileRepository.save(user);
 
             log.info("Completed avatar upload for user id: {} -> {}", userId, avatarUrl);
@@ -50,7 +47,7 @@ public class ImageAsyncService {
             String imageUrl = cloudinaryService.uploadPetImage(imageData.getImage());
 
             Pet pet = petRepository.findById(petId)
-                    .orElseThrow(() -> new RuntimeException("Pet not found"));
+                    .orElseThrow(() -> new RuntimeException("Pet not found: " + petId));
 
             pet.setImageUrl(imageUrl);
             petRepository.save(pet);

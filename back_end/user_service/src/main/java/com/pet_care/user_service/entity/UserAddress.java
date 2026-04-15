@@ -13,7 +13,7 @@ import lombok.*;
 public class UserAddress {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
     @Column(name = "user_id", nullable = false)

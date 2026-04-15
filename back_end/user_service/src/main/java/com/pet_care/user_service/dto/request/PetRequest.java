@@ -1,6 +1,6 @@
 package com.pet_care.user_service.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.pet_care.user_service.enums.Gender;
 import com.pet_care.user_service.enums.PetSpecies;
 import lombok.AllArgsConstructor;
@@ -27,11 +27,22 @@ public class PetRequest {
 
     private Gender gender;
 
-    @JsonProperty("is_neutered")
+    // Chấp nhận cả "isNeutered" (camelCase) và "is_neutered" (snake_case)
+    @JsonAlias("is_neutered")
     private Boolean isNeutered;
 
-    @JsonProperty("health_notes")
+    // Chấp nhận cả "healthNotes" (camelCase) và "health_notes" (snake_case)
+    @JsonAlias("health_notes")
     private String healthNotes;
 
     private MultipartFile image;
+
+    // Setter alias cho multipart/form-data binding (Spring dùng setter name)
+    public void setIs_neutered(Boolean value) {
+        this.isNeutered = value;
+    }
+
+    public void setHealth_notes(String value) {
+        this.healthNotes = value;
+    }
 }
