@@ -1,6 +1,5 @@
 package com.pet_care.user_service.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pet_care.user_service.enums.Gender;
 import com.pet_care.user_service.enums.PetSpecies;
 import lombok.AllArgsConstructor;
@@ -27,10 +26,10 @@ public class PetRequest {
 
     private Gender gender;
 
-    @JsonProperty("is_neutered")
+    // multipart field name: isNeutered
     private Boolean isNeutered;
 
-    @JsonProperty("health_notes")
+    // multipart field name: healthNotes
     private String healthNotes;
 
     private MultipartFile image;

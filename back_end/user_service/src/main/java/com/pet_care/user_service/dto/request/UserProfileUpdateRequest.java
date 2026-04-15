@@ -1,6 +1,5 @@
 package com.pet_care.user_service.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,10 +14,10 @@ import java.time.LocalDate;
 @Builder
 public class UserProfileUpdateRequest {
 
-    @JsonProperty("first_name")
+    // multipart field name: firstName
     private String firstName;
 
-    @JsonProperty("last_name")
+    // multipart field name: lastName
     private String lastName;
 
     private String email;
