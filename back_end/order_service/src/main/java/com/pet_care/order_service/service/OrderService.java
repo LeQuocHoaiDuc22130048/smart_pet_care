@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -151,17 +150,14 @@ public class OrderService {
 
     // get existing order with editable status or create a new one
     private Orders getOrCreateOrder(String userId) {
-
-        List<OrderStatus> editableStatuses = List.of(
-                OrderStatus.PENDING,
-                OrderStatus.PAID
-        );
+        // Chỉ PENDING mới được thêm/sửa items
+        // PAID đã thanh toán rồi, không được chỉnh sửa
+        List<OrderStatus> editableStatuses = List.of(OrderStatus.PENDING);
 
         return orderRepository.findFirstByUserIdAndStatusIn(userId, editableStatuses)
                 .orElseGet(() -> Orders.builder()
                         .userId(userId)
                         .status(OrderStatus.PENDING)
-                        .createdAt(LocalDateTime.now())
                         .items(new ArrayList<>())
                         .totalPrice(BigDecimal.ZERO)
                         .build());
@@ -173,10 +169,11 @@ public class OrderService {
     }
 
     // update existing order item with new quantity and price
-    private void updateItem(OrderItem item, int addedQuantity, BigDecimal price) {
+    private void updateItem(OrderItem item, int addedQuantity, BigDecimal unitPrice) {
         int newQuantity = item.getQuantity() + addedQuantity;
         item.setQuantity(newQuantity);
-        item.setPrice(price.multiply(BigDecimal.valueOf(addedQuantity)));
+        // Tính lại tổng giá theo số lượng mới (không phải chỉ addedQuantity)
+        item.setPrice(unitPrice.multiply(BigDecimal.valueOf(newQuantity)));
     }
 
     @Transactional
