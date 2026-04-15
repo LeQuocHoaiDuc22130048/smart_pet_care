@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,15 +36,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class OrderService {
+
     OrderMapper orderMapper;
     ProductClient productClient;
     OrderRepository orderRepository;
     OrderEventPublisher orderEventPublisher;
 
-
     @Transactional
     public OrderResponse createOrder(String userId, CreateOrderRequest request) {
-
         Orders orders = getOrCreateOrder(userId);
 
         Map<String, OrderItem> existingItems = orders.getItems()
@@ -54,7 +52,6 @@ public class OrderService {
 
         for (OrderItemRequest req : request.getItems()) {
             ProductResponse product = productClient.getProductById(req.getProductId()).getResult();
-
             OrderItem orderItem = existingItems.get(req.getProductId());
 
             if (orderItem != null) {
@@ -65,28 +62,44 @@ public class OrderService {
         }
 
         orders.setTotalPrice(calculateTotalPrice(orders.getItems()));
-
         Orders savedOrder = orderRepository.save(orders);
-
         publishReserveStockEvent(savedOrder);
 
         return orderMapper.toOrderResponse(savedOrder);
     }
 
-    @Transactional
-    public void cancelOrder(String orderId) {
-        Orders orders = getOrder(orderId);
+    public List<OrderResponse> getOrdersByUser(String userId) {
+        return orderMapper.toOrderResponseList(orderRepository.findByUserId(userId));
+    }
 
-        if (orders.getStatus() == OrderStatus.CANCELLED) return;
-
-        publishRollbackEvent(orders);
+    public OrderResponse getOrderById(String orderId, String userId) {
+        Orders order = getOrder(orderId);
+        if (!order.getUserId().equals(userId))
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        return orderMapper.toOrderResponse(order);
     }
 
     @Transactional
-    public void updatePaymentStatus(String orderId, String status) {
+    public void cancelOrder(String orderId, String userId) {
+        Orders orders = getOrder(orderId);
+        if (!orders.getUserId().equals(userId))
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        if (orders.getStatus() == OrderStatus.CANCELLED) return;
+        publishRollbackEvent(orders);
+        orders.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(orders);
+    }
+
+    @Transactional
+    public OrderResponse updatePaymentStatus(String orderId, String status) {
         Orders orders = getOrder(orderId);
 
-        if (orders.getStatus() == OrderStatus.PAID) return;
+        // Không cho phép cập nhật nếu đã ở trạng thái cuối
+        if (orders.getStatus() == OrderStatus.PAID ||
+            orders.getStatus() == OrderStatus.CANCELLED ||
+            orders.getStatus() == OrderStatus.PAYMENT_FAILED) {
+            throw new AppException(ErrorCode.ORDER_ALREADY_TERMINAL);
+        }
 
         switch (status) {
             case "PAID":
@@ -98,10 +111,36 @@ public class OrderService {
             default:
                 throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
-        orderRepository.save(orders);
+        return orderMapper.toOrderResponse(orderRepository.save(orders));
     }
 
-    // call product service to rollback stock for the order items
+    @Transactional
+    public void handlePaymentFailed(Orders order) {
+        publishRollbackEvent(order);
+        order.setStatus(OrderStatus.FAILED);
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    public void updateOrderStatusFromPayment(String orderId, String status) {
+        Orders order = getOrder(orderId);
+        OrderStatus newStatus = OrderStatus.valueOf(status);
+        order.setStatus(newStatus);
+        orderRepository.save(order);
+        log.info("Updated order {} status to {}", orderId, newStatus);
+    }
+
+    @Transactional
+    public void cancelOrderDueToPaymentFailure(String orderId) {
+        Orders order = getOrder(orderId);
+        publishRollbackEvent(order);
+        order.setStatus(OrderStatus.PAYMENT_FAILED);
+        orderRepository.save(order);
+        log.info("Cancelled order {} due to payment failure", orderId);
+    }
+
+    // --- Private helpers ---
+
     private void publishRollbackEvent(Orders orders) {
         List<RollbackStockRequest> items = orders.getItems().stream()
                 .map(i -> RollbackStockRequest.builder()
@@ -111,7 +150,6 @@ public class OrderService {
         orderEventPublisher.publish("stock.rollback", items);
     }
 
-    // publish order event to rabbitmq
     private void publishReserveStockEvent(Orders savedOrder) {
         List<OrderItemEvent> itemEvents = savedOrder.getItems()
                 .stream()
@@ -130,18 +168,16 @@ public class OrderService {
         orderEventPublisher.publish("stock.reserve", event);
     }
 
-    // calculate total price of the order
     private BigDecimal calculateTotalPrice(List<OrderItem> items) {
         return items.stream()
                 .map(OrderItem::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    // create order item from request and product details
     private OrderItem createItem(Orders orders, OrderItemRequest req, ProductResponse product) {
         BigDecimal price = product.getPrice().multiply(BigDecimal.valueOf(req.getQuantity()));
-        return OrderItem.builder().
-                order(orders)
+        return OrderItem.builder()
+                .order(orders)
                 .productId(req.getProductId())
                 .productName(product.getProductName())
                 .quantity(req.getQuantity())
@@ -149,64 +185,26 @@ public class OrderService {
                 .build();
     }
 
-    // get existing order with editable status or create a new one
     private Orders getOrCreateOrder(String userId) {
-
-        List<OrderStatus> editableStatuses = List.of(
-                OrderStatus.PENDING,
-                OrderStatus.PAID
-        );
-
-        return orderRepository.findFirstByUserIdAndStatusIn(userId, editableStatuses)
+        // Chỉ PENDING mới được thêm/sửa items — PAID đã thanh toán không được chỉnh sửa
+        return orderRepository.findFirstByUserIdAndStatusIn(userId, List.of(OrderStatus.PENDING))
                 .orElseGet(() -> Orders.builder()
                         .userId(userId)
                         .status(OrderStatus.PENDING)
-                        .createdAt(LocalDateTime.now())
                         .items(new ArrayList<>())
                         .totalPrice(BigDecimal.ZERO)
                         .build());
     }
 
-    // get order by id
     private Orders getOrder(String orderId) {
-        return orderRepository.findById(orderId).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
     }
 
-    // update existing order item with new quantity and price
-    private void updateItem(OrderItem item, int addedQuantity, BigDecimal price) {
+    private void updateItem(OrderItem item, int addedQuantity, BigDecimal unitPrice) {
         int newQuantity = item.getQuantity() + addedQuantity;
         item.setQuantity(newQuantity);
-        item.setPrice(price.multiply(BigDecimal.valueOf(addedQuantity)));
-    }
-
-    @Transactional
-    public void handlePaymentFailed(Orders order) {
-        publishRollbackEvent(order);
-        order.setStatus(OrderStatus.FAILED);
-        orderRepository.save(order);
-    }
-
-    /**
-     * Cập nhật trạng thái đơn hàng từ payment event
-     */
-    @Transactional
-    public void updateOrderStatusFromPayment(String orderId, String status) {
-        Orders order = getOrder(orderId);
-        OrderStatus newStatus = OrderStatus.valueOf(status);
-        order.setStatus(newStatus);
-        orderRepository.save(order);
-        log.info("Updated order {} status to {}", orderId, newStatus);
-    }
-
-    /**
-     * Hủy đơn hàng khi thanh toán thất bại
-     */
-    @Transactional
-    public void cancelOrderDueToPaymentFailure(String orderId) {
-        Orders order = getOrder(orderId);
-        publishRollbackEvent(order);
-        order.setStatus(OrderStatus.PAYMENT_FAILED);
-        orderRepository.save(order);
-        log.info("Cancelled order {} due to payment failure", orderId);
+        // Tính lại tổng giá theo số lượng mới
+        item.setPrice(unitPrice.multiply(BigDecimal.valueOf(newQuantity)));
     }
 }

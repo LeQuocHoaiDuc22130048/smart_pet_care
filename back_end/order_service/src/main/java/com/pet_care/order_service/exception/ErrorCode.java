@@ -7,28 +7,20 @@ import org.springframework.http.HttpStatusCode;
 @Getter
 public enum ErrorCode {
     UNCATEGORIZED_EXCEPTION(9999, "Uncategorized error", HttpStatus.INTERNAL_SERVER_ERROR),
-    PRODUCT_NAME_EXISTED(2001, "Product name existed", HttpStatus.BAD_REQUEST),
-    PRODUCT_NOT_FOUND(2002, "Product not found", HttpStatus.NOT_FOUND),
-
-    PRIMARY_IMAGE_REQUIRED(2003, "Primary image is required", HttpStatus.BAD_REQUEST),
-    PRIMARY_IMAGE_INDEX_INVALID(2004, "Primary image index is invalid", HttpStatus.BAD_REQUEST),
-
-    CATEGORY_EXISTED(2101, "User existed", HttpStatus.BAD_REQUEST),
-    CATEGORY_NOT_FOUND(2102, "Category not found", HttpStatus.NOT_FOUND),
-    CATEGORY_IS_USED(2103, "Category is used by products", HttpStatus.BAD_REQUEST),
     INVALID_KEY(1004, "Invalid message key", HttpStatus.BAD_REQUEST),
-    UNAUTHORIZED(1005, "you do not have permission", HttpStatus.FORBIDDEN),
-    UNAUTHENTICATED(1006, "unauthenticated", HttpStatus.UNAUTHORIZED),
+    UNAUTHORIZED(1005, "You do not have permission", HttpStatus.FORBIDDEN),
+    UNAUTHENTICATED(1006, "Unauthenticated", HttpStatus.UNAUTHORIZED),
 
     ORDER_NOT_FOUND(3001, "Order not found", HttpStatus.NOT_FOUND),
     ORDER_STATUS_INVALID(3002, "Order status invalid", HttpStatus.BAD_REQUEST),
+    ORDER_ALREADY_TERMINAL(3003, "Order is already in a terminal status and cannot be updated", HttpStatus.BAD_REQUEST),
+    PRODUCT_NOT_FOUND(3004, "Product not found", HttpStatus.NOT_FOUND),
 
-    INVALID_PAYMENT_STATUS(4001, "Invalid payment status", HttpStatus.BAD_REQUEST)
-    ;
+    INVALID_PAYMENT_STATUS(4001, "Invalid payment status", HttpStatus.BAD_REQUEST);
 
-    private int code;
-    private String message;
-    private HttpStatusCode status;
+    private final int code;
+    private final String message;
+    private final HttpStatusCode status;
 
     ErrorCode(int code, String message, HttpStatusCode status) {
         this.code = code;

@@ -3,44 +3,44 @@ server:
   servlet:
     context-path: /pet_care_order
 
-logging:
-  level:
-    org.springframework.web: DEBUG
-    org.springframework.web.multipart: DEBUG
-    org.springframework.web.servlet.DispatcherServlet: DEBUG
-
 feign:
   client:
     config:
       default:
         connectTimeout: 5000
         readTimeout: 5000
-        loggerLevel: full
+        loggerLevel: basic
 
 spring:
   application:
     name: order_service
   datasource:
-    url: "jdbc:mysql://localhost:3306/pet_care_order?createDatabaseIfNotExist=true"
+    url: ${DB_URL:jdbc:mysql://localhost:3306/pet_care_order?createDatabaseIfNotExist=true}
     driver-class-name: "com.mysql.cj.jdbc.Driver"
-    username: root
-    password: root
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
-
+    show-sql: false
+    open-in-view: false
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
-    template:
-      exchange: order.exchange
-      routing-key: order.created
-      default-receive-queue: order.created.queue
-  security:
-    oauth2:
-      resource server:
-        jwt:
-          issuer-uri: "http://localhost:8080/pet_care_identity"
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY}
+
+services:
+  product-service:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8081/pet_care_product}
+
+logging:
+  level:
+    com.pet_care.order_service: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%highlight(%-5level)] [order_service] %cyan(%logger{36}) - %msg%n"
