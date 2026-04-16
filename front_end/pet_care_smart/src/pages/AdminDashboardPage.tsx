@@ -283,7 +283,6 @@ const AdminDashboardPage = () => {
 
     const [newCategoryName, setNewCategoryName] = useState('');
     const [editingCategory, setEditingCategory] = useState<{ index: number; name: string } | null>(null);
-    const [editingCategory, setEditingCategory] = useState<{ index: number; name: string } | null>(null);
 
     const addCategory = () => {
         const name = newCategoryName.trim();
@@ -301,9 +300,7 @@ const AdminDashboardPage = () => {
         setCategories(prev => prev.map((c, i) => i === editingCategory.index ? name : c));
         setEditingCategory(null);
     };
-    const [orders, setOrders] = useState<Order[]>(INIT_ORDERS);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-    const [customers, setCustomers] = useState<Customer[]>(INIT_CUSTOMERS);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
     const [customerPasswords, setCustomerPasswords] = useState<Record<string, string>>(
         () => Object.fromEntries(INIT_CUSTOMERS.map(c => [c.id, 'password123']))
