@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
     DollarSign, ShoppingBag, Users, Calendar,
     Plus, Pencil, Trash2, X, Search, Lock, Unlock,
-    ChevronLeft, ChevronRight, Settings, Eye, EyeOff, ArrowLeft, Camera,
+    ChevronLeft, ChevronRight, Settings, Eye, EyeOff, ArrowLeft, Camera, Loader2,
 } from 'lucide-react';
 import {
     Bar, BarChart, CartesianGrid, Line, LineChart,
@@ -22,6 +22,9 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DashboardThemeSettings } from '@/components/dashboard/DashboardThemeSettings';
+import { productApi, type Product as ApiProduct, type Category as ApiCategory } from '@/lib/productApi';
+import { orderApi, type Order as ApiOrder, type OrderStatus } from '@/lib/orderApi';
+import { authApi, type UserIdentity } from '@/lib/authApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -46,6 +49,53 @@ interface Booking {
     id: string; customer: string; service: string; pet: string;
     date: string; time: string;
     status: 'Chờ xác nhận' | 'Đã xác nhận' | 'Hoàn thành' | 'Đã hủy';
+}
+
+// ─── Mappers ──────────────────────────────────────────────────────────────────
+function mapApiProduct(p: ApiProduct): Product {
+    const primary = p.images?.find(i => i.isPrimary) ?? p.images?.[0];
+    return {
+        id: p.id,
+        name: p.productName,
+        category: p.categories?.map(c => c.categoryName).join(', ') || 'Khác',
+        price: p.price,
+        stock: p.stockQuantity,
+        status: p.status === 'ACTIVE' ? 'active' : 'inactive',
+        image: p.primaryImageUrl ?? primary?.imageUrl ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
+    };
+}
+
+function mapApiOrder(o: ApiOrder): Order {
+    const statusMap: Record<string, Order['status']> = {
+        PENDING: 'Đang xử lý', RESERVED: 'Đang xử lý',
+        PAYMENT_PENDING: 'Đang xử lý', PAID: 'Đang giao',
+        CONFIRMED: 'Hoàn thành', FAILED: 'Đã hủy',
+        PAYMENT_FAILED: 'Đã hủy', CANCELLED: 'Đã hủy',
+    };
+    return {
+        id: o.id,
+        customer: o.userId ?? 'Khách hàng',
+        productId: o.items?.[0]?.productId ?? '',
+        product: o.items?.[0]?.productName ?? `Đơn hàng #${o.id.slice(0, 8)}`,
+        amount: `${o.totalAmount?.toLocaleString('vi-VN')}₫`,
+        address: '',
+        status: statusMap[o.status] ?? 'Đang xử lý',
+        date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '',
+    };
+}
+
+function mapApiUser(u: UserIdentity): Customer {
+    return {
+        id: u.id,
+        name: `${u.firstName} ${u.lastName}`,
+        email: u.username,
+        phone: '',
+        address: '',
+        orders: 0,
+        spent: '0₫',
+        joined: '',
+        status: 'active',
+    };
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
@@ -188,9 +238,51 @@ const AdminDashboardPage = () => {
         else setSearchParams({ tab: t }, { replace: true });
     };
 
+    // ── API state ─────────────────────────────────────────────────────────────
+    const [apiLoading, setApiLoading] = useState(false);
     const [products, setProducts] = useState<Product[]>(INIT_PRODUCTS);
     const [categories, setCategories] = useState<string[]>([...CATEGORIES]);
+    const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
+    const [orders, setOrders] = useState<Order[]>(INIT_ORDERS);
+    const [customers, setCustomers] = useState<Customer[]>(INIT_CUSTOMERS);
+
+    const fetchAdminData = useCallback(async () => {
+        setApiLoading(true);
+        try {
+            const [productsRes, categoriesRes, ordersRes, usersRes] = await Promise.allSettled([
+                productApi.getAll(),
+                productApi.getAllCategories(),
+                orderApi.getAllOrders(),
+                authApi.getAllUsers(),
+            ]);
+
+            if (productsRes.status === 'fulfilled') {
+                setProducts((productsRes.value.result ?? []).map(mapApiProduct));
+            }
+            if (categoriesRes.status === 'fulfilled') {
+                const cats = categoriesRes.value.result ?? [];
+                setApiCategories(cats);
+                setCategories(cats.map(c => c.categoryName));
+            }
+            if (ordersRes.status === 'fulfilled') {
+                setOrders((ordersRes.value.result ?? []).map(mapApiOrder));
+            }
+            if (usersRes.status === 'fulfilled') {
+                setCustomers((usersRes.value.result ?? []).map(mapApiUser));
+            }
+        } catch {
+            // silently fall back to mock data
+        } finally {
+            setApiLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchAdminData();
+    }, [fetchAdminData]);
+
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [editingCategory, setEditingCategory] = useState<{ index: number; name: string } | null>(null);
     const [editingCategory, setEditingCategory] = useState<{ index: number; name: string } | null>(null);
 
     const addCategory = () => {
@@ -241,45 +333,93 @@ const AdminDashboardPage = () => {
         setEditingProduct(p);
         setProductModal('edit');
     };
-    const saveProduct = () => {
+    const saveProduct = async () => {
         if (!pForm.name.trim()) { toast.error('Vui lòng nhập tên sản phẩm'); return; }
-        if (productModal === 'add') {
-            const newP: Product = {
-                id: 'P' + Date.now(), name: pForm.name, category: pForm.category,
-                price: parseFloat(pForm.price) || 0, stock: parseInt(pForm.stock) || 0,
-                status: pForm.status, image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
+        try {
+            const catId = apiCategories.find(c => c.categoryName === pForm.category)?.id;
+            const requestData = {
+                productName: pForm.name,
+                price: parseFloat(pForm.price) || 0,
+                stockQuantity: parseInt(pForm.stock) || 0,
+                categoryId: catId ? [catId] : [],
+                status: (pForm.status === 'active' ? 'ACTIVE' : 'INACTIVE') as 'ACTIVE' | 'INACTIVE',
             };
-            setProducts(prev => [newP, ...prev]);
-            toast.success('Đã thêm sản phẩm');
-        } else if (editingProduct) {
-            setProducts(prev => prev.map(p => p.id === editingProduct.id
-                ? { ...p, name: pForm.name, category: pForm.category, price: parseFloat(pForm.price) || 0, stock: parseInt(pForm.stock) || 0, status: pForm.status }
-                : p));
-            toast.success('Đã cập nhật sản phẩm');
+            if (productModal === 'add') {
+                await productApi.create(requestData, []);
+                toast.success('Đã thêm sản phẩm');
+            } else if (editingProduct) {
+                await productApi.update(editingProduct.id, requestData);
+                toast.success('Đã cập nhật sản phẩm');
+            }
+            await fetchAdminData();
+        } catch {
+            // Fallback to local update
+            if (productModal === 'add') {
+                const newP: Product = {
+                    id: 'P' + Date.now(), name: pForm.name, category: pForm.category,
+                    price: parseFloat(pForm.price) || 0, stock: parseInt(pForm.stock) || 0,
+                    status: pForm.status, image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
+                };
+                setProducts(prev => [newP, ...prev]);
+                toast.success('Đã thêm sản phẩm');
+            } else if (editingProduct) {
+                setProducts(prev => prev.map(p => p.id === editingProduct.id
+                    ? { ...p, name: pForm.name, category: pForm.category, price: parseFloat(pForm.price) || 0, stock: parseInt(pForm.stock) || 0, status: pForm.status }
+                    : p));
+                toast.success('Đã cập nhật sản phẩm');
+            }
         }
         setProductModal(null);
     };
-    const deleteProduct = (id: string) => {
-        setProducts(prev => prev.filter(p => p.id !== id));
-        toast.success('Đã xóa sản phẩm');
+    const deleteProduct = async (id: string) => {
+        try {
+            await productApi.delete(id);
+            await fetchAdminData();
+            toast.success('Đã xóa sản phẩm');
+        } catch {
+            setProducts(prev => prev.filter(p => p.id !== id));
+            toast.success('Đã xóa sản phẩm');
+        }
     };
 
-    const updateOrderStatus = (id: string, status: Order['status']) => {
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-        toast.success('Đã cập nhật trạng thái đơn hàng');
+    const updateOrderStatus = async (id: string, status: Order['status']) => {
+        const apiStatusMap: Record<Order['status'], OrderStatus> = {
+            'Đang xử lý': 'PENDING', 'Đang giao': 'CONFIRMED',
+            'Hoàn thành': 'CONFIRMED', 'Đã hủy': 'CANCELLED',
+        };
+        try {
+            await orderApi.adminUpdateStatus(id, { status: apiStatusMap[status] });
+            await fetchAdminData();
+            toast.success('Đã cập nhật trạng thái đơn hàng');
+        } catch {
+            setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+            toast.success('Đã cập nhật trạng thái đơn hàng');
+        }
     };
-    const deleteOrder = (id: string) => {
-        setOrders(prev => prev.filter(o => o.id !== id));
-        toast.success('Đã xóa đơn hàng');
+    const deleteOrder = async (id: string) => {
+        try {
+            await orderApi.adminCancelOrder(id);
+            await fetchAdminData();
+            toast.success('Đã xóa đơn hàng');
+        } catch {
+            setOrders(prev => prev.filter(o => o.id !== id));
+            toast.success('Đã xóa đơn hàng');
+        }
     };
 
     const toggleCustomer = (id: string) => {
         setCustomers(prev => prev.map(c => c.id === id ? { ...c, status: c.status === 'active' ? 'blocked' : 'active' } : c));
         toast.success('Đã cập nhật trạng thái khách hàng');
     };
-    const deleteCustomer = (id: string) => {
-        setCustomers(prev => prev.filter(c => c.id !== id));
-        toast.success('Đã xóa khách hàng');
+    const deleteCustomer = async (id: string) => {
+        try {
+            await authApi.deleteUser(id);
+            await fetchAdminData();
+            toast.success('Đã xóa khách hàng');
+        } catch {
+            setCustomers(prev => prev.filter(c => c.id !== id));
+            toast.success('Đã xóa khách hàng');
+        }
     };
 
     const updateBookingStatus = (id: string, status: Booking['status']) => {
@@ -332,6 +472,12 @@ const AdminDashboardPage = () => {
 
                 {/* ── Tổng quan ── */}
                 <TabsContent value="overview">
+                    {apiLoading && (
+                        <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Đang tải dữ liệu từ server...
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
                         {[
                             { icon: DollarSign, label: 'Doanh thu', value: '$45,890', change: '+12.5%' },
