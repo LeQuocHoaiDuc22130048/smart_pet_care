@@ -346,12 +346,30 @@ const AdminDashboardPage = () => {
     const deleteCategory = async (idx: number) => {
         const cat = apiCategories[idx];
         if (!cat) { setCategories(prev => prev.filter((_, i) => i !== idx)); return; }
+
+        // Xác nhận trước khi xóa
+        if (!confirm(`Bạn có chắc muốn xóa danh mục "${cat.categoryName}"?`)) {
+            return;
+        }
+
         try {
             await productApi.deleteCategory(cat.categoryId);
             toast.success('Đã xóa danh mục');
             await fetchAdminData();
-        } catch {
-            toast.error('Không thể xóa danh mục');
+        } catch (error: any) {
+            console.error('Delete category error:', error);
+
+            // Kiểm tra error code (ApiError có thuộc tính code)
+            // Kiểm tra cả message để đảm bảo
+            if (error?.code === 2103 || error?.message?.includes('used by product')) {
+                toast.error('Không thể xóa! Danh mục đang được sử dụng bởi sản phẩm.', {
+                    duration: 5000,
+                    description: 'Vui lòng xóa tất cả sản phẩm trong danh mục này trước.'
+                });
+            } else {
+                // Hiển thị message từ backend
+                toast.error(error?.message || 'Không thể xóa danh mục');
+            }
         }
     };
 

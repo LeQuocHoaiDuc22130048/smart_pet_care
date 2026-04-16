@@ -306,11 +306,11 @@ const ProductListingPage = () => {
                                         key={product.id}
                                         className='group cursor-pointer overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-lg transition-all duration-300 bg-card flex flex-col'
                                     >
-                                        <div className='relative overflow-hidden'>
+                                        <div className='relative overflow-hidden bg-gray-50'>
                                             <img
                                                 src={getPrimaryImage(product)}
                                                 alt={product.productName}
-                                                className='w-full h-40 sm:h-52 object-cover group-hover:scale-105 transition-transform duration-500'
+                                                className='w-full h-40 sm:h-52 object-contain group-hover:scale-105 transition-transform duration-500'
                                                 onClick={() => navigate(`/products/${product.id}`)}
                                             />
                                             {product.status === 'OUT_OF_STOCK' && (
@@ -371,11 +371,11 @@ const ProductListingPage = () => {
                                         className='group overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-md transition-all duration-300 bg-card'
                                     >
                                         <div className='flex gap-4 p-3 sm:p-4'>
-                                            <div className='relative shrink-0 overflow-hidden rounded-lg'>
+                                            <div className='relative shrink-0 overflow-hidden rounded-lg bg-gray-50'>
                                                 <img
                                                     src={getPrimaryImage(product)}
                                                     alt={product.productName}
-                                                    className='w-24 h-24 sm:w-32 sm:h-32 object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer'
+                                                    className='w-24 h-24 sm:w-32 sm:h-32 object-contain group-hover:scale-105 transition-transform duration-500 cursor-pointer'
                                                     onClick={() => navigate(`/products/${product.id}`)}
                                                 />
                                             </div>

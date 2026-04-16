@@ -196,16 +196,19 @@ const UserDashboardPage = () => {
 
     const saveProfile = async () => {
         try {
+            console.log('[UserDashboard] Saving profile:', profileForm);
             const res = await userApi.updateProfile({
                 firstName: profileForm.firstName,
                 lastName: profileForm.lastName,
                 phone: profileForm.phone,
                 email: profileForm.email,
             });
+            console.log('[UserDashboard] Profile updated:', res);
             setProfile(res.result);
             updateUser({ firstName: res.result.firstName, lastName: res.result.lastName });
             toast.success('Đã cập nhật hồ sơ thành công');
-        } catch {
+        } catch (err) {
+            console.error('[UserDashboard] Error updating profile:', err);
             toast.error('Không thể cập nhật hồ sơ');
         }
     };

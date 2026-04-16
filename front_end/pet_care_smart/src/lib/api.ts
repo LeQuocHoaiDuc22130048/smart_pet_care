@@ -75,12 +75,23 @@ export async function apiRequest<T>(
 
 // ─── Custom error ─────────────────────────────────────────────────────────────
 export class ApiError extends Error {
+    public readonly code: number;
+    public readonly httpStatus: number;
+    
     constructor(
-        public readonly code: number,
+        code: number,
         message: string,
-        public readonly httpStatus: number
+        httpStatus: number
     ) {
         super(message);
         this.name = 'ApiError';
+        this.code = code;
+        this.httpStatus = httpStatus;
+        
+        // Đảm bảo message được set đúng
+        Object.defineProperty(this, 'message', {
+            enumerable: true,
+            value: message
+        });
     }
 }

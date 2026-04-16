@@ -58,18 +58,28 @@ const CheckoutPage = () => {
             // 3. If VNPAY/MOMO, get payment URL and redirect
             if (paymentMethod === 'VNPAY' || paymentMethod === 'MOMO') {
                 try {
+                    console.log('[Checkout] Getting payment URL for order:', order.id);
                     const paymentRes = await paymentApi.getPaymentByOrder(order.id);
+                    console.log('[Checkout] Payment response:', paymentRes);
                     const txId = paymentRes.result?.id;
                     if (txId) {
+                        console.log('[Checkout] Transaction ID:', txId);
                         const urlRes = await paymentApi.getPaymentUrl(txId);
+                        console.log('[Checkout] Payment URL response:', urlRes);
                         const url = urlRes.result?.paymentUrl;
                         if (url) {
+                            console.log('[Checkout] Redirecting to:', url);
                             await clearCart();
                             window.location.href = url;
                             return;
+                        } else {
+                            console.warn('[Checkout] No payment URL in response');
                         }
+                    } else {
+                        console.warn('[Checkout] No transaction ID in payment response');
                     }
-                } catch {
+                } catch (err) {
+                    console.error('[Checkout] Error getting payment URL:', err);
                     // fallback to success flow
                 }
             }

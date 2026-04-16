@@ -11,9 +11,11 @@ export interface CartItem {
     id: string;             // itemId
     productId: string;
     productName: string;
-    price: number;
+    unitPrice: number;      // backend trả về unitPrice, không phải price
     quantity: number;
+    subtotal?: number;
     imageUrl?: string;
+    addedAt?: string;
 }
 
 export interface Cart {

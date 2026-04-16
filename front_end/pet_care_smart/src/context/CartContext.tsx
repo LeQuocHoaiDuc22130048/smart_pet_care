@@ -29,13 +29,17 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 // ─── Map API cart item → local cart item ─────────────────────────────────────
 function mapApiItem(item: ApiCartItem): CartItem {
+    // Nếu không có imageUrl từ backend, sẽ dùng placeholder
+    // Frontend sẽ cần fetch product detail để lấy ảnh thật
+    const fallbackImage = 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=200&h=200&fit=crop';
+
     return {
         id: item.productId,
         itemId: item.id,
         name: item.productName,
-        price: item.price,
+        price: item.unitPrice ?? 0,
         quantity: item.quantity,
-        image: item.imageUrl ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=200&h=200&fit=crop',
+        image: item.imageUrl || fallbackImage,
         category: '',
     };
 }
@@ -54,9 +58,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         try {
             const res = await cartApi.getCart();
-            setCart((res.result?.items ?? []).map(mapApiItem));
-        } catch {
+            const items = res.result?.items ?? [];
+            console.log('[CartContext] Synced cart items:', items);
+            setCart(items.map(mapApiItem));
+        } catch (err) {
+            console.error('[CartContext] Error syncing cart:', err);
             // silently fail — keep local state
+            setCart([]);
         } finally {
             setIsLoading(false);
         }
