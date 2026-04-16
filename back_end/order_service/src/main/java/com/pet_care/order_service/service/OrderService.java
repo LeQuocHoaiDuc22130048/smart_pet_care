@@ -1,11 +1,13 @@
 package com.pet_care.order_service.service;
 
 import com.pet_care.order_service.client.ProductClient;
+import com.pet_care.order_service.dto.request.AdminUpdateStatusRequest;
 import com.pet_care.order_service.dto.request.CreateOrderRequest;
 import com.pet_care.order_service.dto.request.OrderItemRequest;
 import com.pet_care.order_service.dto.request.ReserveStockRequest;
 import com.pet_care.order_service.dto.request.RollbackStockRequest;
 import com.pet_care.order_service.dto.response.OrderResponse;
+import com.pet_care.order_service.dto.response.OrderStatsResponse;
 import com.pet_care.order_service.dto.response.ProductResponse;
 import com.pet_care.order_service.entity.OrderItem;
 import com.pet_care.order_service.entity.Orders;
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -41,6 +44,8 @@ public class OrderService {
     ProductClient productClient;
     OrderRepository orderRepository;
     OrderEventPublisher orderEventPublisher;
+
+    // ===================== USER METHODS =====================
 
     @Transactional
     public OrderResponse createOrder(String userId, CreateOrderRequest request) {
@@ -94,7 +99,6 @@ public class OrderService {
     public OrderResponse updatePaymentStatus(String orderId, String status) {
         Orders orders = getOrder(orderId);
 
-        // Không cho phép cập nhật nếu đã ở trạng thái cuối
         if (orders.getStatus() == OrderStatus.PAID ||
             orders.getStatus() == OrderStatus.CANCELLED ||
             orders.getStatus() == OrderStatus.PAYMENT_FAILED) {
@@ -102,14 +106,9 @@ public class OrderService {
         }
 
         switch (status) {
-            case "PAID":
-                orders.setStatus(OrderStatus.PAID);
-                break;
-            case "FAILED":
-                orders.setStatus(OrderStatus.FAILED);
-                break;
-            default:
-                throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
+            case "PAID":   orders.setStatus(OrderStatus.PAID);   break;
+            case "FAILED": orders.setStatus(OrderStatus.FAILED); break;
+            default: throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
         return orderMapper.toOrderResponse(orderRepository.save(orders));
     }
@@ -139,7 +138,68 @@ public class OrderService {
         log.info("Cancelled order {} due to payment failure", orderId);
     }
 
-    // --- Private helpers ---
+    // ===================== ADMIN METHODS =====================
+
+    /** Lấy tất cả đơn hàng, có thể lọc theo status */
+    public List<OrderResponse> adminGetAllOrders(OrderStatus status) {
+        if (status != null) {
+            return orderMapper.toOrderResponseList(orderRepository.findByStatus(status));
+        }
+        return orderMapper.toOrderResponseList(orderRepository.findAll());
+    }
+
+    /** Lấy đơn hàng của 1 user cụ thể, có thể lọc theo status */
+    public List<OrderResponse> adminGetOrdersByUser(String userId, OrderStatus status) {
+        if (status != null) {
+            return orderMapper.toOrderResponseList(orderRepository.findByUserIdAndStatus(userId, status));
+        }
+        return orderMapper.toOrderResponseList(orderRepository.findByUserId(userId));
+    }
+
+    /** Lấy chi tiết bất kỳ đơn hàng nào (không check ownership) */
+    public OrderResponse adminGetOrderById(String orderId) {
+        return orderMapper.toOrderResponse(getOrder(orderId));
+    }
+
+    /**
+     * Admin cập nhật trạng thái đơn hàng thủ công.
+     * Dùng khi cần can thiệp: xác nhận giao hàng, xử lý khiếu nại...
+     */
+    @Transactional
+    public OrderResponse adminUpdateStatus(String orderId, AdminUpdateStatusRequest request) {
+        Orders order = getOrder(orderId);
+        OrderStatus oldStatus = order.getStatus();
+        order.setStatus(request.getStatus());
+        Orders saved = orderRepository.save(order);
+        log.info("Admin updated order {} status: {} → {}", orderId, oldStatus, request.getStatus());
+        return orderMapper.toOrderResponse(saved);
+    }
+
+    /** Admin hủy đơn hàng và rollback tồn kho */
+    @Transactional
+    public void adminCancelOrder(String orderId) {
+        Orders order = getOrder(orderId);
+        if (order.getStatus() == OrderStatus.CANCELLED) return;
+        publishRollbackEvent(order);
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        log.info("Admin cancelled order {}", orderId);
+    }
+
+    /** Thống kê đơn hàng theo status */
+    public OrderStatsResponse adminGetStats() {
+        long total = orderRepository.count();
+        Map<String, Long> byStatus = new LinkedHashMap<>();
+        for (OrderStatus s : OrderStatus.values()) {
+            byStatus.put(s.name(), orderRepository.countByStatus(s));
+        }
+        return OrderStatsResponse.builder()
+                .total(total)
+                .byStatus(byStatus)
+                .build();
+    }
+
+    // ===================== PRIVATE HELPERS =====================
 
     private void publishRollbackEvent(Orders orders) {
         List<RollbackStockRequest> items = orders.getItems().stream()
@@ -186,7 +246,6 @@ public class OrderService {
     }
 
     private Orders getOrCreateOrder(String userId) {
-        // Chỉ PENDING mới được thêm/sửa items — PAID đã thanh toán không được chỉnh sửa
         return orderRepository.findFirstByUserIdAndStatusIn(userId, List.of(OrderStatus.PENDING))
                 .orElseGet(() -> Orders.builder()
                         .userId(userId)
@@ -204,7 +263,6 @@ public class OrderService {
     private void updateItem(OrderItem item, int addedQuantity, BigDecimal unitPrice) {
         int newQuantity = item.getQuantity() + addedQuantity;
         item.setQuantity(newQuantity);
-        // Tính lại tổng giá theo số lượng mới
         item.setPrice(unitPrice.multiply(BigDecimal.valueOf(newQuantity)));
     }
 }
