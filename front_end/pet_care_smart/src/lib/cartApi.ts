@@ -1,13 +1,14 @@
 /**
  * Cart Service API
  * Route prefix: /pet_care_cart
+ * DTOs: AddToCartRequest, UpdateCartItemRequest
  */
 
 import { apiRequest, type ApiResponse } from './api';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Response types ───────────────────────────────────────────────────────────
 export interface CartItem {
-    id: string;         // itemId
+    id: string;             // itemId
     productId: string;
     productName: string;
     price: number;
@@ -22,28 +23,60 @@ export interface Cart {
     totalAmount: number;
 }
 
+// ─── Request types (khớp DTO backend) ────────────────────────────────────────
+
+/**
+ * AddToCartRequest
+ * productId: @NotBlank
+ * quantity: @Min(1)
+ */
+export interface AddToCartRequest {
+    productId: string;
+    quantity: number;       // >= 1
+}
+
+/**
+ * UpdateCartItemRequest
+ * quantity: @Min(0) — 0 = xóa item
+ */
+export interface UpdateCartItemRequest {
+    quantity: number;       // >= 0
+}
+
 // ─── Cart endpoints ───────────────────────────────────────────────────────────
 export const cartApi = {
+    /** GET /pet_care_cart/cart */
     getCart(): Promise<ApiResponse<Cart>> {
         return apiRequest('/pet_care_cart/cart', { requireAuth: true });
     },
 
+    /**
+     * POST /pet_care_cart/cart/items — AddToCartRequest
+     * quantity >= 1
+     */
     addItem(productId: string, quantity: number): Promise<ApiResponse<Cart>> {
+        const body: AddToCartRequest = { productId, quantity };
         return apiRequest('/pet_care_cart/cart/items', {
             method: 'POST',
-            body: { productId, quantity },
+            body,
             requireAuth: true,
         });
     },
 
+    /**
+     * PUT /pet_care_cart/cart/items/{itemId} — UpdateCartItemRequest
+     * quantity >= 0 (0 = xóa item)
+     */
     updateItem(itemId: string, quantity: number): Promise<ApiResponse<Cart>> {
+        const body: UpdateCartItemRequest = { quantity };
         return apiRequest(`/pet_care_cart/cart/items/${itemId}`, {
             method: 'PUT',
-            body: { quantity },
+            body,
             requireAuth: true,
         });
     },
 
+    /** DELETE /pet_care_cart/cart/items/{itemId} */
     removeItem(itemId: string): Promise<ApiResponse<Cart>> {
         return apiRequest(`/pet_care_cart/cart/items/${itemId}`, {
             method: 'DELETE',
@@ -51,6 +84,7 @@ export const cartApi = {
         });
     },
 
+    /** DELETE /pet_care_cart/cart */
     clearCart(): Promise<ApiResponse<null>> {
         return apiRequest('/pet_care_cart/cart', {
             method: 'DELETE',

@@ -19,10 +19,10 @@ const LoginPage = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            const success = await login(username, password);
-            if (success) {
+            const role = await login(username, password);
+            if (role !== null) {
                 toast.success('Đăng nhập thành công!');
-                navigate('/dashboard');
+                navigate(role === 'admin' ? '/admin' : '/dashboard');
             } else {
                 toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
             }

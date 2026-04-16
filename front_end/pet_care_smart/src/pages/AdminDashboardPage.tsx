@@ -57,11 +57,11 @@ function mapApiProduct(p: ApiProduct): Product {
     return {
         id: p.id,
         name: p.productName,
-        category: p.categories?.map(c => c.categoryName).join(', ') || 'Khác',
+        category: p.category?.map(c => c.categoryName).join(', ') || 'Khác',
         price: p.price,
         stock: p.stockQuantity,
         status: p.status === 'ACTIVE' ? 'active' : 'inactive',
-        image: p.primaryImageUrl ?? primary?.imageUrl ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
+        image: primary?.imageUrl ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
     };
 }
 
@@ -115,45 +115,52 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     );
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const INIT_PRODUCTS: Product[] = [
-    { id: 'P1', name: 'Thức ăn chó hữu cơ cao cấp', category: 'Thức ăn', price: 49.99, stock: 45, status: 'active', image: 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=80&h=80&fit=crop' },
-    { id: 'P2', name: 'Cột cào móng mèo cao cấp', category: 'Đồ chơi', price: 89.99, stock: 30, status: 'active', image: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=80&h=80&fit=crop' },
-    { id: 'P3', name: 'Bộ dây dắt & vòng cổ chó', category: 'Phụ kiện', price: 34.99, stock: 80, status: 'active', image: 'https://images.unsplash.com/photo-1600277971170-8a7d75fb1bd9?w=80&h=80&fit=crop' },
-    { id: 'P4', name: 'Giường thú cưng chỉnh hình', category: 'Giường', price: 79.99, stock: 25, status: 'active', image: 'https://images.unsplash.com/photo-1553736026-ff14d158d222?w=80&h=80&fit=crop' },
-    { id: 'P5', name: 'Đồ chơi thông minh tương tác', category: 'Đồ chơi', price: 44.99, stock: 0, status: 'inactive', image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop' },
-];
-const INIT_ORDERS: Order[] = [
-    { id: 'ORD-1234', customer: 'Nguyễn Văn An', productId: '1', product: 'Thức ăn chó cao cấp', amount: '$49.99', address: '12 Nguyễn Huệ, Q.1, TP.HCM', status: 'Hoàn thành', date: '11/02/2026' },
-    { id: 'ORD-1233', customer: 'Trần Thị Bình', productId: '2', product: 'Cột cào móng mèo', amount: '$89.99', address: '45 Lê Lợi, Q.Hoàn Kiếm, Hà Nội', status: 'Đang xử lý', date: '11/02/2026' },
-    { id: 'ORD-1232', customer: 'Lê Văn Cường', productId: '4', product: 'Giường thú cưng', amount: '$79.99', address: '78 Trần Phú, Q.Hải Châu, Đà Nẵng', status: 'Đang giao', date: '10/02/2026' },
-    { id: 'ORD-1231', customer: 'Phạm Thị Dung', productId: '5', product: 'Đồ chơi thông minh', amount: '$44.99', address: '23 Lý Thường Kiệt, Q.10, TP.HCM', status: 'Đang xử lý', date: '09/02/2026' },
-    { id: 'ORD-1230', customer: 'Hoàng Văn E', productId: '3', product: 'Bộ dây dắt chó', amount: '$34.99', address: '56 Đinh Tiên Hoàng, Q.Bình Thạnh, TP.HCM', status: 'Đã hủy', date: '08/02/2026' },
-];
-const INIT_CUSTOMERS: Customer[] = [
-    { id: 'C1', name: 'Nguyễn Văn An', email: 'user@petcare.vn', phone: '0901234567', address: '12 Nguyễn Huệ, Q.1, TP.HCM', orders: 12, spent: '$890', joined: '01/01/2026', status: 'active' },
-    { id: 'C2', name: 'Trần Thị Bình', email: 'binh@gmail.com', phone: '0912345678', address: '45 Lê Lợi, Q.Hoàn Kiếm, Hà Nội', orders: 5, spent: '$320', joined: '15/01/2026', status: 'active' },
-    { id: 'C3', name: 'Lê Văn Cường', email: 'cuong@gmail.com', phone: '0923456789', address: '78 Trần Phú, Q.Hải Châu, Đà Nẵng', orders: 8, spent: '$560', joined: '20/01/2026', status: 'active' },
-    { id: 'C4', name: 'Phạm Thị Dung', email: 'dung@gmail.com', phone: '0934567890', address: '23 Lý Thường Kiệt, Q.10, TP.HCM', orders: 2, spent: '$120', joined: '01/02/2026', status: 'blocked' },
-];
-const INIT_BOOKINGS: Booking[] = [
-    { id: 'BK-001', customer: 'Nguyễn Văn An', service: 'Spa thú cưng', pet: 'Max', date: '15/02/2026', time: '10:00', status: 'Đã xác nhận' },
-    { id: 'BK-002', customer: 'Trần Thị Bình', service: 'Khám sức khỏe', pet: 'Mimi', date: '16/02/2026', time: '14:00', status: 'Chờ xác nhận' },
-    { id: 'BK-003', customer: 'Lê Văn Cường', service: 'Tiêm phòng', pet: 'Buddy', date: '17/02/2026', time: '09:00', status: 'Chờ xác nhận' },
-    { id: 'BK-004', customer: 'Phạm Thị Dung', service: 'Cắt tỉa lông', pet: 'Luna', date: '10/02/2026', time: '11:00', status: 'Hoàn thành' },
-    { id: 'BK-005', customer: 'Đỗ Minh Khoa', service: 'Tắm & vệ sinh', pet: 'Coco', date: '06/04/2026', time: '15:00', status: 'Chờ xác nhận' },
-    { id: 'BK-006', customer: 'Võ Thị Hà', service: 'Khám tổng quát', pet: 'Milo', date: '12/04/2026', time: '08:30', status: 'Đã xác nhận' },
-];
-const CHART_DATA = [
-    { month: 'T1', sales: 4000, orders: 240 }, { month: 'T2', sales: 3000, orders: 180 },
-    { month: 'T3', sales: 5000, orders: 320 }, { month: 'T4', sales: 4500, orders: 280 },
-    { month: 'T5', sales: 6000, orders: 380 }, { month: 'T6', sales: 5500, orders: 350 },
-];
-const CATEGORIES = ['Thức ăn', 'Đồ chơi', 'Phụ kiện', 'Giường', 'Sức khỏe'];
+// ─── Mock data (bookings chưa có service) ────────────────────────────────────
+// ─── Bookings: chưa có booking service — giữ rỗng, hiển thị empty state ──────
+const INIT_BOOKINGS: Booking[] = [];
+
 const ORDER_STATUSES = ['Đang xử lý', 'Đang giao', 'Hoàn thành', 'Đã hủy'] as const;
 const BOOKING_STATUSES = ['Chờ xác nhận', 'Đã xác nhận', 'Hoàn thành', 'Đã hủy'] as const;
 
-const ADMIN_TABS = ['overview', 'products', 'products-add', 'product-categories', 'orders', 'order-detail', 'customers', 'customer-detail', 'bookings', 'stats', 'settings'] as const;
+// ─── Helper: tính chart data từ orders thực tế ────────────────────────────────
+function buildChartData(orders: Order[]) {
+    const monthLabels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+    const now = new Date();
+    // Lấy 6 tháng gần nhất
+    return Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+        const monthOrders = orders.filter(o => {
+            if (!o.date) return false;
+            try {
+                // Parse date string "dd/MM/yyyy"
+                const parts = o.date.split('/');
+                if (parts.length !== 3) return false;
+                const od = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                return od.getFullYear() === y && od.getMonth() === m;
+            } catch {
+                return false;
+            }
+        });
+        // Calculate sales from amount string "123,456₫"
+        const sales = monthOrders.reduce((s, o) => {
+            try {
+                const amount = parseFloat(o.amount.replace(/[₫,]/g, '')) || 0;
+                return s + amount;
+            } catch {
+                return s;
+            }
+        }, 0);
+        return {
+            month: monthLabels[m],
+            sales,
+            orders: monthOrders.length,
+        };
+    });
+}
+
+const ADMIN_TABS = ['overview', 'products', 'product-categories', 'orders', 'order-detail', 'customers', 'customer-detail', 'bookings', 'stats', 'settings'] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
 
 function parseAdminTab(raw: string | null): AdminTab {
@@ -240,11 +247,11 @@ const AdminDashboardPage = () => {
 
     // ── API state ─────────────────────────────────────────────────────────────
     const [apiLoading, setApiLoading] = useState(false);
-    const [products, setProducts] = useState<Product[]>(INIT_PRODUCTS);
-    const [categories, setCategories] = useState<string[]>([...CATEGORIES]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<string[]>([]);
     const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
-    const [orders, setOrders] = useState<Order[]>(INIT_ORDERS);
-    const [customers, setCustomers] = useState<Customer[]>(INIT_CUSTOMERS);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
 
     const fetchAdminData = useCallback(async () => {
         setApiLoading(true);
@@ -256,22 +263,61 @@ const AdminDashboardPage = () => {
                 authApi.getAllUsers(),
             ]);
 
-            if (productsRes.status === 'fulfilled') {
-                setProducts((productsRes.value.result ?? []).map(mapApiProduct));
+            if (productsRes.status === 'fulfilled' && productsRes.value?.result) {
+                try {
+                    setProducts((productsRes.value.result ?? []).map(mapApiProduct));
+                } catch (err) {
+                    console.error('Error mapping products:', err);
+                    setProducts([]);
+                }
+            } else {
+                setProducts([]);
             }
-            if (categoriesRes.status === 'fulfilled') {
-                const cats = categoriesRes.value.result ?? [];
-                setApiCategories(cats);
-                setCategories(cats.map(c => c.categoryName));
+
+            if (categoriesRes.status === 'fulfilled' && categoriesRes.value?.result) {
+                try {
+                    const cats = categoriesRes.value.result ?? [];
+                    setApiCategories(cats);
+                    setCategories(cats.map(c => c.categoryName));
+                } catch (err) {
+                    console.error('Error mapping categories:', err);
+                    setApiCategories([]);
+                    setCategories([]);
+                }
+            } else {
+                setApiCategories([]);
+                setCategories([]);
             }
-            if (ordersRes.status === 'fulfilled') {
-                setOrders((ordersRes.value.result ?? []).map(mapApiOrder));
+
+            if (ordersRes.status === 'fulfilled' && ordersRes.value?.result) {
+                try {
+                    setOrders((ordersRes.value.result ?? []).map(mapApiOrder));
+                } catch (err) {
+                    console.error('Error mapping orders:', err);
+                    setOrders([]);
+                }
+            } else {
+                setOrders([]);
             }
-            if (usersRes.status === 'fulfilled') {
-                setCustomers((usersRes.value.result ?? []).map(mapApiUser));
+
+            if (usersRes.status === 'fulfilled' && usersRes.value?.result) {
+                try {
+                    setCustomers((usersRes.value.result ?? []).map(mapApiUser));
+                } catch (err) {
+                    console.error('Error mapping users:', err);
+                    setCustomers([]);
+                }
+            } else {
+                setCustomers([]);
             }
-        } catch {
-            // silently fall back to mock data
+        } catch (err) {
+            console.error('Error fetching admin data:', err);
+            // Set empty arrays on error
+            setProducts([]);
+            setApiCategories([]);
+            setCategories([]);
+            setOrders([]);
+            setCustomers([]);
         } finally {
             setApiLoading(false);
         }
@@ -282,29 +328,54 @@ const AdminDashboardPage = () => {
     }, [fetchAdminData]);
 
     const [newCategoryName, setNewCategoryName] = useState('');
-    const [editingCategory, setEditingCategory] = useState<{ index: number; name: string } | null>(null);
+    const [editingCategory, setEditingCategory] = useState<{ index: number; name: string; id?: string } | null>(null);
 
-    const addCategory = () => {
+    const addCategory = async () => {
         const name = newCategoryName.trim();
         if (!name || categories.includes(name)) return;
-        setCategories(prev => [...prev, name]);
+        try {
+            await productApi.createCategory({ categoryName: name });
+            toast.success('Đã thêm danh mục');
+            await fetchAdminData();
+        } catch {
+            toast.error('Không thể thêm danh mục');
+        }
         setNewCategoryName('');
     };
 
-    const deleteCategory = (idx: number) => setCategories(prev => prev.filter((_, i) => i !== idx));
+    const deleteCategory = async (idx: number) => {
+        const cat = apiCategories[idx];
+        if (!cat) { setCategories(prev => prev.filter((_, i) => i !== idx)); return; }
+        try {
+            await productApi.deleteCategory(cat.categoryId);
+            toast.success('Đã xóa danh mục');
+            await fetchAdminData();
+        } catch {
+            toast.error('Không thể xóa danh mục');
+        }
+    };
 
-    const saveEditCategory = () => {
+    const saveEditCategory = async () => {
         if (!editingCategory) return;
         const name = editingCategory.name.trim();
         if (!name) return;
-        setCategories(prev => prev.map((c, i) => i === editingCategory.index ? name : c));
+        const cat = apiCategories[editingCategory.index];
+        if (cat) {
+            try {
+                await productApi.updateCategory(cat.categoryId, { categoryName: name });
+                toast.success('Đã cập nhật danh mục');
+                await fetchAdminData();
+            } catch {
+                toast.error('Không thể cập nhật danh mục');
+            }
+        } else {
+            setCategories(prev => prev.map((c, i) => i === editingCategory.index ? name : c));
+        }
         setEditingCategory(null);
     };
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-    const [customerPasswords, setCustomerPasswords] = useState<Record<string, string>>(
-        () => Object.fromEntries(INIT_CUSTOMERS.map(c => [c.id, 'password123']))
-    );
+    const [customerPasswords, setCustomerPasswords] = useState<Record<string, string>>({});
     const [showPasswordFor, setShowPasswordFor] = useState<string | null>(null);
     const [editingPassword, setEditingPassword] = useState<{ id: string; value: string } | null>(null);
     const [bookings, setBookings] = useState<Booking[]>(INIT_BOOKINGS);
@@ -318,55 +389,99 @@ const AdminDashboardPage = () => {
     // Product modal state
     const [productModal, setProductModal] = useState<'add' | 'edit' | null>(null);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-    const [pForm, setPForm] = useState({ name: '', category: 'Thức ăn', price: '', stock: '', status: 'active' as 'active' | 'inactive' });
+    const [pForm, setPForm] = useState({
+        name: '', description: '', categoryId: '',
+        price: '', stock: '', status: 'active' as 'active' | 'inactive',
+    });
+    const [pImages, setPImages] = useState<File[]>([]);
+    const [pImagePreviews, setPImagePreviews] = useState<string[]>([]);
+    const [pPrimaryIdx, setPPrimaryIdx] = useState(0);
+    const [pSaving, setPSaving] = useState(false);
+    const pImageInputRef = useRef<HTMLInputElement>(null);
 
     const openAddProduct = () => {
-        setPForm({ name: '', category: 'Thức ăn', price: '', stock: '', status: 'active' });
+        setPForm({ name: '', description: '', categoryId: apiCategories[0]?.categoryId ?? '', price: '', stock: '', status: 'active' });
+        setPImages([]);
+        setPImagePreviews([]);
+        setPPrimaryIdx(0);
         setEditingProduct(null);
         setProductModal('add');
     };
     const openEditProduct = (p: Product) => {
-        setPForm({ name: p.name, category: p.category, price: String(p.price), stock: String(p.stock), status: p.status });
+        const catId = apiCategories.find(c => c.categoryName === p.category)?.categoryId ?? '';
+        setPForm({ name: p.name, description: '', categoryId: catId, price: String(p.price), stock: String(p.stock), status: p.status });
+        setPImages([]);
+        setPImagePreviews(p.image ? [p.image] : []);
+        setPPrimaryIdx(0);
         setEditingProduct(p);
         setProductModal('edit');
     };
+
+    const handlePImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+        const newFiles = [...pImages, ...files];
+        setPImages(newFiles);
+        // Tạo preview URLs
+        const newPreviews = files.map(f => URL.createObjectURL(f));
+        setPImagePreviews(prev => [...prev, ...newPreviews]);
+        // Reset input để có thể chọn lại cùng file
+        e.target.value = '';
+    };
+
+    const removePImage = (idx: number) => {
+        // Nếu là file mới (không phải ảnh cũ từ server)
+        const existingCount = editingProduct?.image ? 1 : 0;
+        if (idx >= existingCount) {
+            const fileIdx = idx - existingCount;
+            URL.revokeObjectURL(pImagePreviews[idx]);
+            setPImages(prev => prev.filter((_, i) => i !== fileIdx));
+        }
+        setPImagePreviews(prev => prev.filter((_, i) => i !== idx));
+        if (pPrimaryIdx >= idx && pPrimaryIdx > 0) setPPrimaryIdx(p => p - 1);
+    };
+
     const saveProduct = async () => {
         if (!pForm.name.trim()) { toast.error('Vui lòng nhập tên sản phẩm'); return; }
+        if (productModal === 'add' && pImages.length === 0) {
+            toast.error('Vui lòng chọn ít nhất 1 ảnh sản phẩm');
+            return;
+        }
+        setPSaving(true);
         try {
-            const catId = apiCategories.find(c => c.categoryName === pForm.category)?.id;
-            const requestData = {
-                productName: pForm.name,
-                price: parseFloat(pForm.price) || 0,
-                stockQuantity: parseInt(pForm.stock) || 0,
-                categoryId: catId ? [catId] : [],
-                status: (pForm.status === 'active' ? 'ACTIVE' : 'INACTIVE') as 'ACTIVE' | 'INACTIVE',
-            };
+            const catId = pForm.categoryId;
+            if (!catId) { toast.error('Vui lòng chọn danh mục'); setPSaving(false); return; }
             if (productModal === 'add') {
-                await productApi.create(requestData, []);
+                const requestData = {
+                    productName: pForm.name,
+                    description: pForm.description || undefined,
+                    price: parseFloat(pForm.price) || 0,
+                    stockQuantity: parseInt(pForm.stock) || 0,
+                    categoryId: [catId],
+                    primaryImageIndex: pPrimaryIdx,
+                };
+                await productApi.create(requestData, pImages);
                 toast.success('Đã thêm sản phẩm');
             } else if (editingProduct) {
-                await productApi.update(editingProduct.id, requestData);
+                const requestData = {
+                    productName: pForm.name,
+                    description: pForm.description || undefined,
+                    price: parseFloat(pForm.price) || 0,
+                    stockQuantity: parseInt(pForm.stock) || 0,
+                    categoryId: [catId],
+                    status: (pForm.status === 'active' ? 'ACTIVE' : 'INACTIVE') as 'ACTIVE' | 'INACTIVE',
+                    primaryImageIndex: pPrimaryIdx,
+                };
+                await productApi.update(editingProduct.id, requestData, pImages.length > 0 ? pImages : undefined);
                 toast.success('Đã cập nhật sản phẩm');
             }
             await fetchAdminData();
+            setProductModal(null);
         } catch {
-            // Fallback to local update
-            if (productModal === 'add') {
-                const newP: Product = {
-                    id: 'P' + Date.now(), name: pForm.name, category: pForm.category,
-                    price: parseFloat(pForm.price) || 0, stock: parseInt(pForm.stock) || 0,
-                    status: pForm.status, image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
-                };
-                setProducts(prev => [newP, ...prev]);
-                toast.success('Đã thêm sản phẩm');
-            } else if (editingProduct) {
-                setProducts(prev => prev.map(p => p.id === editingProduct.id
-                    ? { ...p, name: pForm.name, category: pForm.category, price: parseFloat(pForm.price) || 0, stock: parseInt(pForm.stock) || 0, status: pForm.status }
-                    : p));
-                toast.success('Đã cập nhật sản phẩm');
-            }
+            toast.error('Không thể lưu sản phẩm. Vui lòng thử lại.');
+        } finally {
+            setPSaving(false);
         }
-        setProductModal(null);
     };
     const deleteProduct = async (id: string) => {
         try {
@@ -374,8 +489,7 @@ const AdminDashboardPage = () => {
             await fetchAdminData();
             toast.success('Đã xóa sản phẩm');
         } catch {
-            setProducts(prev => prev.filter(p => p.id !== id));
-            toast.success('Đã xóa sản phẩm');
+            toast.error('Không thể xóa sản phẩm');
         }
     };
 
@@ -389,8 +503,7 @@ const AdminDashboardPage = () => {
             await fetchAdminData();
             toast.success('Đã cập nhật trạng thái đơn hàng');
         } catch {
-            setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-            toast.success('Đã cập nhật trạng thái đơn hàng');
+            toast.error('Không thể cập nhật trạng thái đơn hàng');
         }
     };
     const deleteOrder = async (id: string) => {
@@ -399,8 +512,7 @@ const AdminDashboardPage = () => {
             await fetchAdminData();
             toast.success('Đã xóa đơn hàng');
         } catch {
-            setOrders(prev => prev.filter(o => o.id !== id));
-            toast.success('Đã xóa đơn hàng');
+            toast.error('Không thể xóa đơn hàng');
         }
     };
 
@@ -414,8 +526,7 @@ const AdminDashboardPage = () => {
             await fetchAdminData();
             toast.success('Đã xóa khách hàng');
         } catch {
-            setCustomers(prev => prev.filter(c => c.id !== id));
-            toast.success('Đã xóa khách hàng');
+            toast.error('Không thể xóa khách hàng');
         }
     };
 
@@ -448,6 +559,7 @@ const AdminDashboardPage = () => {
     };
 
     const lowStock = products.filter(p => p.stock < 10);
+    const chartData = useMemo(() => buildChartData(orders), [orders]);
 
     return (
         <div className="w-full">
@@ -499,7 +611,7 @@ const AdminDashboardPage = () => {
                         <Card className="p-5">
                             <h2 className="font-semibold text-foreground mb-4">Doanh thu theo tháng</h2>
                             <ResponsiveContainer width="100%" height={260}>
-                                <LineChart data={CHART_DATA}>
+                                <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                                     <YAxis stroke="#6B7280" fontSize={12} />
@@ -511,7 +623,7 @@ const AdminDashboardPage = () => {
                         <Card className="p-5">
                             <h2 className="font-semibold text-foreground mb-4">Đơn hàng theo tháng</h2>
                             <ResponsiveContainer width="100%" height={260}>
-                                <BarChart data={CHART_DATA}>
+                                <BarChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                                     <YAxis stroke="#6B7280" fontSize={12} />
@@ -627,51 +739,6 @@ const AdminDashboardPage = () => {
                                 </tbody>
                             </table>
                             {filteredProducts.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy sản phẩm</p>}
-                        </div>
-                    </Card>
-                </TabsContent>
-
-                {/* ── Thêm sản phẩm ── */}
-                <TabsContent value="products-add">
-                    <Card className="p-6 max-w-2xl">
-                        <h2 className="text-lg font-semibold text-foreground mb-6">Thêm sản phẩm mới</h2>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Tên sản phẩm</label>
-                                    <Input placeholder="Nhập tên sản phẩm..." />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Danh mục</label>
-                                    <Select>
-                                        <SelectTrigger><SelectValue placeholder="Chọn danh mục" /></SelectTrigger>
-                                        <SelectContent>
-                                            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Giá (USD)</label>
-                                    <Input type="number" placeholder="0.00" min={0} step={0.01} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Tồn kho</label>
-                                    <Input type="number" placeholder="0" min={0} />
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground">Mô tả</label>
-                                <textarea
-                                    className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                                    placeholder="Nhập mô tả sản phẩm..."
-                                />
-                            </div>
-                            <div className="flex gap-3 pt-2">
-                                <Button className="bg-[#448B3D] hover:bg-[#336B2D] text-white">
-                                    <Plus className="w-4 h-4" /> Thêm sản phẩm
-                                </Button>
-                                <Button variant="outline">Hủy</Button>
-                            </div>
                         </div>
                     </Card>
                 </TabsContent>
@@ -1297,7 +1364,7 @@ const AdminDashboardPage = () => {
                         <Card className="p-5">
                             <h2 className="font-semibold text-foreground mb-4">Doanh thu theo tháng</h2>
                             <ResponsiveContainer width="100%" height={280}>
-                                <LineChart data={CHART_DATA}>
+                                <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                                     <YAxis stroke="#6B7280" fontSize={12} />
@@ -1309,7 +1376,7 @@ const AdminDashboardPage = () => {
                         <Card className="p-5">
                             <h2 className="font-semibold text-foreground mb-4">Đơn hàng theo tháng</h2>
                             <ResponsiveContainer width="100%" height={280}>
-                                <BarChart data={CHART_DATA}>
+                                <BarChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                                     <YAxis stroke="#6B7280" fontSize={12} />
@@ -1457,47 +1524,141 @@ const AdminDashboardPage = () => {
             {/* ── Product Modal ── */}
             {productModal && (
                 <Modal title={productModal === 'add' ? 'Thêm sản phẩm' : 'Chỉnh sửa sản phẩm'} onClose={() => setProductModal(null)}>
-                    <div className="space-y-3">
+                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+
+                        {/* Tên sản phẩm */}
                         <div>
-                            <Label htmlFor="pname">Tên sản phẩm</Label>
+                            <Label htmlFor="pname">Tên sản phẩm <span className="text-red-500">*</span></Label>
                             <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
                         </div>
+
+                        {/* Mô tả */}
                         <div>
-                            <Label>Danh mục</Label>
-                            <Select value={pForm.category} onValueChange={v => setPForm(f => ({ ...f, category: v }))}>
+                            <Label htmlFor="pdesc">Mô tả</Label>
+                            <textarea
+                                id="pdesc"
+                                rows={3}
+                                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                                placeholder="Mô tả sản phẩm (tối đa 500 ký tự)"
+                                maxLength={500}
+                                value={pForm.description}
+                                onChange={e => setPForm(f => ({ ...f, description: e.target.value }))}
+                            />
+                        </div>
+
+                        {/* Danh mục */}
+                        <div>
+                            <Label>Danh mục <span className="text-red-500">*</span></Label>
+                            <Select value={pForm.categoryId} onValueChange={v => setPForm(f => ({ ...f, categoryId: v }))}>
                                 <SelectTrigger className="mt-1 w-full">
-                                    <SelectValue />
+                                    <SelectValue placeholder="Chọn danh mục" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                    {apiCategories.map(c => (
+                                        <SelectItem key={c.categoryId} value={c.categoryId}>{c.categoryName}</SelectItem>
+                                    ))}
+                                    {apiCategories.length === 0 && (
+                                        <div className="px-3 py-2 text-sm text-muted-foreground">Chưa có danh mục</div>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {/* Giá & Tồn kho */}
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <Label htmlFor="pprice">Giá ($)</Label>
-                                <Input id="pprice" type="number" className="mt-1" placeholder="0.00" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
+                                <Label htmlFor="pprice">Giá (₫) <span className="text-red-500">*</span></Label>
+                                <Input id="pprice" type="number" min={0} className="mt-1" placeholder="0" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
                             </div>
                             <div>
-                                <Label htmlFor="pstock">Tồn kho</Label>
-                                <Input id="pstock" type="number" className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
+                                <Label htmlFor="pstock">Tồn kho <span className="text-red-500">*</span></Label>
+                                <Input id="pstock" type="number" min={0} className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
                             </div>
                         </div>
+
+                        {/* Trạng thái (chỉ hiện khi edit) */}
+                        {productModal === 'edit' && (
+                            <div>
+                                <Label>Trạng thái</Label>
+                                <Select value={pForm.status} onValueChange={v => setPForm(f => ({ ...f, status: v as 'active' | 'inactive' }))}>
+                                    <SelectTrigger className="mt-1 w-full">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="active">Hoạt động</SelectItem>
+                                        <SelectItem value="inactive">Ẩn</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {/* Upload ảnh */}
                         <div>
-                            <Label>Trạng thái</Label>
-                            <Select value={pForm.status} onValueChange={v => setPForm(f => ({ ...f, status: v as 'active' | 'inactive' }))}>
-                                <SelectTrigger className="mt-1 w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="active">Hoạt động</SelectItem>
-                                    <SelectItem value="inactive">Ẩn</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Label>
+                                Hình ảnh sản phẩm
+                                {productModal === 'add' && <span className="text-red-500"> *</span>}
+                                <span className="text-xs text-muted-foreground ml-1">(click ảnh để đặt làm ảnh chính)</span>
+                            </Label>
+
+                            {/* Khu vực drop/click upload */}
+                            <button
+                                type="button"
+                                onClick={() => pImageInputRef.current?.click()}
+                                className="mt-1 w-full border-2 border-dashed border-border rounded-xl p-4 flex flex-col items-center gap-2 hover:border-[#448B3D] hover:bg-[#448B3D]/5 transition-colors cursor-pointer"
+                            >
+                                <Camera className="w-6 h-6 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">Nhấn để chọn ảnh</span>
+                                <span className="text-xs text-muted-foreground">PNG, JPG, WEBP</span>
+                            </button>
+                            <input
+                                ref={pImageInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={handlePImageChange}
+                            />
+
+                            {/* Preview grid */}
+                            {pImagePreviews.length > 0 && (
+                                <div className="mt-3 grid grid-cols-4 gap-2">
+                                    {pImagePreviews.map((src, idx) => (
+                                        <div
+                                            key={idx}
+                                            className={`relative group rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${idx === pPrimaryIdx ? 'border-[#448B3D] ring-2 ring-[#448B3D]/30' : 'border-border hover:border-[#448B3D]/50'}`}
+                                            onClick={() => setPPrimaryIdx(idx)}
+                                        >
+                                            <img src={src} alt={`preview-${idx}`} className="w-full aspect-square object-cover" />
+                                            {/* Badge ảnh chính */}
+                                            {idx === pPrimaryIdx && (
+                                                <span className="absolute bottom-0 left-0 right-0 bg-[#448B3D] text-white text-[10px] text-center py-0.5 font-medium">
+                                                    Chính
+                                                </span>
+                                            )}
+                                            {/* Nút xóa */}
+                                            <button
+                                                type="button"
+                                                onClick={e => { e.stopPropagation(); removePImage(idx); }}
+                                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                        <div className="flex gap-2 pt-2">
-                            <Button className="flex-1 bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={saveProduct}>Lưu</Button>
-                            <Button variant="outline" className="flex-1" onClick={() => setProductModal(null)}>Hủy</Button>
+
+                        {/* Buttons */}
+                        <div className="flex gap-2 pt-1">
+                            <Button
+                                className="flex-1 bg-[#448B3D] hover:bg-[#336B2D] text-white"
+                                onClick={saveProduct}
+                                disabled={pSaving}
+                            >
+                                {pSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Đang lưu...</> : 'Lưu'}
+                            </Button>
+                            <Button variant="outline" className="flex-1" onClick={() => setProductModal(null)} disabled={pSaving}>Hủy</Button>
                         </div>
                     </div>
                 </Modal>

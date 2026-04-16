@@ -117,4 +117,14 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
+    server: {
+        proxy: {
+            // Proxy tất cả /api/v1/* → API Gateway, tránh CORS
+            '/api/v1': {
+                target: 'http://localhost:8888',
+                changeOrigin: true,
+                secure: false,
+            },
+        },
+    },
 });

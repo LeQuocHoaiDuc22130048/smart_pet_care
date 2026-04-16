@@ -17,7 +17,6 @@ const menuItems: MenuItem[] = [
         icon: ShoppingBag, label: 'Sản phẩm', tab: 'products',
         children: [
             { icon: List, label: 'Danh sách sản phẩm', tab: 'products' },
-            { icon: PlusCircle, label: 'Thêm sản phẩm', tab: 'products-add' },
             { icon: Tag, label: 'Danh mục sản phẩm', tab: 'product-categories' },
         ]
     },

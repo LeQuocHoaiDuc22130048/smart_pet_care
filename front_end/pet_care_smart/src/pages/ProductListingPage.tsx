@@ -30,7 +30,7 @@ function getPrimaryImage(product: Product): string {
 }
 
 function getCategoryNames(product: Product): string {
-    return product.categories?.map((c) => c.categoryName).join(', ') || 'Khác';
+    return product.category?.map((c) => c.categoryName).join(', ') || 'Khác';
 }
 
 const ProductListingPage = () => {
@@ -75,10 +75,11 @@ const ProductListingPage = () => {
 
     const filteredProducts = products
         .filter((p) => {
-            if (p.status === 'INACTIVE') return false;
+            // Tạm thời hiển thị cả INACTIVE để test
+            // if (p.status === 'INACTIVE') return false;
             if (searchQuery && !p.productName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
             if (selectedCategories.length > 0) {
-                const productCatIds = p.categories?.map((c) => c.id) ?? [];
+                const productCatIds = p.category?.map((c) => c.categoryId) ?? [];
                 if (!selectedCategories.some((id) => productCatIds.includes(id))) return false;
             }
             if (p.price < priceRange[0] || p.price > priceRange[1]) return false;
@@ -157,15 +158,15 @@ const ProductListingPage = () => {
                     <Label className='mb-3 block font-semibold'>Danh mục</Label>
                     <div className='space-y-2.5'>
                         {categories.map((cat) => (
-                            <div key={cat.id} className='flex items-center gap-2.5'>
+                            <div key={cat.categoryId} className='flex items-center gap-2.5'>
                                 <Checkbox
-                                    id={`cat-${cat.id}`}
-                                    checked={selectedCategories.includes(cat.id)}
-                                    onCheckedChange={(checked) => toggleCategory(cat.id, !!checked)}
+                                    id={`cat-${cat.categoryId}`}
+                                    checked={selectedCategories.includes(cat.categoryId)}
+                                    onCheckedChange={(checked) => toggleCategory(cat.categoryId, !!checked)}
                                     className='size-3.5'
                                 />
                                 <label
-                                    htmlFor={`cat-${cat.id}`}
+                                    htmlFor={`cat-${cat.categoryId}`}
                                     className='text-sm text-muted-foreground cursor-pointer select-none'
                                 >
                                     {cat.categoryName}
@@ -269,7 +270,7 @@ const ProductListingPage = () => {
                 {selectedCategories.length > 0 && (
                     <div className='flex flex-wrap gap-2 mb-5'>
                         {selectedCategories.map((id) => {
-                            const cat = categories.find((c) => c.id === id);
+                            const cat = categories.find((c) => c.categoryId === id);
                             return cat ? (
                                 <button
                                     key={id}

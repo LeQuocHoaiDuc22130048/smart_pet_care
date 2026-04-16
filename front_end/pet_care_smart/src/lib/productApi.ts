@@ -1,25 +1,40 @@
 /**
  * Product Service API
  * Route prefix: /pet_care_product
+ * DTOs: ProductCreationRequest, ProductUpdateRequest,
+ *        CategoryCreationRequest, CategoryUpdateRequest
  */
 
 import { apiRequest, type ApiResponse } from './api';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Enums ────────────────────────────────────────────────────────────────────
+/** Khớp với ProductStatus enum backend */
 export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
 
+// ─── Response types ───────────────────────────────────────────────────────────
+
+/** CategoryResponse — field là categoryId (không phải id) */
 export interface Category {
-    id: string;
+    categoryId: string;         // backend dùng categoryId
     categoryName: string;
     description?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
+/** CategoryResponseCreateProduct — dùng trong ProductResponse.category */
+export interface CategoryInProduct {
+    categoryId: string;
+    categoryName: string;
+}
+
+/** ImageResponse */
 export interface ProductImage {
-    id: string;
     imageUrl: string;
     isPrimary: boolean;
 }
 
+/** ProductResponse */
 export interface Product {
     id: string;
     productName: string;
@@ -27,41 +42,82 @@ export interface Product {
     price: number;
     stockQuantity: number;
     status: ProductStatus;
-    categories?: Category[];
+    category?: CategoryInProduct[];     // Set<CategoryResponseCreateProduct>
     images?: ProductImage[];
-    primaryImageUrl?: string;
     createdAt?: string;
     updatedAt?: string;
 }
 
-export interface CreateProductRequest {
-    productName: string;
-    description?: string;
-    price: number;
+// ─── Request types (khớp DTO backend) ────────────────────────────────────────
+
+/**
+ * ProductCreationRequest — multipart/form-data
+ * field "request": JSON string của object bên dưới
+ * field "images": File[]
+ */
+export interface ProductCreationRequest {
+    productName: string;        // @NotBlank
+    description?: string;       // @Size(max=500)
+    price: number;              // BigDecimal
     stockQuantity: number;
-    categoryId: string[];
+    categoryId: string[];       // Set<String> @NotEmpty — dùng array, backend nhận Set
     primaryImageIndex?: number;
-    status?: ProductStatus;
+    // status không có trong CreationRequest (mặc định ACTIVE)
 }
 
-export interface CreateCategoryRequest {
-    categoryName: string;
+/**
+ * ProductUpdateRequest — multipart/form-data
+ * field "request": JSON string
+ * field "images": File[] (optional)
+ */
+export interface ProductUpdateRequest {
+    productName: string;        // @NotBlank
+    description?: string;       // @Size(max=500)
+    price?: number;
+    stockQuantity?: number;
+    status?: ProductStatus;
+    categoryId: string[];       // @NotEmpty
+    primaryImageIndex?: number;
+}
+
+/**
+ * CategoryCreationRequest — application/json
+ */
+export interface CategoryCreationRequest {
+    categoryName: string;       // @NotBlank, @Size(max=100)
+    description?: string;       // @Size(max=500)
+}
+
+/**
+ * CategoryUpdateRequest — application/json
+ */
+export interface CategoryUpdateRequest {
+    categoryName?: string;
     description?: string;
 }
 
 // ─── Product endpoints ────────────────────────────────────────────────────────
 export const productApi = {
-    // Public
+    // ── Public ───────────────────────────────────────────────────────────────
+
+    /** GET /pet_care_product/products */
     getAll(): Promise<ApiResponse<Product[]>> {
         return apiRequest('/pet_care_product/products');
     },
 
+    /** GET /pet_care_product/products/{id} */
     getById(id: string): Promise<ApiResponse<Product>> {
         return apiRequest(`/pet_care_product/products/${id}`);
     },
 
-    // Admin
-    create(data: CreateProductRequest, images: File[]): Promise<ApiResponse<Product>> {
+    // ── Admin ─────────────────────────────────────────────────────────────────
+
+    /**
+     * POST /pet_care_product/products — multipart/form-data
+     * field "request": JSON string của ProductCreationRequest
+     * field "images": File[]
+     */
+    create(data: ProductCreationRequest, images: File[]): Promise<ApiResponse<Product>> {
         const formData = new FormData();
         formData.append('request', JSON.stringify(data));
         images.forEach((img) => formData.append('images', img));
@@ -73,10 +129,15 @@ export const productApi = {
         });
     },
 
-    update(id: string, data: Partial<CreateProductRequest>, images?: File[]): Promise<ApiResponse<Product>> {
+    /**
+     * PUT /pet_care_product/products/{id} — multipart/form-data
+     * field "request": JSON string của ProductUpdateRequest
+     * field "images": File[] (optional)
+     */
+    update(id: string, data: ProductUpdateRequest, images?: File[]): Promise<ApiResponse<Product>> {
         const formData = new FormData();
         formData.append('request', JSON.stringify(data));
-        if (images) {
+        if (images && images.length > 0) {
             images.forEach((img) => formData.append('images', img));
         }
         return apiRequest(`/pet_care_product/products/${id}`, {
@@ -87,6 +148,7 @@ export const productApi = {
         });
     },
 
+    /** DELETE /pet_care_product/products/{id} */
     delete(id: string): Promise<ApiResponse<null>> {
         return apiRequest(`/pet_care_product/products/${id}`, {
             method: 'DELETE',
@@ -94,16 +156,20 @@ export const productApi = {
         });
     },
 
-    // Categories
+    // ── Categories ────────────────────────────────────────────────────────────
+
+    /** GET /pet_care_product/categories */
     getAllCategories(): Promise<ApiResponse<Category[]>> {
         return apiRequest('/pet_care_product/categories');
     },
 
+    /** GET /pet_care_product/categories/{id} */
     getCategoryById(id: string): Promise<ApiResponse<Category>> {
         return apiRequest(`/pet_care_product/categories/${id}`);
     },
 
-    createCategory(data: CreateCategoryRequest): Promise<ApiResponse<Category>> {
+    /** POST /pet_care_product/categories — CategoryCreationRequest */
+    createCategory(data: CategoryCreationRequest): Promise<ApiResponse<Category>> {
         return apiRequest('/pet_care_product/categories', {
             method: 'POST',
             body: data,
@@ -111,7 +177,8 @@ export const productApi = {
         });
     },
 
-    updateCategory(id: string, data: CreateCategoryRequest): Promise<ApiResponse<Category>> {
+    /** PUT /pet_care_product/categories/{id} — CategoryUpdateRequest */
+    updateCategory(id: string, data: CategoryUpdateRequest): Promise<ApiResponse<Category>> {
         return apiRequest(`/pet_care_product/categories/${id}`, {
             method: 'PUT',
             body: data,
@@ -119,6 +186,7 @@ export const productApi = {
         });
     },
 
+    /** DELETE /pet_care_product/categories/{id} */
     deleteCategory(id: string): Promise<ApiResponse<null>> {
         return apiRequest(`/pet_care_product/categories/${id}`, {
             method: 'DELETE',

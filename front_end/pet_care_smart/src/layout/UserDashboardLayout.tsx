@@ -6,7 +6,7 @@ import { Navigate, Outlet } from 'react-router';
 import { Menu, Loader2 } from 'lucide-react';
 
 const UserDashboardLayout = () => {
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, user } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     if (isLoading) {
@@ -19,6 +19,11 @@ const UserDashboardLayout = () => {
 
     if (!isAuthenticated) {
         return <Navigate to='/login' replace />;
+    }
+
+    // Admin không vào dashboard user
+    if (user?.role === 'admin') {
+        return <Navigate to='/admin' replace />;
     }
 
     return (

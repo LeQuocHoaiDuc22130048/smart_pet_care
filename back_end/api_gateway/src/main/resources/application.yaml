@@ -87,7 +87,8 @@ spring:
 
 identity:
   service:
-    url: ${IDENTITY_SERVICE_URL:http://localhost:8080}/pet_care_identity
+    url: ${IDENTITY_SERVICE_URL:http://localhost:8080}
+    introspect-path: /pet_care_identity/auth/introspect
 
 logging:
   level:

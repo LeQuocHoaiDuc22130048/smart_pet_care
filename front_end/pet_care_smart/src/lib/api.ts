@@ -3,7 +3,7 @@
  * Base URL: http://localhost:8888/api/v1
  */
 
-export const BASE_URL = 'http://localhost:8888/api/v1';
+export const BASE_URL = '/api/v1';
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export const TOKEN_KEY = 'pcs_token';

@@ -20,7 +20,7 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (username: string, password: string) => Promise<boolean>;
+    login: (username: string, password: string) => Promise<'admin' | 'user' | null>;
     logout: () => Promise<void>;
     register: (data: {
         username: string;
@@ -79,29 +79,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     // ── Login ─────────────────────────────────────────────────────────────────
-    const login = async (username: string, password: string): Promise<boolean> => {
+    const login = async (username: string, password: string): Promise<'admin' | 'user' | null> => {
         try {
             const res = await authApi.login({ username, password });
             const { token, authenticated } = res.result;
 
-            if (!authenticated || !token) return false;
+            if (!authenticated || !token) return null;
 
             setToken(token);
 
             const infoRes = await authApi.getMyInfo();
             const u = infoRes.result;
+            const role = extractRole(u.roles);
             setUser({
                 id: u.id,
                 username: u.username,
                 firstName: u.firstName,
                 lastName: u.lastName,
                 name: `${u.firstName} ${u.lastName}`,
-                role: extractRole(u.roles),
+                role,
             });
 
-            return true;
+            return role;
         } catch {
-            return false;
+            return null;
         }
     };
 
@@ -116,7 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             await authApi.register(data);
             // Auto-login after register
-            return await login(data.username, data.password);
+            const role = await login(data.username, data.password);
+            return role !== null;
         } catch {
             return false;
         }
