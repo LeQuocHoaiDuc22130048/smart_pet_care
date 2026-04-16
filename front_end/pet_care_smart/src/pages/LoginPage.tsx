@@ -22,7 +22,6 @@ const LoginPage = () => {
             const success = await login(username, password);
             if (success) {
                 toast.success('Đăng nhập thành công!');
-                // Redirect dựa theo role — useAuth đã set user, lấy từ context
                 navigate('/dashboard');
             } else {
                 toast.error('Tên đăng nhập hoặc mật khẩu không đúng');

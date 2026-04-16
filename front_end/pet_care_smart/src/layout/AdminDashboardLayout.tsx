@@ -4,11 +4,12 @@ import AdminSidebar from '@/components/AdminSidebar';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate, Outlet } from 'react-router';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 const ADMIN_SIDEBAR_STORAGE_KEY = 'petcare-admin-sidebar-desktop';
 
 const AdminDashboardLayout = () => {
-    const { isAuthenticated, user } = useAuth();
+    const { isAuthenticated, isLoading, user } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
 
@@ -28,6 +29,14 @@ const AdminDashboardLayout = () => {
             /* ignore */
         }
     }, [desktopSidebarOpen]);
+
+    if (isLoading) {
+        return (
+            <div className='min-h-screen flex items-center justify-center bg-background'>
+                <Loader2 className='w-8 h-8 animate-spin text-[#448B3D]' />
+            </div>
+        );
+    }
 
     if (!isAuthenticated) {
         return <Navigate to='/login' replace />;
