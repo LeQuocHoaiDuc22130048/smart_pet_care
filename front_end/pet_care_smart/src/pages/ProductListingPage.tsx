@@ -13,16 +13,16 @@ import WishlistButton from '@/components/WishlistButton';
 import { motion, AnimatePresence } from 'motion/react';
 import {
     Filter, Grid, List, ShoppingCart,
-    SlidersHorizontal, Star, Search, X, Loader2
+    SlidersHorizontal, Search, X, Loader2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { productApi, type Product, type Category } from '@/lib/productApi';
+import { cn } from '@/lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getPrimaryImage(product: Product): string {
-    if (product.primaryImageUrl) return product.primaryImageUrl;
     const primary = product.images?.find((i) => i.isPrimary);
     if (primary) return primary.imageUrl;
     if (product.images?.[0]) return product.images[0].imageUrl;
@@ -31,6 +31,85 @@ function getPrimaryImage(product: Product): string {
 
 function getCategoryNames(product: Product): string {
     return product.category?.map((c) => c.categoryName).join(', ') || 'Khác';
+}
+
+// ─── Pagination Component ─────────────────────────────────────────────────────
+function Pagination({
+    currentPage,
+    totalItems,
+    itemsPerPage,
+    onPageChange
+}: {
+    currentPage: number;
+    totalItems: number;
+    itemsPerPage: number;
+    onPageChange: (page: number) => void;
+}) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    if (totalPages <= 1) return null;
+
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+        if (currentPage <= 3) {
+            pages.push(1, 2, 3, 4, '...', totalPages);
+        } else if (currentPage >= totalPages - 2) {
+            pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+        } else {
+            pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+        }
+    }
+
+    return (
+        <div className="flex items-center justify-between px-4 py-6 border-t border-border mt-8">
+            <div className="text-sm text-muted-foreground">
+                Hiển thị {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} - {Math.min(currentPage * itemsPerPage, totalItems)} trong tổng số {totalItems}
+            </div>
+            <div className="flex items-center gap-1">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="h-9 rounded-xl"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                {pages.map((page, idx) => (
+                    page === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                    ) : (
+                        <Button
+                            key={page}
+                            size="sm"
+                            variant={currentPage === page ? 'default' : 'outline'}
+                            onClick={() => onPageChange(page as number)}
+                            className={cn(
+                                "h-9 w-9 rounded-xl",
+                                currentPage === page && "bg-[#448B3D] hover:bg-[#336B2D] text-white"
+                            )}
+                        >
+                            {page}
+                        </Button>
+                    )
+                ))}
+
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="h-9 rounded-xl"
+                >
+                    <ChevronRight className="w-4 h-4" />
+                </Button>
+            </div>
+        </div>
+    );
 }
 
 const ProductListingPage = () => {
@@ -49,6 +128,8 @@ const ProductListingPage = () => {
     const [sortBy, setSortBy] = useState('popular');
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 12;
 
     // ── Fetch data ────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -91,17 +172,31 @@ const ProductListingPage = () => {
             return b.stockQuantity - a.stockQuantity;
         });
 
-    const toggleCategory = (id: string, checked: boolean) =>
+    const toggleCategory = (id: string, checked: boolean) => {
         setSelectedCategories((prev) => (checked ? [...prev, id] : prev.filter((c) => c !== id)));
+        setCurrentPage(1); // Reset về trang 1 khi thay đổi filter
+    };
 
     const clearAll = () => {
         setSelectedCategories([]);
         setPriceRange([0, maxPrice]);
         setSearchQuery('');
+        setCurrentPage(1);
     };
 
     const activeFilterCount =
         selectedCategories.length + (priceRange[0] > 0 || priceRange[1] < maxPrice ? 1 : 0);
+
+    // Pagination
+    const paginatedProducts = filteredProducts.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset về trang 1 khi search hoặc sort thay đổi
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, sortBy, priceRange]);
 
     const handleAddToCart = (product: Product) => {
         addToCart({
@@ -300,119 +395,135 @@ const ProductListingPage = () => {
 
                         {/* Grid view */}
                         {viewMode === 'grid' && (
-                            <div className='grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5'>
-                                {filteredProducts.map((product) => (
-                                    <Card
-                                        key={product.id}
-                                        className='group cursor-pointer overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-lg transition-all duration-300 bg-card flex flex-col'
-                                    >
-                                        <div className='relative overflow-hidden bg-gray-50'>
-                                            <img
-                                                src={getPrimaryImage(product)}
-                                                alt={product.productName}
-                                                className='w-full h-40 sm:h-52 object-contain group-hover:scale-105 transition-transform duration-500'
-                                                onClick={() => navigate(`/products/${product.id}`)}
-                                            />
-                                            {product.status === 'OUT_OF_STOCK' && (
-                                                <Badge className='absolute top-2 left-2 bg-gray-500 text-white border-0 text-xs px-2 py-0.5'>
-                                                    Hết hàng
-                                                </Badge>
-                                            )}
-                                            <div className='absolute bottom-2 right-2'>
-                                                <WishlistButton
-                                                    item={{
-                                                        id: product.id,
-                                                        name: product.productName,
-                                                        price: product.price,
-                                                        image: getPrimaryImage(product),
-                                                        category: getCategoryNames(product),
-                                                    }}
-                                                    size='sm'
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className='p-3 sm:p-4 flex flex-col flex-1'>
-                                            <p className='text-xs text-muted-foreground mb-0.5'>
-                                                {getCategoryNames(product)}
-                                            </p>
-                                            <h3
-                                                className='font-bold text-sm sm:text-base text-foreground mb-2 hover:text-[#448B3D] transition-colors cursor-pointer leading-snug line-clamp-2 flex-1'
-                                                onClick={() => navigate(`/products/${product.id}`)}
-                                            >
-                                                {product.productName}
-                                            </h3>
-                                            <div className='flex items-center justify-between gap-2 mt-auto'>
-                                                <span className='text-lg sm:text-xl font-bold text-[#448B3D]'>
-                                                    {product.price.toLocaleString('vi-VN')}₫
-                                                </span>
-                                                <Button
-                                                    size='sm'
-                                                    onClick={() => handleAddToCart(product)}
-                                                    disabled={product.status === 'OUT_OF_STOCK'}
-                                                    className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white h-9 w-9 sm:w-auto sm:px-3 p-0 shrink-0'
-                                                    aria-label='Thêm vào giỏ'
-                                                >
-                                                    <ShoppingCart className='w-4 h-4' />
-                                                    <span className='hidden sm:inline ml-1.5'>Thêm</span>
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* List view */}
-                        {viewMode === 'list' && (
-                            <div className='space-y-3'>
-                                {filteredProducts.map((product) => (
-                                    <Card
-                                        key={product.id}
-                                        className='group overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-md transition-all duration-300 bg-card'
-                                    >
-                                        <div className='flex gap-4 p-3 sm:p-4'>
-                                            <div className='relative shrink-0 overflow-hidden rounded-lg bg-gray-50'>
+                            <>
+                                <div className='grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5'>
+                                    {paginatedProducts.map((product) => (
+                                        <Card
+                                            key={product.id}
+                                            className='group cursor-pointer overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-lg transition-all duration-300 bg-card flex flex-col'
+                                        >
+                                            <div className='relative overflow-hidden bg-gray-50'>
                                                 <img
                                                     src={getPrimaryImage(product)}
                                                     alt={product.productName}
-                                                    className='w-24 h-24 sm:w-32 sm:h-32 object-contain group-hover:scale-105 transition-transform duration-500 cursor-pointer'
+                                                    className='w-full h-40 sm:h-52 object-contain group-hover:scale-105 transition-transform duration-500'
                                                     onClick={() => navigate(`/products/${product.id}`)}
                                                 />
+                                                {product.status === 'OUT_OF_STOCK' && (
+                                                    <Badge className='absolute top-2 left-2 bg-gray-500 text-white border-0 text-xs px-2 py-0.5'>
+                                                        Hết hàng
+                                                    </Badge>
+                                                )}
+                                                <div className='absolute bottom-2 right-2'>
+                                                    <WishlistButton
+                                                        item={{
+                                                            id: product.id,
+                                                            name: product.productName,
+                                                            price: product.price,
+                                                            image: getPrimaryImage(product),
+                                                            category: getCategoryNames(product),
+                                                        }}
+                                                        size='sm'
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className='flex-1 min-w-0 flex flex-col'>
+                                            <div className='p-3 sm:p-4 flex flex-col flex-1'>
                                                 <p className='text-xs text-muted-foreground mb-0.5'>
                                                     {getCategoryNames(product)}
                                                 </p>
                                                 <h3
-                                                    className='font-bold text-base sm:text-lg text-foreground hover:text-[#448B3D] transition-colors cursor-pointer leading-snug'
+                                                    className='font-bold text-sm sm:text-base text-foreground mb-2 hover:text-[#448B3D] transition-colors cursor-pointer leading-snug line-clamp-2 flex-1'
                                                     onClick={() => navigate(`/products/${product.id}`)}
                                                 >
                                                     {product.productName}
                                                 </h3>
-                                                {product.description && (
-                                                    <p className='text-sm text-muted-foreground mt-1 line-clamp-2'>
-                                                        {product.description}
-                                                    </p>
-                                                )}
-                                                <div className='flex items-center justify-between gap-3 mt-auto pt-3'>
-                                                    <span className='text-xl font-bold text-[#448B3D]'>
+                                                <div className='flex items-center justify-between gap-2 mt-auto'>
+                                                    <span className='text-lg sm:text-xl font-bold text-[#448B3D]'>
                                                         {product.price.toLocaleString('vi-VN')}₫
                                                     </span>
                                                     <Button
                                                         size='sm'
                                                         onClick={() => handleAddToCart(product)}
                                                         disabled={product.status === 'OUT_OF_STOCK'}
-                                                        className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white h-10 px-4 shrink-0'
+                                                        className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white h-9 w-9 sm:w-auto sm:px-3 p-0 shrink-0'
+                                                        aria-label='Thêm vào giỏ'
                                                     >
-                                                        <ShoppingCart className='w-4 h-4 mr-1.5' />
-                                                        Thêm vào giỏ
+                                                        <ShoppingCart className='w-4 h-4' />
+                                                        <span className='hidden sm:inline ml-1.5'>Thêm</span>
                                                     </Button>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalItems={filteredProducts.length}
+                                    itemsPerPage={itemsPerPage}
+                                    onPageChange={setCurrentPage}
+                                />
+                            </>
+                        )}
+
+                        {/* List view */}
+                        {viewMode === 'list' && (
+                            <>
+                                <div className='space-y-3'>
+                                    {paginatedProducts.map((product) => (
+                                        <Card
+                                            key={product.id}
+                                            className='group overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-md transition-all duration-300 bg-card'
+                                        >
+                                            <div className='flex gap-4 p-3 sm:p-4'>
+                                                <div className='relative shrink-0 overflow-hidden rounded-lg bg-gray-50'>
+                                                    <img
+                                                        src={getPrimaryImage(product)}
+                                                        alt={product.productName}
+                                                        className='w-24 h-24 sm:w-32 sm:h-32 object-contain group-hover:scale-105 transition-transform duration-500 cursor-pointer'
+                                                        onClick={() => navigate(`/products/${product.id}`)}
+                                                    />
+                                                </div>
+                                                <div className='flex-1 min-w-0 flex flex-col'>
+                                                    <p className='text-xs text-muted-foreground mb-0.5'>
+                                                        {getCategoryNames(product)}
+                                                    </p>
+                                                    <h3
+                                                        className='font-bold text-base sm:text-lg text-foreground hover:text-[#448B3D] transition-colors cursor-pointer leading-snug'
+                                                        onClick={() => navigate(`/products/${product.id}`)}
+                                                    >
+                                                        {product.productName}
+                                                    </h3>
+                                                    {product.description && (
+                                                        <p className='text-sm text-muted-foreground mt-1 line-clamp-2'>
+                                                            {product.description}
+                                                        </p>
+                                                    )}
+                                                    <div className='flex items-center justify-between gap-3 mt-auto pt-3'>
+                                                        <span className='text-xl font-bold text-[#448B3D]'>
+                                                            {product.price.toLocaleString('vi-VN')}₫
+                                                        </span>
+                                                        <Button
+                                                            size='sm'
+                                                            onClick={() => handleAddToCart(product)}
+                                                            disabled={product.status === 'OUT_OF_STOCK'}
+                                                            className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white h-10 px-4 shrink-0'
+                                                        >
+                                                            <ShoppingCart className='w-4 h-4 mr-1.5' />
+                                                            Thêm vào giỏ
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalItems={filteredProducts.length}
+                                    itemsPerPage={itemsPerPage}
+                                    onPageChange={setCurrentPage}
+                                />
+                            </>
                         )}
 
                         {filteredProducts.length === 0 && !loading && (
@@ -464,7 +575,7 @@ const ProductListingPage = () => {
                                     className='w-full rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-12'
                                     onClick={() => setFilterDrawerOpen(false)}
                                 >
-                                    Xem {filteredProducts.length} sản phẩm
+                                    Xem {paginatedProducts.length} sản phẩm
                                 </Button>
                             </div>
                         </motion.div>

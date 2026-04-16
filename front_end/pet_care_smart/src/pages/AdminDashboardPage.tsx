@@ -99,17 +99,28 @@ function mapApiUser(u: UserIdentity): Customer {
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Modal({ title, onClose, children, size = 'default' }: {
+    title: string;
+    onClose: () => void;
+    children: React.ReactNode;
+    size?: 'default' | 'large' | 'xlarge';
+}) {
+    const sizeClasses = {
+        default: 'max-w-lg',
+        large: 'max-w-3xl',
+        xlarge: 'max-w-5xl'
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
-                <div className="flex items-center justify-between p-6 border-b border-border">
+            <div className={`bg-card border border-border rounded-2xl w-full ${sizeClasses[size]} shadow-2xl max-h-[90vh] flex flex-col`}>
+                <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
                     <h3 className="text-lg font-bold text-foreground">{title}</h3>
                     <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <div className="p-6 space-y-4">{children}</div>
+                <div className="p-6 overflow-y-auto flex-1">{children}</div>
             </div>
         </div>
     );
@@ -169,6 +180,92 @@ function parseAdminTab(raw: string | null): AdminTab {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatVND(amount: number): string {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(amount);
+}
+
+// ─── Pagination Component ─────────────────────────────────────────────────────
+function Pagination({
+    currentPage,
+    totalItems,
+    itemsPerPage,
+    onPageChange
+}: {
+    currentPage: number;
+    totalItems: number;
+    itemsPerPage: number;
+    onPageChange: (page: number) => void;
+}) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    if (totalPages <= 1) return null;
+
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+        if (currentPage <= 3) {
+            pages.push(1, 2, 3, 4, '...', totalPages);
+        } else if (currentPage >= totalPages - 2) {
+            pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+        } else {
+            pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+        }
+    }
+
+    return (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <div className="text-sm text-muted-foreground">
+                Hiển thị {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} - {Math.min(currentPage * itemsPerPage, totalItems)} trong tổng số {totalItems}
+            </div>
+            <div className="flex items-center gap-1">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="h-8"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                {pages.map((page, idx) => (
+                    page === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                    ) : (
+                        <Button
+                            key={page}
+                            size="sm"
+                            variant={currentPage === page ? 'default' : 'outline'}
+                            onClick={() => onPageChange(page as number)}
+                            className={cn(
+                                "h-8 w-8",
+                                currentPage === page && "bg-[#448B3D] hover:bg-[#336B2D] text-white"
+                            )}
+                        >
+                            {page}
+                        </Button>
+                    )
+                ))}
+
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="h-8"
+                >
+                    <ChevronRight className="w-4 h-4" />
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 function orderBadge(s: string) {
     if (s === 'Hoàn thành') return 'bg-green-100 text-green-700 border border-green-300';
     if (s === 'Đang giao') return 'bg-blue-100 text-blue-700 border border-blue-300';
@@ -328,19 +425,25 @@ const AdminDashboardPage = () => {
     }, [fetchAdminData]);
 
     const [newCategoryName, setNewCategoryName] = useState('');
-    const [editingCategory, setEditingCategory] = useState<{ index: number; name: string; id?: string } | null>(null);
+    const [newCategoryDesc, setNewCategoryDesc] = useState('');
+    const [editingCategory, setEditingCategory] = useState<{ index: number; name: string; description?: string; id?: string } | null>(null);
 
     const addCategory = async () => {
         const name = newCategoryName.trim();
+        const description = newCategoryDesc.trim();
         if (!name || categories.includes(name)) return;
         try {
-            await productApi.createCategory({ categoryName: name });
+            await productApi.createCategory({
+                categoryName: name,
+                description: description || undefined
+            });
             toast.success('Đã thêm danh mục');
             await fetchAdminData();
         } catch {
             toast.error('Không thể thêm danh mục');
         }
         setNewCategoryName('');
+        setNewCategoryDesc('');
     };
 
     const deleteCategory = async (idx: number) => {
@@ -380,7 +483,10 @@ const AdminDashboardPage = () => {
         const cat = apiCategories[editingCategory.index];
         if (cat) {
             try {
-                await productApi.updateCategory(cat.categoryId, { categoryName: name });
+                await productApi.updateCategory(cat.categoryId, {
+                    categoryName: name,
+                    description: editingCategory.description?.trim() || undefined
+                });
                 toast.success('Đã cập nhật danh mục');
                 await fetchAdminData();
             } catch {
@@ -398,6 +504,17 @@ const AdminDashboardPage = () => {
     const [editingPassword, setEditingPassword] = useState<{ id: string; value: string } | null>(null);
     const [bookings, setBookings] = useState<Booking[]>(INIT_BOOKINGS);
     const [search, setSearch] = useState('');
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState<Record<string, number>>({
+        products: 1,
+        categories: 1,
+        orders: 1,
+        customers: 1,
+        bookings: 1
+    });
+    const itemsPerPage = 10;
+
     const [calendarMonth, setCalendarMonth] = useState(() => {
         const n = new Date();
         return new Date(n.getFullYear(), n.getMonth(), 1);
@@ -561,6 +678,24 @@ const AdminDashboardPage = () => {
     const filteredOrders = orders.filter(o => o.id.toLowerCase().includes(search.toLowerCase()) || o.customer.toLowerCase().includes(search.toLowerCase()));
     const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase()));
     const filteredBookings = bookings.filter(b => b.id.toLowerCase().includes(search.toLowerCase()) || b.customer.toLowerCase().includes(search.toLowerCase()));
+
+    // Paginated data
+    const paginatedProducts = filteredProducts.slice(
+        (currentPage.products - 1) * itemsPerPage,
+        currentPage.products * itemsPerPage
+    );
+    const paginatedCategories = apiCategories.slice(
+        (currentPage.categories - 1) * itemsPerPage,
+        currentPage.categories * itemsPerPage
+    );
+    const paginatedOrders = filteredOrders.slice(
+        (currentPage.orders - 1) * itemsPerPage,
+        currentPage.orders * itemsPerPage
+    );
+    const paginatedCustomers = filteredCustomers.slice(
+        (currentPage.customers - 1) * itemsPerPage,
+        currentPage.customers * itemsPerPage
+    );
 
     const calendarCells = useMemo(() => buildMonthCalendarCells(calendarMonth), [calendarMonth]);
     const today = new Date();
@@ -726,14 +861,14 @@ const AdminDashboardPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredProducts.map(p => (
+                                    {paginatedProducts.map(p => (
                                         <tr key={p.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                             <td className="p-3">
                                                 <img src={p.image} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
                                             </td>
                                             <td className="p-3 font-medium text-foreground max-w-[180px] truncate">{p.name}</td>
                                             <td className="p-3 text-muted-foreground">{p.category}</td>
-                                            <td className="p-3 font-medium">${p.price.toFixed(2)}</td>
+                                            <td className="p-3 font-medium text-[#448B3D]">{formatVND(p.price)}</td>
                                             <td className="p-3">
                                                 <span className={p.stock === 0 ? 'text-red-600 font-medium' : p.stock < 10 ? 'text-orange-600 font-medium' : 'text-foreground'}>{p.stock}</span>
                                             </td>
@@ -758,6 +893,12 @@ const AdminDashboardPage = () => {
                             </table>
                             {filteredProducts.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy sản phẩm</p>}
                         </div>
+                        <Pagination
+                            currentPage={currentPage.products}
+                            totalItems={filteredProducts.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(page) => setCurrentPage(prev => ({ ...prev, products: page }))}
+                        />
                     </Card>
                 </TabsContent>
 
@@ -766,25 +907,40 @@ const AdminDashboardPage = () => {
                     {/* Form thêm danh mục */}
                     <Card className="p-5 mb-4">
                         <h3 className="text-sm font-semibold text-foreground mb-3">Thêm danh mục mới</h3>
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="Nhập tên danh mục..."
-                                value={newCategoryName}
-                                onChange={e => setNewCategoryName(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && addCategory()}
-                                className="max-w-sm"
-                            />
-                            <Button
-                                onClick={addCategory}
-                                disabled={!newCategoryName.trim() || categories.includes(newCategoryName.trim())}
-                                className="bg-[#448B3D] hover:bg-[#336B2D] text-white shrink-0"
-                            >
-                                <Plus className="w-4 h-4" /> Thêm
-                            </Button>
+                        <div className="space-y-3">
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Nhập tên danh mục..."
+                                    value={newCategoryName}
+                                    onChange={e => setNewCategoryName(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && addCategory()}
+                                    className="max-w-sm"
+                                />
+                                <Button
+                                    onClick={addCategory}
+                                    disabled={!newCategoryName.trim() || categories.includes(newCategoryName.trim())}
+                                    className="bg-[#448B3D] hover:bg-[#336B2D] text-white shrink-0"
+                                >
+                                    <Plus className="w-4 h-4" /> Thêm
+                                </Button>
+                            </div>
+                            <div>
+                                <textarea
+                                    placeholder="Mô tả danh mục (tùy chọn, tối đa 500 ký tự)"
+                                    value={newCategoryDesc}
+                                    onChange={e => setNewCategoryDesc(e.target.value)}
+                                    maxLength={500}
+                                    rows={2}
+                                    className="w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                                />
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    {newCategoryDesc.length}/500 ký tự
+                                </div>
+                            </div>
+                            {newCategoryName.trim() && categories.includes(newCategoryName.trim()) && (
+                                <p className="text-xs text-red-500">Danh mục này đã tồn tại.</p>
+                            )}
                         </div>
-                        {newCategoryName.trim() && categories.includes(newCategoryName.trim()) && (
-                            <p className="text-xs text-red-500 mt-1.5">Danh mục này đã tồn tại.</p>
-                        )}
                     </Card>
 
                     {/* Danh sách danh mục */}
@@ -795,50 +951,88 @@ const AdminDashboardPage = () => {
                                     <tr className="border-b border-border">
                                         <th className="text-left p-3 text-muted-foreground font-medium">#</th>
                                         <th className="text-left p-3 text-muted-foreground font-medium">Tên danh mục</th>
+                                        <th className="text-left p-3 text-muted-foreground font-medium">Mô tả</th>
                                         <th className="text-left p-3 text-muted-foreground font-medium">Số sản phẩm</th>
                                         <th className="text-left p-3 text-muted-foreground font-medium">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {categories.map((cat, idx) => (
-                                        <tr key={cat} className="border-b border-border hover:bg-muted/30 transition-colors">
-                                            <td className="p-3 text-muted-foreground">{idx + 1}</td>
-                                            <td className="p-3 font-medium text-foreground">
-                                                {editingCategory?.index === idx ? (
-                                                    <div className="flex gap-2 items-center">
+                                    {paginatedCategories.map((cat, idx) => {
+                                        const actualIdx = (currentPage.categories - 1) * itemsPerPage + idx;
+                                        return (
+                                            <tr key={cat.categoryId} className="border-b border-border hover:bg-muted/30 transition-colors">
+                                                <td className="p-3 text-muted-foreground">{actualIdx + 1}</td>
+                                                <td className="p-3 font-medium text-foreground">
+                                                    {editingCategory?.index === actualIdx ? (
                                                         <Input
                                                             value={editingCategory.name}
-                                                            onChange={e => setEditingCategory({ index: idx, name: e.target.value })}
+                                                            onChange={e => setEditingCategory({ ...editingCategory, name: e.target.value })}
                                                             onKeyDown={e => { if (e.key === 'Enter') saveEditCategory(); if (e.key === 'Escape') setEditingCategory(null); }}
                                                             className="h-8 max-w-[200px]"
                                                             autoFocus
                                                         />
-                                                        <Button size="sm" onClick={saveEditCategory} className="bg-[#448B3D] hover:bg-[#336B2D] text-white h-8">Lưu</Button>
-                                                        <Button size="sm" variant="outline" onClick={() => setEditingCategory(null)} className="h-8">Hủy</Button>
-                                                    </div>
-                                                ) : cat}
-                                            </td>
-                                            <td className="p-3 text-muted-foreground">
-                                                {products.filter(p => p.category === cat).length}
-                                            </td>
-                                            <td className="p-3">
-                                                <div className="flex items-center gap-1">
-                                                    <Button size="icon-sm" variant="ghost" onClick={() => setEditingCategory({ index: idx, name: cat })}>
-                                                        <Pencil className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                    <Button size="icon-sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deleteCategory(idx)}>
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {categories.length === 0 && (
-                                        <tr><td colSpan={4} className="text-center text-muted-foreground py-8">Chưa có danh mục nào</td></tr>
+                                                    ) : cat.categoryName}
+                                                </td>
+                                                <td className="p-3 text-muted-foreground max-w-xs">
+                                                    {editingCategory?.index === actualIdx ? (
+                                                        <textarea
+                                                            value={editingCategory.description || ''}
+                                                            onChange={e => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                                                            maxLength={500}
+                                                            rows={2}
+                                                            className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm resize-none"
+                                                            placeholder="Mô tả..."
+                                                        />
+                                                    ) : (
+                                                        <span className="text-xs line-clamp-2" title={cat.description}>
+                                                            {cat.description || <span className="text-muted-foreground/50 italic">Chưa có mô tả</span>}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-muted-foreground">
+                                                    {products.filter(p => p.category === cat.categoryName).length}
+                                                </td>
+                                                <td className="p-3">
+                                                    {editingCategory?.index === actualIdx ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <Button size="sm" onClick={saveEditCategory} className="bg-[#448B3D] hover:bg-[#336B2D] text-white h-7 text-xs">Lưu</Button>
+                                                            <Button size="sm" variant="outline" onClick={() => setEditingCategory(null)} className="h-7 text-xs">Hủy</Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1">
+                                                            <Button
+                                                                size="icon-sm"
+                                                                variant="ghost"
+                                                                onClick={() => setEditingCategory({
+                                                                    index: actualIdx,
+                                                                    name: cat.categoryName,
+                                                                    description: cat.description,
+                                                                    id: cat.categoryId
+                                                                })}
+                                                            >
+                                                                <Pencil className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                            <Button size="icon-sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deleteCategory(actualIdx)}>
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                    {apiCategories.length === 0 && (
+                                        <tr><td colSpan={5} className="text-center text-muted-foreground py-8">Chưa có danh mục nào</td></tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
+                        <Pagination
+                            currentPage={currentPage.categories}
+                            totalItems={apiCategories.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(page) => setCurrentPage(prev => ({ ...prev, categories: page }))}
+                        />
                     </Card>
                 </TabsContent>
 
@@ -863,7 +1057,7 @@ const AdminDashboardPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredOrders.map(o => (
+                                    {paginatedOrders.map(o => (
                                         <tr key={o.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                             <td className="p-3 font-medium text-foreground">{o.id}</td>
                                             <td className="p-3 text-muted-foreground">{o.customer}</td>
@@ -904,6 +1098,12 @@ const AdminDashboardPage = () => {
                             </table>
                             {filteredOrders.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy đơn hàng</p>}
                         </div>
+                        <Pagination
+                            currentPage={currentPage.orders}
+                            totalItems={filteredOrders.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(page) => setCurrentPage(prev => ({ ...prev, orders: page }))}
+                        />
                     </Card>
                 </TabsContent>
 
@@ -1063,7 +1263,7 @@ const AdminDashboardPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredCustomers.map(c => (
+                                    {paginatedCustomers.map(c => (
                                         <tr key={c.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                             <td className="p-3 font-medium text-foreground">{c.name}</td>
                                             <td className="p-3 text-muted-foreground">{c.email}</td>
@@ -1095,6 +1295,12 @@ const AdminDashboardPage = () => {
                             </table>
                             {filteredCustomers.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy khách hàng</p>}
                         </div>
+                        <Pagination
+                            currentPage={currentPage.customers}
+                            totalItems={filteredCustomers.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(page) => setCurrentPage(prev => ({ ...prev, customers: page }))}
+                        />
                     </Card>
                 </TabsContent>
 
@@ -1541,143 +1747,162 @@ const AdminDashboardPage = () => {
 
             {/* ── Product Modal ── */}
             {productModal && (
-                <Modal title={productModal === 'add' ? 'Thêm sản phẩm' : 'Chỉnh sửa sản phẩm'} onClose={() => setProductModal(null)}>
-                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-
-                        {/* Tên sản phẩm */}
-                        <div>
-                            <Label htmlFor="pname">Tên sản phẩm <span className="text-red-500">*</span></Label>
-                            <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
-                        </div>
-
-                        {/* Mô tả */}
-                        <div>
-                            <Label htmlFor="pdesc">Mô tả</Label>
-                            <textarea
-                                id="pdesc"
-                                rows={3}
-                                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                                placeholder="Mô tả sản phẩm (tối đa 500 ký tự)"
-                                maxLength={500}
-                                value={pForm.description}
-                                onChange={e => setPForm(f => ({ ...f, description: e.target.value }))}
-                            />
-                        </div>
-
-                        {/* Danh mục */}
-                        <div>
-                            <Label>Danh mục <span className="text-red-500">*</span></Label>
-                            <Select value={pForm.categoryId} onValueChange={v => setPForm(f => ({ ...f, categoryId: v }))}>
-                                <SelectTrigger className="mt-1 w-full">
-                                    <SelectValue placeholder="Chọn danh mục" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {apiCategories.map(c => (
-                                        <SelectItem key={c.categoryId} value={c.categoryId}>{c.categoryName}</SelectItem>
-                                    ))}
-                                    {apiCategories.length === 0 && (
-                                        <div className="px-3 py-2 text-sm text-muted-foreground">Chưa có danh mục</div>
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Giá & Tồn kho */}
-                        <div className="grid grid-cols-2 gap-3">
+                <Modal
+                    title={productModal === 'add' ? 'Thêm sản phẩm' : 'Chỉnh sửa sản phẩm'}
+                    onClose={() => setProductModal(null)}
+                    size="large"
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Cột trái - Thông tin cơ bản */}
+                        <div className="space-y-4">
+                            {/* Tên sản phẩm */}
                             <div>
-                                <Label htmlFor="pprice">Giá (₫) <span className="text-red-500">*</span></Label>
-                                <Input id="pprice" type="number" min={0} className="mt-1" placeholder="0" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
+                                <Label htmlFor="pname">Tên sản phẩm <span className="text-red-500">*</span></Label>
+                                <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
                             </div>
-                            <div>
-                                <Label htmlFor="pstock">Tồn kho <span className="text-red-500">*</span></Label>
-                                <Input id="pstock" type="number" min={0} className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
-                            </div>
-                        </div>
 
-                        {/* Trạng thái (chỉ hiện khi edit) */}
-                        {productModal === 'edit' && (
+                            {/* Mô tả */}
                             <div>
-                                <Label>Trạng thái</Label>
-                                <Select value={pForm.status} onValueChange={v => setPForm(f => ({ ...f, status: v as 'active' | 'inactive' }))}>
+                                <Label htmlFor="pdesc">Mô tả</Label>
+                                <textarea
+                                    id="pdesc"
+                                    rows={4}
+                                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                                    placeholder="Mô tả sản phẩm (tối đa 500 ký tự)"
+                                    maxLength={500}
+                                    value={pForm.description}
+                                    onChange={e => setPForm(f => ({ ...f, description: e.target.value }))}
+                                />
+                                <div className="text-xs text-muted-foreground mt-1 text-right">
+                                    {pForm.description.length}/500
+                                </div>
+                            </div>
+
+                            {/* Danh mục */}
+                            <div>
+                                <Label>Danh mục <span className="text-red-500">*</span></Label>
+                                <Select value={pForm.categoryId} onValueChange={v => setPForm(f => ({ ...f, categoryId: v }))}>
                                     <SelectTrigger className="mt-1 w-full">
-                                        <SelectValue />
+                                        <SelectValue placeholder="Chọn danh mục" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="active">Hoạt động</SelectItem>
-                                        <SelectItem value="inactive">Ẩn</SelectItem>
+                                        {apiCategories.map(c => (
+                                            <SelectItem key={c.categoryId} value={c.categoryId}>{c.categoryName}</SelectItem>
+                                        ))}
+                                        {apiCategories.length === 0 && (
+                                            <div className="px-3 py-2 text-sm text-muted-foreground">Chưa có danh mục</div>
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </div>
-                        )}
 
-                        {/* Upload ảnh */}
-                        <div>
-                            <Label>
-                                Hình ảnh sản phẩm
-                                {productModal === 'add' && <span className="text-red-500"> *</span>}
-                                <span className="text-xs text-muted-foreground ml-1">(click ảnh để đặt làm ảnh chính)</span>
-                            </Label>
+                            {/* Giá & Tồn kho */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label htmlFor="pprice">Giá (₫) <span className="text-red-500">*</span></Label>
+                                    <Input id="pprice" type="number" min={0} className="mt-1" placeholder="0" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="pstock">Tồn kho <span className="text-red-500">*</span></Label>
+                                    <Input id="pstock" type="number" min={0} className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
+                                </div>
+                            </div>
 
-                            {/* Khu vực drop/click upload */}
-                            <button
-                                type="button"
-                                onClick={() => pImageInputRef.current?.click()}
-                                className="mt-1 w-full border-2 border-dashed border-border rounded-xl p-4 flex flex-col items-center gap-2 hover:border-[#448B3D] hover:bg-[#448B3D]/5 transition-colors cursor-pointer"
-                            >
-                                <Camera className="w-6 h-6 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">Nhấn để chọn ảnh</span>
-                                <span className="text-xs text-muted-foreground">PNG, JPG, WEBP</span>
-                            </button>
-                            <input
-                                ref={pImageInputRef}
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={handlePImageChange}
-                            />
-
-                            {/* Preview grid */}
-                            {pImagePreviews.length > 0 && (
-                                <div className="mt-3 grid grid-cols-4 gap-2">
-                                    {pImagePreviews.map((src, idx) => (
-                                        <div
-                                            key={idx}
-                                            className={`relative group rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${idx === pPrimaryIdx ? 'border-[#448B3D] ring-2 ring-[#448B3D]/30' : 'border-border hover:border-[#448B3D]/50'}`}
-                                            onClick={() => setPPrimaryIdx(idx)}
-                                        >
-                                            <img src={src} alt={`preview-${idx}`} className="w-full aspect-square object-cover" />
-                                            {/* Badge ảnh chính */}
-                                            {idx === pPrimaryIdx && (
-                                                <span className="absolute bottom-0 left-0 right-0 bg-[#448B3D] text-white text-[10px] text-center py-0.5 font-medium">
-                                                    Chính
-                                                </span>
-                                            )}
-                                            {/* Nút xóa */}
-                                            <button
-                                                type="button"
-                                                onClick={e => { e.stopPropagation(); removePImage(idx); }}
-                                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    ))}
+                            {/* Trạng thái (chỉ hiện khi edit) */}
+                            {productModal === 'edit' && (
+                                <div>
+                                    <Label>Trạng thái</Label>
+                                    <Select value={pForm.status} onValueChange={v => setPForm(f => ({ ...f, status: v as 'active' | 'inactive' }))}>
+                                        <SelectTrigger className="mt-1 w-full">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="active">Hoạt động</SelectItem>
+                                            <SelectItem value="inactive">Ẩn</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
                         </div>
 
-                        {/* Buttons */}
-                        <div className="flex gap-2 pt-1">
-                            <Button
-                                className="flex-1 bg-[#448B3D] hover:bg-[#336B2D] text-white"
-                                onClick={saveProduct}
-                                disabled={pSaving}
-                            >
-                                {pSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Đang lưu...</> : 'Lưu'}
-                            </Button>
-                            <Button variant="outline" className="flex-1" onClick={() => setProductModal(null)} disabled={pSaving}>Hủy</Button>
+                        {/* Cột phải - Hình ảnh */}
+                        <div className="space-y-4">
+                            <div>
+                                <Label>
+                                    Hình ảnh sản phẩm
+                                    {productModal === 'add' && <span className="text-red-500"> *</span>}
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                                    Click vào ảnh để đặt làm ảnh chính
+                                </p>
+
+                                {/* Khu vực drop/click upload */}
+                                <button
+                                    type="button"
+                                    onClick={() => pImageInputRef.current?.click()}
+                                    className="w-full border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center gap-2 hover:border-[#448B3D] hover:bg-[#448B3D]/5 transition-colors cursor-pointer"
+                                >
+                                    <Camera className="w-8 h-8 text-muted-foreground" />
+                                    <span className="text-sm font-medium text-foreground">Nhấn để chọn ảnh</span>
+                                    <span className="text-xs text-muted-foreground">PNG, JPG, WEBP (tối đa 10MB)</span>
+                                </button>
+                                <input
+                                    ref={pImageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="hidden"
+                                    onChange={handlePImageChange}
+                                />
+
+                                {/* Preview grid */}
+                                {pImagePreviews.length > 0 && (
+                                    <div className="mt-4 grid grid-cols-3 gap-3">
+                                        {pImagePreviews.map((src, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`relative group rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${idx === pPrimaryIdx ? 'border-[#448B3D] ring-2 ring-[#448B3D]/30' : 'border-border hover:border-[#448B3D]/50'}`}
+                                                onClick={() => setPPrimaryIdx(idx)}
+                                            >
+                                                <img src={src} alt={`preview-${idx}`} className="w-full aspect-square object-cover" />
+                                                {/* Badge ảnh chính */}
+                                                {idx === pPrimaryIdx && (
+                                                    <div className="absolute top-1 left-1 bg-[#448B3D] text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+                                                        Chính
+                                                    </div>
+                                                )}
+                                                {/* Nút xóa */}
+                                                <button
+                                                    type="button"
+                                                    onClick={e => { e.stopPropagation(); removePImage(idx); }}
+                                                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {pImagePreviews.length === 0 && (
+                                    <div className="mt-4 text-center text-sm text-muted-foreground py-8 border border-dashed border-border rounded-lg">
+                                        Chưa có ảnh nào được chọn
+                                    </div>
+                                )}
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Buttons - Full width ở dưới */}
+                    <div className="flex gap-3 pt-6 mt-6 border-t border-border">
+                        <Button
+                            className="flex-1 bg-[#448B3D] hover:bg-[#336B2D] text-white"
+                            onClick={saveProduct}
+                            disabled={pSaving}
+                        >
+                            {pSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Đang lưu...</> : (productModal === 'add' ? 'Thêm sản phẩm' : 'Cập nhật')}
+                        </Button>
+                        <Button variant="outline" className="flex-1" onClick={() => setProductModal(null)} disabled={pSaving}>Hủy</Button>
                     </div>
                 </Modal>
             )}
