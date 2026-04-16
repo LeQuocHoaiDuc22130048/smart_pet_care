@@ -1,13 +1,22 @@
 package com.pet_care.payment_service.messaging.event;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.FieldDefaults;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
+@Builder
+@NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class PaymentSuccessEvent {
+    String transactionId;
     String orderId;
+    String userId;
+    BigDecimal amount;
+    String message;
+    LocalDateTime timestamp;
 }

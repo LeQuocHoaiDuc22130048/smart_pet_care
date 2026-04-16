@@ -1,12 +1,22 @@
 package com.pet_care.payment_service.configuration;
 
+import lombok.Getter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+@Getter
 @Component
 public class VNPayConfig {
-    public static final String PAY_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-    public static final String RETURN_URL = "http://localhost:8085/pet_care_payment/payments/vnpay-callback";
 
-    public static final String TMN_CODE = "WZOHMQT5";
-    public static final String SECRET_KEY = "GS4JZ6GBJE8NP3K54S3252I1FXURC8AA";
+    @Value("${vnpay.pay-url}")
+    private String payUrl;
+
+    @Value("${vnpay.return-url}")
+    private String returnUrl;
+
+    @Value("${vnpay.tmn-code}")
+    private String tmnCode;
+
+    @Value("${vnpay.secret-key:}")
+    private String secretKey;
 }

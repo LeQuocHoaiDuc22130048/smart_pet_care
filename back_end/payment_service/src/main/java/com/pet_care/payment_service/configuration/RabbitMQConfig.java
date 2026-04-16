@@ -21,10 +21,32 @@ public class RabbitMQConfig {
     public static final String PAYMENT_SUCCESS_KEY = "payment.success";
     public static final String PAYMENT_FAILED_KEY = "payment.failed";
 
+    // Lắng nghe event từ order_service
+    public static final String ORDER_EXCHANGE = "order.exchange";
+    public static final String PAYMENT_CREATE_QUEUE = "payment.create.queue";
+    public static final String PAYMENT_CREATE_KEY = "payment.create";
+
     // Topics Exchange
     @Bean
     public TopicExchange paymentExchange() {
         return new TopicExchange(PAYMENT_EXCHANGE);
+    }
+
+    // Order Exchange (để bind payment.create queue)
+    @Bean
+    public TopicExchange orderExchange() {
+        return new TopicExchange(ORDER_EXCHANGE, true, false);
+    }
+
+    // payment.create queue — lắng nghe từ order_service
+    @Bean
+    public Queue paymentCreateQueue() {
+        return new Queue(PAYMENT_CREATE_QUEUE, true);
+    }
+
+    @Bean
+    public Binding paymentCreateBinding(Queue paymentCreateQueue, TopicExchange orderExchange) {
+        return BindingBuilder.bind(paymentCreateQueue).to(orderExchange).with(PAYMENT_CREATE_KEY);
     }
 
     // Success Queue
