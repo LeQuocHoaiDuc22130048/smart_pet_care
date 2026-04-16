@@ -12,10 +12,30 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
-            allowedMethods: "*"
-            allowedHeaders: "*"
+            allowedOriginPatterns:
+              - ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - Authorization
+              - Content-Type
+              - Accept
+              - Origin
+              - X-Requested-With
+              - Access-Control-Request-Method
+              - Access-Control-Request-Headers
+            exposedHeaders:
+              - Authorization
             allowCredentials: true
+            maxAge: 3600
+      default-filters:
+        # Xóa CORS headers trùng lặp từ downstream services
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
       routes:
         # Identity Service
         - id: identity_service
