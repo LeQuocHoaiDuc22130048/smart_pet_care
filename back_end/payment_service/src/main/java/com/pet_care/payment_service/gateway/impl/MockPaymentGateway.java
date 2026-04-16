@@ -2,6 +2,7 @@ package com.pet_care.payment_service.gateway.impl;
 
 import com.pet_care.payment_service.gateway.PaymentGateway;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -11,7 +12,8 @@ import java.math.BigDecimal;
  * Thay thế bằng VNPayGateway hoặc MoMoGateway khi triển khai thực
  */
 @Slf4j
-@Component("mockPaymentGateway")
+@Primary
+@Component
 public class MockPaymentGateway implements PaymentGateway {
 
     @Override

@@ -50,9 +50,9 @@ public class PaymentController {
     }
 
     /**
-     * Callback từ payment gateway
+     * Callback từ payment gateway (POST theo chuẩn webhook)
      */
-    @PutMapping("/callback")
+    @PostMapping("/callback")
     public ApiResponse<PaymentResponse> paymentCallback(
             @RequestBody UpdatePaymentStatusRequest request) {
         log.info("Payment callback received for transaction: {}", request.getTransactionId());

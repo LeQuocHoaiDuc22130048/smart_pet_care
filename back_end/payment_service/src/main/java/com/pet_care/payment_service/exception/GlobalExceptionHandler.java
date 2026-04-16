@@ -6,25 +6,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
-@ControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final String MIN_ATTRIBUTE = "min";
 
     @ExceptionHandler(value = Exception.class)
-    ResponseEntity<ApiResponse<?>> handlingRuntimeException(RuntimeException exception) {
-        log.error("Uncategorized exception", exception);
+    ResponseEntity<ApiResponse<?>> handlingException(Exception exception) {
+        log.error("Uncategorized exception: {}", exception.getMessage(), exception);
         ApiResponse<?> apiResponse = new ApiResponse<>();
         apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
         apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
-        return ResponseEntity.badRequest().body(apiResponse);
+        return ResponseEntity.status(ErrorCode.UNCATEGORIZED_EXCEPTION.getStatus()).body(apiResponse);
     }
 
     @ExceptionHandler(value = AppException.class)
@@ -37,8 +37,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(value = AccessDeniedException.class)
-    ResponseEntity<ApiResponse<?>> handlingAccessDeniedException() {
-        ErrorCode errorCode = ErrorCode.UNAUTHORIZED;
+    ResponseEntity<ApiResponse<?>> handlingAccessDeniedException(AccessDeniedException exception) {
+        ErrorCode errorCode = ErrorCode.FORBIDDEN;
         return ResponseEntity.status(errorCode.getStatus())
                 .body(ApiResponse.builder()
                         .code(errorCode.getCode())
@@ -49,7 +49,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     @SuppressWarnings("unchecked")
     ResponseEntity<ApiResponse<?>> handlingValidation(MethodArgumentNotValidException exception) {
-        String enumKey = exception.getFieldError() != null ? exception.getFieldError().getDefaultMessage() : null;
+        String enumKey = exception.getFieldError() != null
+                ? exception.getFieldError().getDefaultMessage()
+                : null;
         ErrorCode errorCode = ErrorCode.INVALID_KEY;
         Map<String, Object> attributes = null;
 
@@ -58,13 +60,11 @@ public class GlobalExceptionHandler {
                 errorCode = ErrorCode.valueOf(enumKey);
                 var constraintViolations =
                         exception.getBindingResult().getAllErrors().getFirst().unwrap(ConstraintViolation.class);
-
                 attributes = constraintViolations.getConstraintDescriptor().getAttributes();
-
                 log.info(attributes.toString());
             }
         } catch (IllegalArgumentException e) {
-            log.debug("Unknown error code", e);
+            log.warn("Unknown validation key: {}", enumKey);
         }
 
         ApiResponse<?> apiResponse = new ApiResponse<>();
@@ -73,7 +73,7 @@ public class GlobalExceptionHandler {
                 Objects.nonNull(attributes)
                         ? mapAttribute(errorCode.getMessage(), attributes)
                         : errorCode.getMessage());
-        return ResponseEntity.badRequest().body(apiResponse);
+        return ResponseEntity.status(errorCode.getStatus()).body(apiResponse);
     }
 
     private String mapAttribute(String message, Map<String, Object> attributes) {
@@ -81,4 +81,3 @@ public class GlobalExceptionHandler {
         return message.replace("{" + MIN_ATTRIBUTE + "}", minValue);
     }
 }
-

@@ -7,46 +7,41 @@ spring:
   application:
     name: payment_service
   datasource:
-      url: "jdbc:mysql://localhost:3306/pet_care_payment?createDatabaseIfNotExist=true"
-      driver-class-name: "com.mysql.cj.jdbc.Driver"
-      username: root
-      password: root
+    url: ${DB_URL:jdbc:mysql://localhost:3306/pet_care_payment?createDatabaseIfNotExist=true}
+    driver-class-name: "com.mysql.cj.jdbc.Driver"
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
   jpa:
-        hibernate:
-            ddl-auto: update
-        show-sql: true
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
   jackson:
     serialization:
       WRITE_DATES_AS_TIMESTAMPS: false
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
-    template:
-      exchange: payment.exchange
-      routing-key: payment.success
-      default-receive-queue: payment.success.queue
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: "http://localhost:8080/pet_care_identity"
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
-resilience4j:
-  circuitbreaker:
-    instances:
-      orderService:
-        slidingWindowSize: 10
-        failureRateThreshold: 50
-        waitDurationInOpenState: 5s
+jwt:
+  signerKey: ${JWT_SIGNER_KEY}
 
-  retry:
-    instances:
-      orderService:
-        maxAttempts: 3
-        waitDuration: 2s
+vnpay:
+  tmn-code: ${VNPAY_TMN_CODE:WZOHMQT5}
+  secret-key: ${VNPAY_SECRET_KEY}
+  pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+  return-url: ${VNPAY_RETURN_URL:http://localhost:8084/pet_care_payment/payments/vnpay-callback}
 
 services:
   order:
-    url: http://localhost:8083/pet_care_order
+    url: ${ORDER_SERVICE_URL:http://localhost:8083/pet_care_order}
+
+logging:
+  level:
+    com.pet_care.payment_service: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%highlight(%-5level)] [payment_service] %cyan(%logger{36}) - %msg%n"
