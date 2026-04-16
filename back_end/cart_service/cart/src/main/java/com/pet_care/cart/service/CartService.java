@@ -88,8 +88,7 @@ public class CartService {
     public CartResponse updateCartItem(String userId, String itemId, UpdateCartItemRequest request) {
         Cart cart = getCartByUser(userId);
 
-        CartItem item = cartItemRepository.findById(itemId)
-                .filter(i -> i.getCart().getId().equals(cart.getId()))
+        CartItem item = cartItemRepository.findByIdAndCartId(itemId, cart.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_FOUND));
 
         if (request.getQuantity() == 0) {
@@ -99,7 +98,7 @@ public class CartService {
             ProductResponse product = fetchProduct(item.getProductId());
             validateStock(product, request.getQuantity());
             item.setQuantity(request.getQuantity());
-            item.setUnitPrice(product.getPrice()); // refresh giá
+            item.setUnitPrice(product.getPrice());
             cartItemRepository.save(item);
         }
 
@@ -107,15 +106,11 @@ public class CartService {
         return cartMapper.toCartResponse(saved);
     }
 
-    /**
-     * Xóa 1 item khỏi giỏ hàng.
-     */
     @Transactional
     public CartResponse removeCartItem(String userId, String itemId) {
         Cart cart = getCartByUser(userId);
 
-        CartItem item = cartItemRepository.findById(itemId)
-                .filter(i -> i.getCart().getId().equals(cart.getId()))
+        CartItem item = cartItemRepository.findByIdAndCartId(itemId, cart.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_FOUND));
 
         cart.getItems().remove(item);
