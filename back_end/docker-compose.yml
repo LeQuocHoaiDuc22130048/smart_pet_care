@@ -1,0 +1,251 @@
+version: "3.9"
+
+# ============================================================
+# PetCareSmart — Docker Compose
+# Chạy: docker-compose up -d
+# Dừng: docker-compose down
+# Xem log: docker-compose logs -f <service_name>
+# ============================================================
+
+networks:
+  petcare-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  rabbitmq-data:
+
+
+services:
+
+  # ─────────────────────────────────────────────
+  # INFRASTRUCTURE
+  # ─────────────────────────────────────────────
+
+  mysql:
+    image: mysql:8.0
+    container_name: petcare-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - petcare-net
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: petcare-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI: http://localhost:15672
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - petcare-net
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────
+  # BUSINESS SERVICES
+  # ─────────────────────────────────────────────
+
+  identity-service:
+    build:
+      context: ./identity_service
+      dockerfile: Dockerfile
+    container_name: petcare-identity
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/pet_care_identity?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      USER_SERVICE_URL: http://user-service:8082/pet_care_user
+    ports:
+      - "8080:8080"
+    networks:
+      - petcare-net
+
+  user-service:
+    build:
+      context: ./user_service
+      dockerfile: Dockerfile
+    container_name: petcare-user
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/pet_care_user?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    ports:
+      - "8082:8082"
+    networks:
+      - petcare-net
+
+  product-service:
+    build:
+      context: ./product_service
+      dockerfile: Dockerfile
+    container_name: petcare-product
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/pet_care_product?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    ports:
+      - "8081:8081"
+    networks:
+      - petcare-net
+
+  order-service:
+    build:
+      context: ./order_service
+      dockerfile: Dockerfile
+    container_name: petcare-order
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/pet_care_order?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
+    ports:
+      - "8083:8083"
+    networks:
+      - petcare-net
+
+  payment-service:
+    build:
+      context: ./payment_service
+      dockerfile: Dockerfile
+    container_name: petcare-payment
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/pet_care_payment?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE}
+      VNPAY_SECRET_KEY: ${VNPAY_SECRET_KEY}
+      ORDER_SERVICE_URL: http://order-service:8083/pet_care_order
+    ports:
+      - "8084:8084"
+    networks:
+      - petcare-net
+
+  cart-service:
+    build:
+      context: ./cart_service/cart
+      dockerfile: Dockerfile
+    container_name: petcare-cart
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/pet_care_cart?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
+    ports:
+      - "8085:8085"
+    networks:
+      - petcare-net
+
+  # ─────────────────────────────────────────────
+  # API GATEWAY
+  # ─────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    container_name: petcare-gateway
+    restart: unless-stopped
+    depends_on:
+      - identity-service
+      - user-service
+      - product-service
+      - order-service
+      - payment-service
+      - cart-service
+    environment:
+      GATEWAY_PORT: 8888
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      IDENTITY_SERVICE_URL: http://identity-service:8080
+      USER_SERVICE_URL: http://user-service:8082
+      PRODUCT_SERVICE_URL: http://product-service:8081
+      ORDER_SERVICE_URL: http://order-service:8083
+      PAYMENT_SERVICE_URL: http://payment-service:8084
+      CART_SERVICE_URL: http://cart-service:8085
+    ports:
+      - "8888:8888"
+    networks:
+      - petcare-net

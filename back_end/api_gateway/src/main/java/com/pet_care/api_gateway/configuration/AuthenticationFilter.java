@@ -45,18 +45,20 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
      * Dùng "*" cho method nếu tất cả method đều public.
      */
     private static final List<PublicRoute> PUBLIC_ROUTES = List.of(
-            // Identity
-            new PublicRoute("POST",   "/pet_care_identity/users"),          // Đăng ký
-            new PublicRoute("POST",   "/pet_care_identity/auth/token"),      // Đăng nhập
-            new PublicRoute("POST",   "/pet_care_identity/auth/introspect"), // Introspect
-            new PublicRoute("POST",   "/pet_care_identity/auth/log-out"),    // Đăng xuất
-            new PublicRoute("POST",   "/pet_care_identity/auth/refresh"),    // Refresh token
+            // ── Identity ──────────────────────────────────────────
+            new PublicRoute("POST", "/pet_care_identity/users"),           // Đăng ký
+            new PublicRoute("POST", "/pet_care_identity/auth/token"),      // Đăng nhập
+            new PublicRoute("POST", "/pet_care_identity/auth/introspect"), // Kiểm tra token (API Gateway dùng)
+            new PublicRoute("POST", "/pet_care_identity/auth/log-out"),    // Đăng xuất
+            new PublicRoute("POST", "/pet_care_identity/auth/refresh"),    // Làm mới token
 
-            // Product — đọc sản phẩm/danh mục không cần đăng nhập
-            new PublicRoute("GET",    "/pet_care_product/products"),
-            new PublicRoute("GET",    "/pet_care_product/products/"),
-            new PublicRoute("GET",    "/pet_care_product/categories"),
-            new PublicRoute("GET",    "/pet_care_product/categories/")
+            // ── Product — đọc không cần đăng nhập ─────────────────
+            new PublicRoute("GET",  "/pet_care_product/products"),
+            new PublicRoute("GET",  "/pet_care_product/categories"),
+
+            // ── Payment callback — gateway gọi từ VNPay/MoMo ──────
+            new PublicRoute("POST", "/pet_care_payment/payments/callback"),
+            new PublicRoute("GET",  "/pet_care_payment/payments/vnpay-callback")
     );
 
     @Override
@@ -105,10 +107,16 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 ? path.substring(apiPrefix.length())
                 : path;
 
+        // Chuẩn hóa: bỏ trailing slash để so sánh nhất quán
+        String normalizedPath = strippedPath.endsWith("/") && strippedPath.length() > 1
+                ? strippedPath.substring(0, strippedPath.length() - 1)
+                : strippedPath;
+
         return PUBLIC_ROUTES.stream().anyMatch(route -> {
             boolean methodMatch = "*".equals(route.method()) || route.method().equalsIgnoreCase(method);
-            boolean pathMatch = strippedPath.equals(route.path())
-                    || strippedPath.startsWith(route.path() + "/");
+            // Match exact hoặc sub-path (có dấu / phân cách rõ ràng)
+            boolean pathMatch = normalizedPath.equals(route.path())
+                    || normalizedPath.startsWith(route.path() + "/");
             return methodMatch && pathMatch;
         });
     }
