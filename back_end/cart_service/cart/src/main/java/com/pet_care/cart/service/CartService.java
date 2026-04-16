@@ -155,8 +155,9 @@ public class CartService {
         try {
             ProductResponse product = productClient.getProductById(productId).getResult();
             if (product == null) throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
-            if ("INACTIVE".equals(product.getStatus()) || "OUT_OF_STOCK".equals(product.getStatus())) {
-                throw new AppException(ErrorCode.PRODUCT_INACTIVE);
+            // Chỉ block khi hết hàng hoàn toàn
+            if ("OUT_OF_STOCK".equals(product.getStatus())) {
+                throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK);
             }
             return product;
         } catch (AppException e) {
@@ -168,7 +169,10 @@ public class CartService {
     }
 
     private void validateStock(ProductResponse product, int requestedQty) {
-        if (product.getStockQuantity() != null && product.getStockQuantity() < requestedQty) {
+        // Chỉ validate khi product có thông tin stock rõ ràng
+        if (product.getStockQuantity() != null
+                && product.getStockQuantity() > 0
+                && product.getStockQuantity() < requestedQty) {
             throw new AppException(ErrorCode.QUANTITY_EXCEEDS_STOCK);
         }
     }
