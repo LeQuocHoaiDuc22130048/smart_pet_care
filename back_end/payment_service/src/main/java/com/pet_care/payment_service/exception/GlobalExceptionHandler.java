@@ -19,28 +19,30 @@ public class GlobalExceptionHandler {
     private static final String MIN_ATTRIBUTE = "min";
 
     @ExceptionHandler(value = Exception.class)
-    ResponseEntity<ApiResponse<?>> handlingException(Exception exception) {
+    ResponseEntity<ApiResponse<Void>> handlingException(Exception exception) {
         log.error("Uncategorized exception: {}", exception.getMessage(), exception);
-        ApiResponse<?> apiResponse = new ApiResponse<>();
-        apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
-        apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
-        return ResponseEntity.status(ErrorCode.UNCATEGORIZED_EXCEPTION.getStatus()).body(apiResponse);
+        return ResponseEntity.status(ErrorCode.UNCATEGORIZED_EXCEPTION.getStatus())
+                .body(ApiResponse.<Void>builder()
+                        .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
+                        .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
+                        .build());
     }
 
     @ExceptionHandler(value = AppException.class)
-    ResponseEntity<ApiResponse<?>> handlingAppException(AppException exception) {
+    ResponseEntity<ApiResponse<Void>> handlingAppException(AppException exception) {
         ErrorCode errorCode = exception.getErrorCode();
-        ApiResponse<?> apiResponse = new ApiResponse<>();
-        apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(errorCode.getMessage());
-        return ResponseEntity.status(errorCode.getStatus()).body(apiResponse);
+        return ResponseEntity.status(errorCode.getStatus())
+                .body(ApiResponse.<Void>builder()
+                        .code(errorCode.getCode())
+                        .message(errorCode.getMessage())
+                        .build());
     }
 
     @ExceptionHandler(value = AccessDeniedException.class)
-    ResponseEntity<ApiResponse<?>> handlingAccessDeniedException(AccessDeniedException exception) {
+    ResponseEntity<ApiResponse<Void>> handlingAccessDeniedException(AccessDeniedException exception) {
         ErrorCode errorCode = ErrorCode.FORBIDDEN;
         return ResponseEntity.status(errorCode.getStatus())
-                .body(ApiResponse.builder()
+                .body(ApiResponse.<Void>builder()
                         .code(errorCode.getCode())
                         .message(errorCode.getMessage())
                         .build());
@@ -48,7 +50,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     @SuppressWarnings("unchecked")
-    ResponseEntity<ApiResponse<?>> handlingValidation(MethodArgumentNotValidException exception) {
+    ResponseEntity<ApiResponse<Void>> handlingValidation(MethodArgumentNotValidException exception) {
         String enumKey = exception.getFieldError() != null
                 ? exception.getFieldError().getDefaultMessage()
                 : null;
@@ -67,13 +69,13 @@ public class GlobalExceptionHandler {
             log.warn("Unknown validation key: {}", enumKey);
         }
 
-        ApiResponse<?> apiResponse = new ApiResponse<>();
-        apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(
-                Objects.nonNull(attributes)
-                        ? mapAttribute(errorCode.getMessage(), attributes)
-                        : errorCode.getMessage());
-        return ResponseEntity.status(errorCode.getStatus()).body(apiResponse);
+        return ResponseEntity.status(errorCode.getStatus())
+                .body(ApiResponse.<Void>builder()
+                        .code(errorCode.getCode())
+                        .message(Objects.nonNull(attributes)
+                                ? mapAttribute(errorCode.getMessage(), attributes)
+                                : errorCode.getMessage())
+                        .build());
     }
 
     private String mapAttribute(String message, Map<String, Object> attributes) {
