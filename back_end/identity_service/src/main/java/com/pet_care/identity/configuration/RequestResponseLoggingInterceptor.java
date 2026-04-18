@@ -6,12 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.util.ContentCachingRequestWrapper;
-import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
 
 /**
  * HTTP Request/Response Logging Interceptor
@@ -33,6 +31,9 @@ public class RequestResponseLoggingInterceptor implements HandlerInterceptor {
         if (isLoggingDisabled(request)) {
             return true;
         }
+
+        // Set start time for duration calculation in afterCompletion
+        request.setAttribute("startTime", System.currentTimeMillis());
 
         try {
             String method = request.getMethod();
@@ -66,9 +67,11 @@ public class RequestResponseLoggingInterceptor implements HandlerInterceptor {
             String uri = request.getRequestURI();
             int status = response.getStatus();
 
-            log.info("<<< {} {} {} - {} ms", method, uri, status,
-                    System.currentTimeMillis() - request.getAttribute("startTime") == null ? 0
-                    : System.currentTimeMillis() - (Long) request.getAttribute("startTime"));
+            // Calculate duration
+            Long startTime = (Long) request.getAttribute("startTime");
+            long duration = startTime != null ? System.currentTimeMillis() - startTime : 0;
+
+            log.info("<<< {} {} {} - {} ms", method, uri, status, duration);
 
             // Log response status and content type
             log.info("Response Content-Type: {}", response.getContentType());
@@ -85,13 +88,17 @@ public class RequestResponseLoggingInterceptor implements HandlerInterceptor {
      * Log request headers (excluding sensitive ones)
      */
     private void logRequestHeaders(HttpServletRequest request) {
-        String headers = request.getHeaderNames().asIterator().hasNext()
-                ? request.getHeaderNames().asIterator().forEachRemaining(h -> {
-            if (!isSensitiveHeader(h)) {
-                log.debug("Header: {} = {}", h, request.getHeader(h));
+        try {
+            var headerNames = request.getHeaderNames();
+            while (headerNames.hasMoreElements()) {
+                String headerName = headerNames.nextElement();
+                if (!isSensitiveHeader(headerName)) {
+                    log.debug("Header: {} = {}", headerName, request.getHeader(headerName));
+                }
             }
-        })
-                : null;
+        } catch (Exception e) {
+            log.debug("Error logging request headers", e);
+        }
     }
 
     /**
