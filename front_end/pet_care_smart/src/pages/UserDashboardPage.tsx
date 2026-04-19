@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
+import { orderApi, type Order } from '@/lib/orderApi';
+import { userApi, type Pet as ApiPet, type UserProfile } from '@/lib/userApi';
 import { DashboardThemeSettings } from '@/components/dashboard/DashboardThemeSettings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,28 +16,19 @@ import {
 } from '@/components/ui/select';
 import {
     Package, Calendar, ShoppingBag, TrendingUp, Clock,
-    Plus, Pencil, Trash2, X, PawPrint, Settings, Sparkles, User as UserIcon, Camera,
+    Plus, Pencil, Trash2, X, PawPrint, Settings, Sparkles, User as UserIcon, Camera, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface UserOrder {
-    id: string;
-    productId: string;
-    product: string;
-    image: string;
-    date: string;
-    status: 'Đang xử lý' | 'Đang giao' | 'Hoàn thành' | 'Đã hủy';
-    total: string;
-}
 interface UserBooking {
     id: string; service: string; pet: string;
     date: string; time: string;
     status: 'Chờ xác nhận' | 'Đã xác nhận' | 'Hoàn thành' | 'Đã hủy';
 }
 interface Pet {
-    id: string; name: string; species: 'Chó' | 'Mèo' | 'Khác';
+    id: string; name: string; species: string;
     breed: string; age: string; weight: string; notes: string;
 }
 
@@ -57,25 +50,25 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
-const INIT_ORDERS: UserOrder[] = [
-    { id: 'ORD-001', productId: '1', product: 'Thức ăn chó hữu cơ cao cấp', image: 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=80&h=80&fit=crop', date: '08/02/2026', status: 'Hoàn thành', total: '$49.99' },
-    { id: 'ORD-002', productId: '2', product: 'Cột cào móng mèo cao cấp', image: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=80&h=80&fit=crop', date: '05/02/2026', status: 'Đang giao', total: '$89.99' },
-    { id: 'ORD-003', productId: '3', product: 'Bộ dây dắt & vòng cổ chó', image: 'https://images.unsplash.com/photo-1600277971170-8a7d75fb1bd9?w=80&h=80&fit=crop', date: '01/02/2026', status: 'Đang xử lý', total: '$34.99' },
-];
 const INIT_BOOKINGS: UserBooking[] = [
     { id: 'BK-001', service: 'Spa thú cưng', pet: 'Max', date: '15/02/2026', time: '10:00', status: 'Đã xác nhận' },
     { id: 'BK-002', service: 'Khám sức khỏe', pet: 'Bella', date: '20/02/2026', time: '14:00', status: 'Chờ xác nhận' },
 ];
-const INIT_PETS: Pet[] = [
-    { id: 'PET-1', name: 'Max', species: 'Chó', breed: 'Golden Retriever', age: '3', weight: '28', notes: 'Thích chơi bóng' },
-    { id: 'PET-2', name: 'Bella', species: 'Mèo', breed: 'British Shorthair', age: '2', weight: '4', notes: 'Dị ứng với tôm' },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function orderStatusLabel(s: string): string {
+    const map: Record<string, string> = {
+        PENDING: 'Đang xử lý', RESERVED: 'Đã giữ hàng',
+        PAYMENT_PENDING: 'Chờ thanh toán', PAID: 'Đã thanh toán',
+        CONFIRMED: 'Đã xác nhận', FAILED: 'Thất bại',
+        PAYMENT_FAILED: 'TT thất bại', CANCELLED: 'Đã hủy',
+    };
+    return map[s] ?? s;
+}
 function orderBadge(s: string) {
-    if (s === 'Hoàn thành') return 'bg-green-100 text-green-800 border-0 dark:bg-green-950/60 dark:text-green-300';
-    if (s === 'Đang giao') return 'bg-blue-100 text-blue-800 border-0 dark:bg-blue-950/60 dark:text-blue-300';
-    if (s === 'Đã hủy') return 'bg-red-100 text-red-800 border-0 dark:bg-red-950/60 dark:text-red-300';
+    if (s === 'CONFIRMED' || s === 'PAID') return 'bg-green-100 text-green-800 border-0 dark:bg-green-950/60 dark:text-green-300';
+    if (s === 'RESERVED' || s === 'PAYMENT_PENDING') return 'bg-blue-100 text-blue-800 border-0 dark:bg-blue-950/60 dark:text-blue-300';
+    if (s === 'CANCELLED' || s === 'FAILED' || s === 'PAYMENT_FAILED') return 'bg-red-100 text-red-800 border-0 dark:bg-red-950/60 dark:text-red-300';
     return 'bg-orange-100 text-orange-800 border-0 dark:bg-orange-950/50 dark:text-orange-300';
 }
 function bookingBadge(s: string) {
@@ -85,7 +78,13 @@ function bookingBadge(s: string) {
     return 'bg-orange-100 text-orange-800 border-0 dark:bg-orange-950/50 dark:text-orange-300';
 }
 
-const SPECIES = ['Chó', 'Mèo', 'Khác'] as const;
+const SPECIES_OPTIONS = [
+    { value: 'HOUSEHOLD_PET', label: 'Thú cưng gia đình' },
+    { value: 'EXOTIC_PET', label: 'Thú cưng ngoại lai' },
+    { value: 'LIVESTOCK', label: 'Gia súc' },
+    { value: 'POULTRY', label: 'Gia cầm' },
+    { value: 'AQUACULTURE', label: 'Thủy sản' },
+] as const;
 
 const DASH_TABS = ['overview', 'orders', 'bookings', 'pets', 'profile', 'settings'] as const;
 type DashTab = (typeof DASH_TABS)[number];
@@ -108,65 +107,192 @@ const UserDashboardPage = () => {
         else setSearchParams({ tab: t });
     };
 
-    const [orders, setOrders] = useState<UserOrder[]>(INIT_ORDERS);
+    // ── API state ─────────────────────────────────────────────────────────────
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [ordersLoading, setOrdersLoading] = useState(false);
+    const [pets, setPets] = useState<ApiPet[]>([]);
+    const [petsLoading, setPetsLoading] = useState(false);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [profileLoading, setProfileLoading] = useState(false);
+
+    // Bookings remain local (no booking service in API)
     const [bookings, setBookings] = useState<UserBooking[]>(INIT_BOOKINGS);
-    const [pets, setPets] = useState<Pet[]>(INIT_PETS);
 
-    // Pet modal
-    const [petModal, setPetModal] = useState<'add' | 'edit' | null>(null);
-    const [editingPet, setEditingPet] = useState<Pet | null>(null);
-    const [petForm, setPetForm] = useState<Omit<Pet, 'id'>>({ name: '', species: 'Chó', breed: '', age: '', weight: '', notes: '' });
+    // ── Fetch orders ──────────────────────────────────────────────────────────
+    const fetchOrders = useCallback(async () => {
+        setOrdersLoading(true);
+        try {
+            const res = await orderApi.getMyOrders();
+            setOrders(res.result ?? []);
+        } catch {
+            // silently fail
+        } finally {
+            setOrdersLoading(false);
+        }
+    }, []);
 
-    // Profile form
-    const [profile, setProfile] = useState({ name: user?.name ?? '', phone: '0901234567', address: '123 Đường Lê Lợi, TP.HCM', bio: 'Yêu thú cưng từ nhỏ' });
+    // ── Fetch pets ────────────────────────────────────────────────────────────
+    const fetchPets = useCallback(async () => {
+        setPetsLoading(true);
+        try {
+            const res = await userApi.getMyPets();
+            setPets(res.result ?? []);
+        } catch {
+            // silently fail
+        } finally {
+            setPetsLoading(false);
+        }
+    }, []);
+
+    // ── Fetch profile ─────────────────────────────────────────────────────────
+    const fetchProfile = useCallback(async () => {
+        setProfileLoading(true);
+        try {
+            const res = await userApi.getMyProfile();
+            setProfile(res.result);
+        } catch {
+            // silently fail
+        } finally {
+            setProfileLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchOrders();
+        fetchPets();
+        fetchProfile();
+    }, [fetchOrders, fetchPets, fetchProfile]);
+
+    // ── Profile form ──────────────────────────────────────────────────────────
+    const [profileForm, setProfileForm] = useState({ firstName: '', lastName: '', phone: '', email: '' });
+    useEffect(() => {
+        if (profile) {
+            setProfileForm({
+                firstName: profile.firstName ?? '',
+                lastName: profile.lastName ?? '',
+                phone: profile.phone ?? '',
+                email: profile.email ?? '',
+            });
+        }
+    }, [profile]);
+
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        // Local preview
         const reader = new FileReader();
         reader.onload = (ev) => updateUser({ avatar: ev.target?.result as string });
         reader.readAsDataURL(file);
+        // Upload to server
+        try {
+            await userApi.updateProfile({ avatar: file });
+            toast.success('Đã cập nhật ảnh đại diện');
+        } catch {
+            toast.error('Không thể cập nhật ảnh đại diện');
+        }
     };
 
-    const cancelOrder = (id: string) => {
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Đã hủy' } : o));
-        toast.success('Đã hủy đơn hàng');
+    const saveProfile = async () => {
+        try {
+            console.log('[UserDashboard] Saving profile:', profileForm);
+            const res = await userApi.updateProfile({
+                firstName: profileForm.firstName,
+                lastName: profileForm.lastName,
+                phone: profileForm.phone,
+                email: profileForm.email,
+            });
+            console.log('[UserDashboard] Profile updated:', res);
+            setProfile(res.result);
+            updateUser({ firstName: res.result.firstName, lastName: res.result.lastName });
+            toast.success('Đã cập nhật hồ sơ thành công');
+        } catch (err) {
+            console.error('[UserDashboard] Error updating profile:', err);
+            toast.error('Không thể cập nhật hồ sơ');
+        }
     };
+
+    // ── Cancel order ──────────────────────────────────────────────────────────
+    const cancelOrder = async (id: string) => {
+        try {
+            await orderApi.cancelOrder(id);
+            await fetchOrders();
+            toast.success('Đã hủy đơn hàng');
+        } catch {
+            toast.error('Không thể hủy đơn hàng');
+        }
+    };
+
     const cancelBooking = (id: string) => {
-        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'Đã hủy' } : b));
+        setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: 'Đã hủy' } : b));
         toast.success('Đã hủy lịch đặt');
     };
 
+    // ── Pet modal ─────────────────────────────────────────────────────────────
+    const [petModal, setPetModal] = useState<'add' | 'edit' | null>(null);
+    const [editingPet, setEditingPet] = useState<ApiPet | null>(null);
+    const [petForm, setPetForm] = useState({
+        name: '', species: 'HOUSEHOLD_PET' as ApiPet['species'],
+        breed: '', age: '', weight: '', healthNotes: '',
+    });
+    const [petSaving, setPetSaving] = useState(false);
+
     const openAddPet = () => {
-        setPetForm({ name: '', species: 'Chó', breed: '', age: '', weight: '', notes: '' });
+        setPetForm({ name: '', species: 'HOUSEHOLD_PET', breed: '', age: '', weight: '', healthNotes: '' });
         setEditingPet(null);
         setPetModal('add');
     };
-    const openEditPet = (p: Pet) => {
-        setPetForm({ name: p.name, species: p.species, breed: p.breed, age: p.age, weight: p.weight, notes: p.notes });
+    const openEditPet = (p: ApiPet) => {
+        setPetForm({
+            name: p.name, species: p.species,
+            breed: p.breed ?? '', age: String(p.age ?? ''),
+            weight: String(p.weight ?? ''), healthNotes: p.healthNotes ?? '',
+        });
         setEditingPet(p);
         setPetModal('edit');
     };
-    const savePet = () => {
+
+    const savePet = async () => {
         if (!petForm.name.trim()) { toast.error('Vui lòng nhập tên thú cưng'); return; }
-        if (petModal === 'add') {
-            setPets(prev => [...prev, { id: 'PET-' + Date.now(), ...petForm }]);
-            toast.success('Đã thêm thú cưng');
-        } else if (editingPet) {
-            setPets(prev => prev.map(p => p.id === editingPet.id ? { ...p, ...petForm } : p));
-            toast.success('Đã cập nhật thú cưng');
+        setPetSaving(true);
+        try {
+            if (petModal === 'add') {
+                await userApi.createPet({
+                    name: petForm.name, species: petForm.species,
+                    breed: petForm.breed || undefined,
+                    age: petForm.age ? parseInt(petForm.age) : undefined,
+                    weight: petForm.weight ? parseFloat(petForm.weight) : undefined,
+                    healthNotes: petForm.healthNotes || undefined,
+                });
+                toast.success('Đã thêm thú cưng');
+            } else if (editingPet) {
+                await userApi.updatePet(editingPet.id, {
+                    name: petForm.name, species: petForm.species,
+                    breed: petForm.breed || undefined,
+                    age: petForm.age ? parseInt(petForm.age) : undefined,
+                    weight: petForm.weight ? parseFloat(petForm.weight) : undefined,
+                    healthNotes: petForm.healthNotes || undefined,
+                });
+                toast.success('Đã cập nhật thú cưng');
+            }
+            await fetchPets();
+            setPetModal(null);
+        } catch {
+            toast.error('Không thể lưu thú cưng');
+        } finally {
+            setPetSaving(false);
         }
-        setPetModal(null);
-    };
-    const deletePet = (id: string) => {
-        setPets(prev => prev.filter(p => p.id !== id));
-        toast.success('Đã xóa thú cưng');
     };
 
-    const saveProfile = () => {
-        updateUser({ name: profile.name });
-        toast.success('Đã cập nhật hồ sơ thành công');
+    const deletePet = async (id: string) => {
+        try {
+            await userApi.deletePet(id);
+            await fetchPets();
+            toast.success('Đã xóa thú cưng');
+        } catch {
+            toast.error('Không thể xóa thú cưng');
+        }
     };
 
     return (
@@ -257,7 +383,7 @@ const UserDashboardPage = () => {
                             { icon: Package, label: 'Tổng đơn hàng', value: String(orders.length), color: 'bg-[#448B3D]', ring: 'ring-[#448B3D]/20' },
                             { icon: Calendar, label: 'Lịch đặt', value: String(bookings.length), color: 'bg-blue-500', ring: 'ring-blue-500/20' },
                             { icon: PawPrint, label: 'Thú cưng', value: String(pets.length), color: 'bg-orange-500', ring: 'ring-orange-500/20' },
-                            { icon: TrendingUp, label: 'Tổng chi tiêu', value: '$174.97', color: 'bg-violet-500', ring: 'ring-violet-500/20' },
+                            { icon: TrendingUp, label: 'Tổng chi tiêu', value: orders.reduce((s, o) => s + (o.totalAmount ?? 0), 0).toLocaleString('vi-VN') + '₫', color: 'bg-violet-500', ring: 'ring-violet-500/20' },
                         ].map(stat => (
                             <Card
                                 key={stat.label}
@@ -285,24 +411,30 @@ const UserDashboardPage = () => {
                                 <h2 className="font-semibold text-foreground">Đơn hàng gần đây</h2>
                             </div>
                             <div className="space-y-3">
-                                {orders.slice(0, 2).map(o => (
+                                {ordersLoading ? (
+                                    <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#448B3D]" /></div>
+                                ) : orders.slice(0, 2).map(o => (
                                     <div key={o.id} className="flex items-center gap-3">
-                                        <Link
-                                            to={`/products/${o.productId}`}
-                                            className="flex flex-1 min-w-0 items-center gap-3 rounded-lg -m-1 p-1 hover:bg-muted/70 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#448B3D] focus-visible:ring-offset-2"
-                                        >
-                                            <img src={o.image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-foreground truncate">{o.product}</p>
-                                                <p className="text-xs text-muted-foreground">{o.id} · {o.date}</p>
+                                        <div className="flex flex-1 min-w-0 items-center gap-3 rounded-lg -m-1 p-1 hover:bg-muted/70 transition-colors">
+                                            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                                <Package className="w-5 h-5 text-muted-foreground" />
                                             </div>
-                                        </Link>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-foreground truncate">
+                                                    {o.items?.[0]?.productName ?? `Đơn hàng #${o.id.slice(0, 8)}`}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">{o.id.slice(0, 8)} · {o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : ''}</p>
+                                            </div>
+                                        </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-sm font-semibold">{o.total}</p>
-                                            <Badge className={`text-xs ${orderBadge(o.status)}`}>{o.status}</Badge>
+                                            <p className="text-sm font-semibold">{o.totalAmount?.toLocaleString('vi-VN')}₫</p>
+                                            <Badge className={`text-xs ${orderBadge(o.status)}`}>{orderStatusLabel(o.status)}</Badge>
                                         </div>
                                     </div>
                                 ))}
+                                {!ordersLoading && orders.length === 0 && (
+                                    <p className="text-sm text-muted-foreground text-center py-4">Chưa có đơn hàng nào</p>
+                                )}
                             </div>
                         </Card>
                         <Card className="border-border/80 p-5 sm:p-6 shadow-sm">
@@ -372,34 +504,40 @@ const UserDashboardPage = () => {
 
                 {/* ── Đơn hàng ── */}
                 <TabsContent value="orders" className="space-y-4 outline-none">
-                    <div className="space-y-3">
-                        {orders.map(o => (
-                            <Card key={o.id} className="border-border/80 p-4 shadow-sm transition-shadow hover:shadow-md">
-                                <div className="flex items-center gap-4">
-                                    <Link
-                                        to={`/products/${o.productId}`}
-                                        className="group flex flex-1 min-w-0 items-center gap-4 rounded-xl -m-1 p-1 hover:bg-muted/70 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#448B3D] focus-visible:ring-offset-2"
-                                    >
-                                        <img src={o.image} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-foreground truncate underline-offset-2 group-hover:underline">{o.product}</p>
-                                            <p className="text-sm text-muted-foreground mt-0.5">{o.id} · {o.date}</p>
-                                            <Badge className={`text-xs mt-1 ${orderBadge(o.status)}`}>{o.status}</Badge>
+                    {ordersLoading ? (
+                        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-[#448B3D]" /></div>
+                    ) : (
+                        <div className="space-y-3">
+                            {orders.map(o => (
+                                <Card key={o.id} className="border-border/80 p-4 shadow-sm transition-shadow hover:shadow-md">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex flex-1 min-w-0 items-center gap-4 rounded-xl -m-1 p-1">
+                                            <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                                                <Package className="w-7 h-7 text-muted-foreground" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-foreground truncate">
+                                                    {o.items?.[0]?.productName ?? `Đơn hàng #${o.id.slice(0, 8)}`}
+                                                    {(o.items?.length ?? 0) > 1 && ` +${(o.items?.length ?? 1) - 1} sản phẩm`}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground mt-0.5">#{o.id.slice(0, 8)} · {o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : ''}</p>
+                                                <Badge className={`text-xs mt-1 ${orderBadge(o.status)}`}>{orderStatusLabel(o.status)}</Badge>
+                                            </div>
                                         </div>
-                                    </Link>
-                                    <div className="text-right shrink-0 flex flex-col items-end gap-2">
-                                        <p className="font-semibold text-foreground">{o.total}</p>
-                                        {o.status === 'Đang xử lý' && (
-                                            <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600" onClick={() => cancelOrder(o.id)}>
-                                                Hủy
-                                            </Button>
-                                        )}
+                                        <div className="text-right shrink-0 flex flex-col items-end gap-2">
+                                            <p className="font-semibold text-foreground">{o.totalAmount?.toLocaleString('vi-VN')}₫</p>
+                                            {(o.status === 'PENDING' || o.status === 'RESERVED') && (
+                                                <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600" onClick={() => cancelOrder(o.id)}>
+                                                    Hủy
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </Card>
-                        ))}
-                        {orders.length === 0 && <p className="text-center text-muted-foreground py-12">Chưa có đơn hàng nào</p>}
-                    </div>
+                                </Card>
+                            ))}
+                            {orders.length === 0 && <p className="text-center text-muted-foreground py-12">Chưa có đơn hàng nào</p>}
+                        </div>
+                    )}
                 </TabsContent>
 
                 {/* ── Lịch đặt ── */}
@@ -436,46 +574,6 @@ const UserDashboardPage = () => {
                     </div>
                 </TabsContent>
 
-                {/* ── Thú cưng ── */}
-                <TabsContent value="pets" className="space-y-4 outline-none">
-                    <div className="flex justify-end mb-4">
-                        <Button onClick={openAddPet} className="bg-[#448B3D] hover:bg-[#336B2D] text-white">
-                            <Plus className="w-4 h-4" /> Thêm thú cưng
-                        </Button>
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                        {pets.map(p => (
-                            <Card key={p.id} className="border-border/80 p-5 shadow-sm transition-shadow hover:shadow-md">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-11 h-11 rounded-xl bg-orange-100 dark:bg-orange-950/50 flex items-center justify-center ring-2 ring-orange-200/50 dark:ring-orange-900/50">
-                                            <PawPrint className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-foreground">{p.name}</p>
-                                            <p className="text-xs text-muted-foreground">{p.species} · {p.breed}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-1">
-                                        <Button size="icon-sm" variant="ghost" onClick={() => openEditPet(p)}>
-                                            <Pencil className="w-3.5 h-3.5" />
-                                        </Button>
-                                        <Button size="icon-sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deletePet(p.id)}>
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div><span className="text-muted-foreground">Tuổi:</span> <span className="font-medium">{p.age} tuổi</span></div>
-                                    <div><span className="text-muted-foreground">Cân nặng:</span> <span className="font-medium">{p.weight} kg</span></div>
-                                </div>
-                                {p.notes && <p className="text-xs text-muted-foreground mt-2 italic">"{p.notes}"</p>}
-                            </Card>
-                        ))}
-                        {pets.length === 0 && <p className="text-muted-foreground py-8 col-span-2 text-center">Chưa có thú cưng nào</p>}
-                    </div>
-                </TabsContent>
-
                 {/* ── Hồ sơ ── */}
                 <TabsContent value="profile" className="outline-none">
                     <Card className="max-w-lg border-border/80 p-6 shadow-md">
@@ -485,69 +583,57 @@ const UserDashboardPage = () => {
                             </div>
                             <h2 className="text-lg font-bold text-foreground">Thông tin cá nhân</h2>
                         </div>
-                        <div className="space-y-4">
-                            {/* Avatar */}
-                            <div className="flex items-center gap-4 pb-4 border-b border-border">
-                                <div className="relative shrink-0">
-                                    <div className="w-20 h-20 rounded-full overflow-hidden bg-[#448B3D]/15 ring-2 ring-[#448B3D]/30 flex items-center justify-center">
-                                        {user?.avatar
-                                            ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                                            : <UserIcon className="w-8 h-8 text-[#448B3D]" />
-                                        }
+                        {profileLoading ? (
+                            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#448B3D]" /></div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-4 pb-4 border-b border-border">
+                                    <div className="relative shrink-0">
+                                        <div className="w-20 h-20 rounded-full overflow-hidden bg-[#448B3D]/15 ring-2 ring-[#448B3D]/30 flex items-center justify-center">
+                                            {user?.avatar
+                                                ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                                : <UserIcon className="w-8 h-8 text-[#448B3D]" />
+                                            }
+                                        </div>
+                                        <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#448B3D] hover:bg-[#336B2D] text-white flex items-center justify-center shadow-md transition-colors">
+                                            <Camera className="w-3.5 h-3.5" />
+                                        </button>
+                                        <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => avatarInputRef.current?.click()}
-                                        className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#448B3D] hover:bg-[#336B2D] text-white flex items-center justify-center shadow-md transition-colors"
-                                        title="Đổi ảnh đại diện"
-                                    >
-                                        <Camera className="w-3.5 h-3.5" />
-                                    </button>
-                                    <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                                    <div>
+                                        <p className="font-semibold text-foreground">{user?.name}</p>
+                                        <p className="text-sm text-muted-foreground">{user?.username}</p>
+                                        <button type="button" onClick={() => avatarInputRef.current?.click()} className="text-xs text-[#448B3D] hover:underline mt-1 font-medium">Thay đổi ảnh đại diện</button>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <Label htmlFor="prof-first">Họ</Label>
+                                        <Input id="prof-first" className="mt-1" value={profileForm.firstName} onChange={e => setProfileForm(f => ({ ...f, firstName: e.target.value }))} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="prof-last">Tên</Label>
+                                        <Input id="prof-last" className="mt-1" value={profileForm.lastName} onChange={e => setProfileForm(f => ({ ...f, lastName: e.target.value }))} />
+                                    </div>
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-foreground">{user?.name}</p>
-                                    <p className="text-sm text-muted-foreground">{user?.email}</p>
-                                    <button
-                                        type="button"
-                                        onClick={() => avatarInputRef.current?.click()}
-                                        className="text-xs text-[#448B3D] hover:underline mt-1 font-medium"
-                                    >
-                                        Thay đổi ảnh đại diện
-                                    </button>
+                                    <Label htmlFor="prof-email">Email</Label>
+                                    <Input id="prof-email" className="mt-1" value={profileForm.email} onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))} />
                                 </div>
+                                <div>
+                                    <Label htmlFor="prof-phone">Số điện thoại</Label>
+                                    <Input id="prof-phone" className="mt-1" value={profileForm.phone} onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
+                                </div>
+                                <Button className="w-full bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={saveProfile}>
+                                    Lưu thay đổi
+                                </Button>
                             </div>
-
-                            <div>
-                                <Label htmlFor="prof-name">Họ và tên</Label>
-                                <Input id="prof-name" className="mt-1" value={profile.name} onChange={e => setProfile(f => ({ ...f, name: e.target.value }))} />
-                            </div>
-                            <div>
-                                <Label htmlFor="prof-email">Email</Label>
-                                <Input id="prof-email" className="mt-1 opacity-60" value={user?.email ?? ''} readOnly />
-                                <p className="text-xs text-muted-foreground mt-1">Email không thể thay đổi</p>
-                            </div>
-                            <div>
-                                <Label htmlFor="prof-phone">Số điện thoại</Label>
-                                <Input id="prof-phone" className="mt-1" value={profile.phone} onChange={e => setProfile(f => ({ ...f, phone: e.target.value }))} />
-                            </div>
-                            <div>
-                                <Label htmlFor="prof-address">Địa chỉ</Label>
-                                <Input id="prof-address" className="mt-1" value={profile.address} onChange={e => setProfile(f => ({ ...f, address: e.target.value }))} />
-                            </div>
-                            <div>
-                                <Label htmlFor="prof-bio">Giới thiệu</Label>
-                                <Textarea id="prof-bio" className="mt-1" rows={3} value={profile.bio} onChange={e => setProfile(f => ({ ...f, bio: e.target.value }))} />
-                            </div>
-                            <Button className="w-full bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={saveProfile}>
-                                Lưu thay đổi
-                            </Button>
-                        </div>
+                        )}
                     </Card>
                 </TabsContent>
 
                 {/* ── Cài đặt ── */}
-                <TabsContent value="settings" className="outline-none">
+                < TabsContent value="settings" className="outline-none" >
                     <Card className="max-w-xl overflow-hidden border-border/80 shadow-md">
                         <div className="border-b border-border bg-linear-to-r from-[#448B3D]/12 via-transparent to-violet-500/5 px-6 py-5 dark:from-[#448B3D]/25">
                             <div className="flex items-start gap-4">
@@ -566,8 +652,8 @@ const UserDashboardPage = () => {
                             <DashboardThemeSettings />
                         </div>
                     </Card>
-                </TabsContent>
-            </Tabs>
+                </TabsContent >
+            </Tabs >
 
             {/* ── Pet Modal ── */}
             {petModal && (
@@ -579,10 +665,10 @@ const UserDashboardPage = () => {
                         </div>
                         <div>
                             <Label>Loài</Label>
-                            <Select value={petForm.species} onValueChange={v => setPetForm(f => ({ ...f, species: v as Pet['species'] }))}>
+                            <Select value={petForm.species} onValueChange={v => setPetForm(f => ({ ...f, species: v as ApiPet['species'] }))}>
                                 <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    {SPECIES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                    {SPECIES_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -601,11 +687,13 @@ const UserDashboardPage = () => {
                             </div>
                         </div>
                         <div>
-                            <Label htmlFor="pet-notes">Ghi chú</Label>
-                            <Textarea id="pet-notes" className="mt-1" rows={2} placeholder="Dị ứng, thói quen..." value={petForm.notes} onChange={e => setPetForm(f => ({ ...f, notes: e.target.value }))} />
+                            <Label htmlFor="pet-notes">Ghi chú sức khỏe</Label>
+                            <Textarea id="pet-notes" className="mt-1" rows={2} placeholder="Dị ứng, thói quen..." value={petForm.healthNotes} onChange={e => setPetForm(f => ({ ...f, healthNotes: e.target.value }))} />
                         </div>
                         <div className="flex gap-2 pt-1">
-                            <Button className="flex-1 bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={savePet}>Lưu</Button>
+                            <Button className="flex-1 bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={savePet} disabled={petSaving}>
+                                {petSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu'}
+                            </Button>
                             <Button variant="outline" className="flex-1" onClick={() => setPetModal(null)}>Hủy</Button>
                         </div>
                     </div>

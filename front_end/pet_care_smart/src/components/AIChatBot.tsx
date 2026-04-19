@@ -97,7 +97,7 @@ const AIChatBot = () => {
                             {/* Online dot */}
                             <span className='absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-300 rounded-full border-2 border-[#448B3D]' />
                         </div>
-                        <span className='text-sm font-semibold'>Hỗ trợ</span>
+                        
                     </motion.button>
                 )}
             </AnimatePresence>

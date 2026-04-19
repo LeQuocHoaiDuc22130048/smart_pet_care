@@ -1,16 +1,26 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useCart } from '@/context/CartContext';
+import { useCart, type CartItem } from '@/context/CartContext';
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const CartPage = () => {
     const navigate = useNavigate();
-    const { cart, removeFromCart, updateQuantity, cartTotal, clearCart } = useCart();
+    const cartContext = useCart();
 
-    if (cart.length === 0) {
+    const cart = cartContext?.cart ?? [];
+    const removeFromCart = cartContext?.removeFromCart ?? (async () => { });
+    const updateQuantity = cartContext?.updateQuantity ?? (async () => { });
+    const cartTotal = cartContext?.cartTotal ?? 0;
+    const clearCart = cartContext?.clearCart ?? (async () => { });
+
+    // Safe guard: ensure cart is an array
+    const safeCart = Array.isArray(cart) ? cart : [];
+    const safeCartTotal = typeof cartTotal === 'number' && !isNaN(cartTotal) ? cartTotal : 0;
+
+    if (safeCart.length === 0) {
         return (
             <div className='min-h-screen bg-background flex items-center justify-center'>
                 <div className='text-center py-16'>
@@ -38,14 +48,14 @@ const CartPage = () => {
 
                 <div className='grid lg:grid-cols-3 gap-8'>
                     <div className='lg:col-span-2 space-y-4'>
-                        {cart.map((item) => (
+                        {safeCart.map((item) => (
                             <Card key={item.id} className='p-4 sm:p-6 rounded-2xl'>
                                 <div className='flex items-start sm:items-center gap-3 sm:gap-6'>
                                     <img src={item.image} alt={item.name} className='w-16 h-16 sm:w-24 sm:h-24 object-cover rounded-xl shrink-0' />
                                     <div className='flex-1 min-w-0'>
                                         <h3 className='font-semibold text-foreground mb-1 text-sm sm:text-base'>{item.name}</h3>
                                         <p className='text-xs sm:text-sm text-muted-foreground mb-1 sm:mb-3'>{item.category}</p>
-                                        <p className='text-base sm:text-lg font-bold text-[#448B3D]'>${item.price.toFixed(2)}</p>
+                                        <p className='text-base sm:text-lg font-bold text-[#448B3D]'>{item.price.toLocaleString('vi-VN')}₫</p>
                                     </div>
                                     <div className='flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-4 shrink-0'>
                                         <div className='flex items-center border border-border rounded-xl overflow-hidden'>
@@ -78,7 +88,7 @@ const CartPage = () => {
                             <div className='space-y-3 mb-6'>
                                 <div className='flex justify-between text-muted-foreground'>
                                     <span>Tạm tính</span>
-                                    <span>${cartTotal.toFixed(2)}</span>
+                                    <span>{safeCartTotal.toLocaleString('vi-VN')}₫</span>
                                 </div>
                                 <div className='flex justify-between text-muted-foreground'>
                                     <span>Phí vận chuyển</span>
@@ -86,7 +96,7 @@ const CartPage = () => {
                                 </div>
                                 <div className='flex justify-between text-muted-foreground'>
                                     <span>Thuế (8%)</span>
-                                    <span>${(cartTotal * 0.08).toFixed(2)}</span>
+                                    <span>{(safeCartTotal * 0.08).toLocaleString('vi-VN')}₫</span>
                                 </div>
                             </div>
 
@@ -94,7 +104,7 @@ const CartPage = () => {
 
                             <div className='flex justify-between text-lg font-bold text-foreground mb-6'>
                                 <span>Tổng cộng</span>
-                                <span className='text-[#448B3D]'>${(cartTotal * 1.08).toFixed(2)}</span>
+                                <span className='text-[#448B3D]'>{(safeCartTotal * 1.08).toLocaleString('vi-VN')}₫</span>
                             </div>
 
                             <Button

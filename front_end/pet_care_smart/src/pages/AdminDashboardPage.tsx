@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
     DollarSign, ShoppingBag, Users, Calendar,
     Plus, Pencil, Trash2, X, Search, Lock, Unlock,
-    ChevronLeft, ChevronRight, Settings, Eye, EyeOff, ArrowLeft, Camera,
+    ChevronLeft, ChevronRight, Settings, Eye, EyeOff, ArrowLeft, Camera, Loader2,
 } from 'lucide-react';
 import {
     Bar, BarChart, CartesianGrid, Line, LineChart,
@@ -22,6 +22,9 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DashboardThemeSettings } from '@/components/dashboard/DashboardThemeSettings';
+import { productApi, type Product as ApiProduct, type Category as ApiCategory } from '@/lib/productApi';
+import { orderApi, type Order as ApiOrder, type OrderStatus } from '@/lib/orderApi';
+import { authApi, type UserIdentity } from '@/lib/authApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -48,62 +51,127 @@ interface Booking {
     status: 'Chờ xác nhận' | 'Đã xác nhận' | 'Hoàn thành' | 'Đã hủy';
 }
 
+// ─── Mappers ──────────────────────────────────────────────────────────────────
+function mapApiProduct(p: ApiProduct): Product {
+    const primary = p.images?.find(i => i.isPrimary) ?? p.images?.[0];
+    return {
+        id: p.id,
+        name: p.productName,
+        category: p.category?.map(c => c.categoryName).join(', ') || 'Khác',
+        price: p.price,
+        stock: p.stockQuantity,
+        status: p.status === 'ACTIVE' ? 'active' : 'inactive',
+        image: primary?.imageUrl ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
+    };
+}
+
+function mapApiOrder(o: ApiOrder): Order {
+    const statusMap: Record<string, Order['status']> = {
+        PENDING: 'Đang xử lý', RESERVED: 'Đang xử lý',
+        PAYMENT_PENDING: 'Đang xử lý', PAID: 'Đang giao',
+        CONFIRMED: 'Hoàn thành', FAILED: 'Đã hủy',
+        PAYMENT_FAILED: 'Đã hủy', CANCELLED: 'Đã hủy',
+    };
+    return {
+        id: o.id,
+        customer: o.userId ?? 'Khách hàng',
+        productId: o.items?.[0]?.productId ?? '',
+        product: o.items?.[0]?.productName ?? `Đơn hàng #${o.id.slice(0, 8)}`,
+        amount: `${o.totalAmount?.toLocaleString('vi-VN')}₫`,
+        address: '',
+        status: statusMap[o.status] ?? 'Đang xử lý',
+        date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '',
+    };
+}
+
+function mapApiUser(u: UserIdentity): Customer {
+    return {
+        id: u.id,
+        name: `${u.firstName} ${u.lastName}`,
+        email: u.username,
+        phone: '',
+        address: '',
+        orders: 0,
+        spent: '0₫',
+        joined: '',
+        status: 'active',
+    };
+}
+
 // ─── Modal ────────────────────────────────────────────────────────────────────
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Modal({ title, onClose, children, size = 'default' }: {
+    title: string;
+    onClose: () => void;
+    children: React.ReactNode;
+    size?: 'default' | 'large' | 'xlarge';
+}) {
+    const sizeClasses = {
+        default: 'max-w-lg',
+        large: 'max-w-3xl',
+        xlarge: 'max-w-5xl'
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl">
-                <div className="flex items-center justify-between p-6 border-b border-border">
+            <div className={`bg-card border border-border rounded-2xl w-full ${sizeClasses[size]} shadow-2xl max-h-[90vh] flex flex-col`}>
+                <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
                     <h3 className="text-lg font-bold text-foreground">{title}</h3>
                     <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <div className="p-6 space-y-4">{children}</div>
+                <div className="p-6 overflow-y-auto flex-1">{children}</div>
             </div>
         </div>
     );
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const INIT_PRODUCTS: Product[] = [
-    { id: 'P1', name: 'Thức ăn chó hữu cơ cao cấp', category: 'Thức ăn', price: 49.99, stock: 45, status: 'active', image: 'https://images.unsplash.com/photo-1568640347023-a616a30bc3bd?w=80&h=80&fit=crop' },
-    { id: 'P2', name: 'Cột cào móng mèo cao cấp', category: 'Đồ chơi', price: 89.99, stock: 30, status: 'active', image: 'https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=80&h=80&fit=crop' },
-    { id: 'P3', name: 'Bộ dây dắt & vòng cổ chó', category: 'Phụ kiện', price: 34.99, stock: 80, status: 'active', image: 'https://images.unsplash.com/photo-1600277971170-8a7d75fb1bd9?w=80&h=80&fit=crop' },
-    { id: 'P4', name: 'Giường thú cưng chỉnh hình', category: 'Giường', price: 79.99, stock: 25, status: 'active', image: 'https://images.unsplash.com/photo-1553736026-ff14d158d222?w=80&h=80&fit=crop' },
-    { id: 'P5', name: 'Đồ chơi thông minh tương tác', category: 'Đồ chơi', price: 44.99, stock: 0, status: 'inactive', image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop' },
-];
-const INIT_ORDERS: Order[] = [
-    { id: 'ORD-1234', customer: 'Nguyễn Văn An', productId: '1', product: 'Thức ăn chó cao cấp', amount: '$49.99', address: '12 Nguyễn Huệ, Q.1, TP.HCM', status: 'Hoàn thành', date: '11/02/2026' },
-    { id: 'ORD-1233', customer: 'Trần Thị Bình', productId: '2', product: 'Cột cào móng mèo', amount: '$89.99', address: '45 Lê Lợi, Q.Hoàn Kiếm, Hà Nội', status: 'Đang xử lý', date: '11/02/2026' },
-    { id: 'ORD-1232', customer: 'Lê Văn Cường', productId: '4', product: 'Giường thú cưng', amount: '$79.99', address: '78 Trần Phú, Q.Hải Châu, Đà Nẵng', status: 'Đang giao', date: '10/02/2026' },
-    { id: 'ORD-1231', customer: 'Phạm Thị Dung', productId: '5', product: 'Đồ chơi thông minh', amount: '$44.99', address: '23 Lý Thường Kiệt, Q.10, TP.HCM', status: 'Đang xử lý', date: '09/02/2026' },
-    { id: 'ORD-1230', customer: 'Hoàng Văn E', productId: '3', product: 'Bộ dây dắt chó', amount: '$34.99', address: '56 Đinh Tiên Hoàng, Q.Bình Thạnh, TP.HCM', status: 'Đã hủy', date: '08/02/2026' },
-];
-const INIT_CUSTOMERS: Customer[] = [
-    { id: 'C1', name: 'Nguyễn Văn An', email: 'user@petcare.vn', phone: '0901234567', address: '12 Nguyễn Huệ, Q.1, TP.HCM', orders: 12, spent: '$890', joined: '01/01/2026', status: 'active' },
-    { id: 'C2', name: 'Trần Thị Bình', email: 'binh@gmail.com', phone: '0912345678', address: '45 Lê Lợi, Q.Hoàn Kiếm, Hà Nội', orders: 5, spent: '$320', joined: '15/01/2026', status: 'active' },
-    { id: 'C3', name: 'Lê Văn Cường', email: 'cuong@gmail.com', phone: '0923456789', address: '78 Trần Phú, Q.Hải Châu, Đà Nẵng', orders: 8, spent: '$560', joined: '20/01/2026', status: 'active' },
-    { id: 'C4', name: 'Phạm Thị Dung', email: 'dung@gmail.com', phone: '0934567890', address: '23 Lý Thường Kiệt, Q.10, TP.HCM', orders: 2, spent: '$120', joined: '01/02/2026', status: 'blocked' },
-];
-const INIT_BOOKINGS: Booking[] = [
-    { id: 'BK-001', customer: 'Nguyễn Văn An', service: 'Spa thú cưng', pet: 'Max', date: '15/02/2026', time: '10:00', status: 'Đã xác nhận' },
-    { id: 'BK-002', customer: 'Trần Thị Bình', service: 'Khám sức khỏe', pet: 'Mimi', date: '16/02/2026', time: '14:00', status: 'Chờ xác nhận' },
-    { id: 'BK-003', customer: 'Lê Văn Cường', service: 'Tiêm phòng', pet: 'Buddy', date: '17/02/2026', time: '09:00', status: 'Chờ xác nhận' },
-    { id: 'BK-004', customer: 'Phạm Thị Dung', service: 'Cắt tỉa lông', pet: 'Luna', date: '10/02/2026', time: '11:00', status: 'Hoàn thành' },
-    { id: 'BK-005', customer: 'Đỗ Minh Khoa', service: 'Tắm & vệ sinh', pet: 'Coco', date: '06/04/2026', time: '15:00', status: 'Chờ xác nhận' },
-    { id: 'BK-006', customer: 'Võ Thị Hà', service: 'Khám tổng quát', pet: 'Milo', date: '12/04/2026', time: '08:30', status: 'Đã xác nhận' },
-];
-const CHART_DATA = [
-    { month: 'T1', sales: 4000, orders: 240 }, { month: 'T2', sales: 3000, orders: 180 },
-    { month: 'T3', sales: 5000, orders: 320 }, { month: 'T4', sales: 4500, orders: 280 },
-    { month: 'T5', sales: 6000, orders: 380 }, { month: 'T6', sales: 5500, orders: 350 },
-];
-const CATEGORIES = ['Thức ăn', 'Đồ chơi', 'Phụ kiện', 'Giường', 'Sức khỏe'];
+// ─── Mock data (bookings chưa có service) ────────────────────────────────────
+// ─── Bookings: chưa có booking service — giữ rỗng, hiển thị empty state ──────
+const INIT_BOOKINGS: Booking[] = [];
+
 const ORDER_STATUSES = ['Đang xử lý', 'Đang giao', 'Hoàn thành', 'Đã hủy'] as const;
 const BOOKING_STATUSES = ['Chờ xác nhận', 'Đã xác nhận', 'Hoàn thành', 'Đã hủy'] as const;
 
-const ADMIN_TABS = ['overview', 'products', 'products-add', 'product-categories', 'orders', 'order-detail', 'customers', 'customer-detail', 'bookings', 'stats', 'settings'] as const;
+// ─── Helper: tính chart data từ orders thực tế ────────────────────────────────
+function buildChartData(orders: Order[]) {
+    const monthLabels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+    const now = new Date();
+    // Lấy 6 tháng gần nhất
+    return Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+        const monthOrders = orders.filter(o => {
+            if (!o.date) return false;
+            try {
+                // Parse date string "dd/MM/yyyy"
+                const parts = o.date.split('/');
+                if (parts.length !== 3) return false;
+                const od = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                return od.getFullYear() === y && od.getMonth() === m;
+            } catch {
+                return false;
+            }
+        });
+        // Calculate sales from amount string "123,456₫"
+        const sales = monthOrders.reduce((s, o) => {
+            try {
+                const amount = parseFloat(o.amount.replace(/[₫,]/g, '')) || 0;
+                return s + amount;
+            } catch {
+                return s;
+            }
+        }, 0);
+        return {
+            month: monthLabels[m],
+            sales,
+            orders: monthOrders.length,
+        };
+    });
+}
+
+const ADMIN_TABS = ['overview', 'products', 'product-categories', 'orders', 'order-detail', 'customers', 'customer-detail', 'bookings', 'stats', 'settings'] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
 
 function parseAdminTab(raw: string | null): AdminTab {
@@ -112,6 +180,92 @@ function parseAdminTab(raw: string | null): AdminTab {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatVND(amount: number): string {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(amount);
+}
+
+// ─── Pagination Component ─────────────────────────────────────────────────────
+function Pagination({
+    currentPage,
+    totalItems,
+    itemsPerPage,
+    onPageChange
+}: {
+    currentPage: number;
+    totalItems: number;
+    itemsPerPage: number;
+    onPageChange: (page: number) => void;
+}) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    if (totalPages <= 1) return null;
+
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+        if (currentPage <= 3) {
+            pages.push(1, 2, 3, 4, '...', totalPages);
+        } else if (currentPage >= totalPages - 2) {
+            pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+        } else {
+            pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+        }
+    }
+
+    return (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <div className="text-sm text-muted-foreground">
+                Hiển thị {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} - {Math.min(currentPage * itemsPerPage, totalItems)} trong tổng số {totalItems}
+            </div>
+            <div className="flex items-center gap-1">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="h-8"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                {pages.map((page, idx) => (
+                    page === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                    ) : (
+                        <Button
+                            key={page}
+                            size="sm"
+                            variant={currentPage === page ? 'default' : 'outline'}
+                            onClick={() => onPageChange(page as number)}
+                            className={cn(
+                                "h-8 w-8",
+                                currentPage === page && "bg-[#448B3D] hover:bg-[#336B2D] text-white"
+                            )}
+                        >
+                            {page}
+                        </Button>
+                    )
+                ))}
+
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="h-8"
+                >
+                    <ChevronRight className="w-4 h-4" />
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 function orderBadge(s: string) {
     if (s === 'Hoàn thành') return 'bg-green-100 text-green-700 border border-green-300';
     if (s === 'Đang giao') return 'bg-blue-100 text-blue-700 border border-blue-300';
@@ -188,38 +342,179 @@ const AdminDashboardPage = () => {
         else setSearchParams({ tab: t }, { replace: true });
     };
 
-    const [products, setProducts] = useState<Product[]>(INIT_PRODUCTS);
-    const [categories, setCategories] = useState<string[]>([...CATEGORIES]);
-    const [newCategoryName, setNewCategoryName] = useState('');
-    const [editingCategory, setEditingCategory] = useState<{ index: number; name: string } | null>(null);
+    // ── API state ─────────────────────────────────────────────────────────────
+    const [apiLoading, setApiLoading] = useState(false);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<string[]>([]);
+    const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
 
-    const addCategory = () => {
+    const fetchAdminData = useCallback(async () => {
+        setApiLoading(true);
+        try {
+            const [productsRes, categoriesRes, ordersRes, usersRes] = await Promise.allSettled([
+                productApi.getAll(),
+                productApi.getAllCategories(),
+                orderApi.getAllOrders(),
+                authApi.getAllUsers(),
+            ]);
+
+            if (productsRes.status === 'fulfilled' && productsRes.value?.result) {
+                try {
+                    setProducts((productsRes.value.result ?? []).map(mapApiProduct));
+                } catch (err) {
+                    console.error('Error mapping products:', err);
+                    setProducts([]);
+                }
+            } else {
+                setProducts([]);
+            }
+
+            if (categoriesRes.status === 'fulfilled' && categoriesRes.value?.result) {
+                try {
+                    const cats = categoriesRes.value.result ?? [];
+                    setApiCategories(cats);
+                    setCategories(cats.map(c => c.categoryName));
+                } catch (err) {
+                    console.error('Error mapping categories:', err);
+                    setApiCategories([]);
+                    setCategories([]);
+                }
+            } else {
+                setApiCategories([]);
+                setCategories([]);
+            }
+
+            if (ordersRes.status === 'fulfilled' && ordersRes.value?.result) {
+                try {
+                    setOrders((ordersRes.value.result ?? []).map(mapApiOrder));
+                } catch (err) {
+                    console.error('Error mapping orders:', err);
+                    setOrders([]);
+                }
+            } else {
+                setOrders([]);
+            }
+
+            if (usersRes.status === 'fulfilled' && usersRes.value?.result) {
+                try {
+                    setCustomers((usersRes.value.result ?? []).map(mapApiUser));
+                } catch (err) {
+                    console.error('Error mapping users:', err);
+                    setCustomers([]);
+                }
+            } else {
+                setCustomers([]);
+            }
+        } catch (err) {
+            console.error('Error fetching admin data:', err);
+            // Set empty arrays on error
+            setProducts([]);
+            setApiCategories([]);
+            setCategories([]);
+            setOrders([]);
+            setCustomers([]);
+        } finally {
+            setApiLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchAdminData();
+    }, [fetchAdminData]);
+
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryDesc, setNewCategoryDesc] = useState('');
+    const [editingCategory, setEditingCategory] = useState<{ index: number; name: string; description?: string; id?: string } | null>(null);
+
+    const addCategory = async () => {
         const name = newCategoryName.trim();
+        const description = newCategoryDesc.trim();
         if (!name || categories.includes(name)) return;
-        setCategories(prev => [...prev, name]);
+        try {
+            await productApi.createCategory({
+                categoryName: name,
+                description: description || undefined
+            });
+            toast.success('Đã thêm danh mục');
+            await fetchAdminData();
+        } catch {
+            toast.error('Không thể thêm danh mục');
+        }
         setNewCategoryName('');
+        setNewCategoryDesc('');
     };
 
-    const deleteCategory = (idx: number) => setCategories(prev => prev.filter((_, i) => i !== idx));
+    const deleteCategory = async (idx: number) => {
+        const cat = apiCategories[idx];
+        if (!cat) { setCategories(prev => prev.filter((_, i) => i !== idx)); return; }
 
-    const saveEditCategory = () => {
+        // Xác nhận trước khi xóa
+        if (!confirm(`Bạn có chắc muốn xóa danh mục "${cat.categoryName}"?`)) {
+            return;
+        }
+
+        try {
+            await productApi.deleteCategory(cat.categoryId);
+            toast.success('Đã xóa danh mục');
+            await fetchAdminData();
+        } catch (error: any) {
+            console.error('Delete category error:', error);
+
+            // Kiểm tra error code (ApiError có thuộc tính code)
+            // Kiểm tra cả message để đảm bảo
+            if (error?.code === 2103 || error?.message?.includes('used by product')) {
+                toast.error('Không thể xóa! Danh mục đang được sử dụng bởi sản phẩm.', {
+                    duration: 5000,
+                    description: 'Vui lòng xóa tất cả sản phẩm trong danh mục này trước.'
+                });
+            } else {
+                // Hiển thị message từ backend
+                toast.error(error?.message || 'Không thể xóa danh mục');
+            }
+        }
+    };
+
+    const saveEditCategory = async () => {
         if (!editingCategory) return;
         const name = editingCategory.name.trim();
         if (!name) return;
-        setCategories(prev => prev.map((c, i) => i === editingCategory.index ? name : c));
+        const cat = apiCategories[editingCategory.index];
+        if (cat) {
+            try {
+                await productApi.updateCategory(cat.categoryId, {
+                    categoryName: name,
+                    description: editingCategory.description?.trim() || undefined
+                });
+                toast.success('Đã cập nhật danh mục');
+                await fetchAdminData();
+            } catch {
+                toast.error('Không thể cập nhật danh mục');
+            }
+        } else {
+            setCategories(prev => prev.map((c, i) => i === editingCategory.index ? name : c));
+        }
         setEditingCategory(null);
     };
-    const [orders, setOrders] = useState<Order[]>(INIT_ORDERS);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-    const [customers, setCustomers] = useState<Customer[]>(INIT_CUSTOMERS);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-    const [customerPasswords, setCustomerPasswords] = useState<Record<string, string>>(
-        () => Object.fromEntries(INIT_CUSTOMERS.map(c => [c.id, 'password123']))
-    );
+    const [customerPasswords, setCustomerPasswords] = useState<Record<string, string>>({});
     const [showPasswordFor, setShowPasswordFor] = useState<string | null>(null);
     const [editingPassword, setEditingPassword] = useState<{ id: string; value: string } | null>(null);
     const [bookings, setBookings] = useState<Booking[]>(INIT_BOOKINGS);
     const [search, setSearch] = useState('');
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState<Record<string, number>>({
+        products: 1,
+        categories: 1,
+        orders: 1,
+        customers: 1,
+        bookings: 1
+    });
+    const itemsPerPage = 10;
+
     const [calendarMonth, setCalendarMonth] = useState(() => {
         const n = new Date();
         return new Date(n.getFullYear(), n.getMonth(), 1);
@@ -229,57 +524,145 @@ const AdminDashboardPage = () => {
     // Product modal state
     const [productModal, setProductModal] = useState<'add' | 'edit' | null>(null);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-    const [pForm, setPForm] = useState({ name: '', category: 'Thức ăn', price: '', stock: '', status: 'active' as 'active' | 'inactive' });
+    const [pForm, setPForm] = useState({
+        name: '', description: '', categoryId: '',
+        price: '', stock: '', status: 'active' as 'active' | 'inactive',
+    });
+    const [pImages, setPImages] = useState<File[]>([]);
+    const [pImagePreviews, setPImagePreviews] = useState<string[]>([]);
+    const [pPrimaryIdx, setPPrimaryIdx] = useState(0);
+    const [pSaving, setPSaving] = useState(false);
+    const pImageInputRef = useRef<HTMLInputElement>(null);
 
     const openAddProduct = () => {
-        setPForm({ name: '', category: 'Thức ăn', price: '', stock: '', status: 'active' });
+        setPForm({ name: '', description: '', categoryId: apiCategories[0]?.categoryId ?? '', price: '', stock: '', status: 'active' });
+        setPImages([]);
+        setPImagePreviews([]);
+        setPPrimaryIdx(0);
         setEditingProduct(null);
         setProductModal('add');
     };
     const openEditProduct = (p: Product) => {
-        setPForm({ name: p.name, category: p.category, price: String(p.price), stock: String(p.stock), status: p.status });
+        const catId = apiCategories.find(c => c.categoryName === p.category)?.categoryId ?? '';
+        setPForm({ name: p.name, description: '', categoryId: catId, price: String(p.price), stock: String(p.stock), status: p.status });
+        setPImages([]);
+        setPImagePreviews(p.image ? [p.image] : []);
+        setPPrimaryIdx(0);
         setEditingProduct(p);
         setProductModal('edit');
     };
-    const saveProduct = () => {
-        if (!pForm.name.trim()) { toast.error('Vui lòng nhập tên sản phẩm'); return; }
-        if (productModal === 'add') {
-            const newP: Product = {
-                id: 'P' + Date.now(), name: pForm.name, category: pForm.category,
-                price: parseFloat(pForm.price) || 0, stock: parseInt(pForm.stock) || 0,
-                status: pForm.status, image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
-            };
-            setProducts(prev => [newP, ...prev]);
-            toast.success('Đã thêm sản phẩm');
-        } else if (editingProduct) {
-            setProducts(prev => prev.map(p => p.id === editingProduct.id
-                ? { ...p, name: pForm.name, category: pForm.category, price: parseFloat(pForm.price) || 0, stock: parseInt(pForm.stock) || 0, status: pForm.status }
-                : p));
-            toast.success('Đã cập nhật sản phẩm');
-        }
-        setProductModal(null);
-    };
-    const deleteProduct = (id: string) => {
-        setProducts(prev => prev.filter(p => p.id !== id));
-        toast.success('Đã xóa sản phẩm');
+
+    const handlePImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+        const newFiles = [...pImages, ...files];
+        setPImages(newFiles);
+        // Tạo preview URLs
+        const newPreviews = files.map(f => URL.createObjectURL(f));
+        setPImagePreviews(prev => [...prev, ...newPreviews]);
+        // Reset input để có thể chọn lại cùng file
+        e.target.value = '';
     };
 
-    const updateOrderStatus = (id: string, status: Order['status']) => {
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-        toast.success('Đã cập nhật trạng thái đơn hàng');
+    const removePImage = (idx: number) => {
+        // Nếu là file mới (không phải ảnh cũ từ server)
+        const existingCount = editingProduct?.image ? 1 : 0;
+        if (idx >= existingCount) {
+            const fileIdx = idx - existingCount;
+            URL.revokeObjectURL(pImagePreviews[idx]);
+            setPImages(prev => prev.filter((_, i) => i !== fileIdx));
+        }
+        setPImagePreviews(prev => prev.filter((_, i) => i !== idx));
+        if (pPrimaryIdx >= idx && pPrimaryIdx > 0) setPPrimaryIdx(p => p - 1);
     };
-    const deleteOrder = (id: string) => {
-        setOrders(prev => prev.filter(o => o.id !== id));
-        toast.success('Đã xóa đơn hàng');
+
+    const saveProduct = async () => {
+        if (!pForm.name.trim()) { toast.error('Vui lòng nhập tên sản phẩm'); return; }
+        if (productModal === 'add' && pImages.length === 0) {
+            toast.error('Vui lòng chọn ít nhất 1 ảnh sản phẩm');
+            return;
+        }
+        setPSaving(true);
+        try {
+            const catId = pForm.categoryId;
+            if (!catId) { toast.error('Vui lòng chọn danh mục'); setPSaving(false); return; }
+            if (productModal === 'add') {
+                const requestData = {
+                    productName: pForm.name,
+                    description: pForm.description || undefined,
+                    price: parseFloat(pForm.price) || 0,
+                    stockQuantity: parseInt(pForm.stock) || 0,
+                    categoryId: [catId],
+                    primaryImageIndex: pPrimaryIdx,
+                };
+                await productApi.create(requestData, pImages);
+                toast.success('Đã thêm sản phẩm');
+            } else if (editingProduct) {
+                const requestData = {
+                    productName: pForm.name,
+                    description: pForm.description || undefined,
+                    price: parseFloat(pForm.price) || 0,
+                    stockQuantity: parseInt(pForm.stock) || 0,
+                    categoryId: [catId],
+                    status: (pForm.status === 'active' ? 'ACTIVE' : 'INACTIVE') as 'ACTIVE' | 'INACTIVE',
+                    primaryImageIndex: pPrimaryIdx,
+                };
+                await productApi.update(editingProduct.id, requestData, pImages.length > 0 ? pImages : undefined);
+                toast.success('Đã cập nhật sản phẩm');
+            }
+            await fetchAdminData();
+            setProductModal(null);
+        } catch {
+            toast.error('Không thể lưu sản phẩm. Vui lòng thử lại.');
+        } finally {
+            setPSaving(false);
+        }
+    };
+    const deleteProduct = async (id: string) => {
+        try {
+            await productApi.delete(id);
+            await fetchAdminData();
+            toast.success('Đã xóa sản phẩm');
+        } catch {
+            toast.error('Không thể xóa sản phẩm');
+        }
+    };
+
+    const updateOrderStatus = async (id: string, status: Order['status']) => {
+        const apiStatusMap: Record<Order['status'], OrderStatus> = {
+            'Đang xử lý': 'PENDING', 'Đang giao': 'CONFIRMED',
+            'Hoàn thành': 'CONFIRMED', 'Đã hủy': 'CANCELLED',
+        };
+        try {
+            await orderApi.adminUpdateStatus(id, { status: apiStatusMap[status] });
+            await fetchAdminData();
+            toast.success('Đã cập nhật trạng thái đơn hàng');
+        } catch {
+            toast.error('Không thể cập nhật trạng thái đơn hàng');
+        }
+    };
+    const deleteOrder = async (id: string) => {
+        try {
+            await orderApi.adminCancelOrder(id);
+            await fetchAdminData();
+            toast.success('Đã xóa đơn hàng');
+        } catch {
+            toast.error('Không thể xóa đơn hàng');
+        }
     };
 
     const toggleCustomer = (id: string) => {
         setCustomers(prev => prev.map(c => c.id === id ? { ...c, status: c.status === 'active' ? 'blocked' : 'active' } : c));
         toast.success('Đã cập nhật trạng thái khách hàng');
     };
-    const deleteCustomer = (id: string) => {
-        setCustomers(prev => prev.filter(c => c.id !== id));
-        toast.success('Đã xóa khách hàng');
+    const deleteCustomer = async (id: string) => {
+        try {
+            await authApi.deleteUser(id);
+            await fetchAdminData();
+            toast.success('Đã xóa khách hàng');
+        } catch {
+            toast.error('Không thể xóa khách hàng');
+        }
     };
 
     const updateBookingStatus = (id: string, status: Booking['status']) => {
@@ -296,6 +679,24 @@ const AdminDashboardPage = () => {
     const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase()));
     const filteredBookings = bookings.filter(b => b.id.toLowerCase().includes(search.toLowerCase()) || b.customer.toLowerCase().includes(search.toLowerCase()));
 
+    // Paginated data
+    const paginatedProducts = filteredProducts.slice(
+        (currentPage.products - 1) * itemsPerPage,
+        currentPage.products * itemsPerPage
+    );
+    const paginatedCategories = apiCategories.slice(
+        (currentPage.categories - 1) * itemsPerPage,
+        currentPage.categories * itemsPerPage
+    );
+    const paginatedOrders = filteredOrders.slice(
+        (currentPage.orders - 1) * itemsPerPage,
+        currentPage.orders * itemsPerPage
+    );
+    const paginatedCustomers = filteredCustomers.slice(
+        (currentPage.customers - 1) * itemsPerPage,
+        currentPage.customers * itemsPerPage
+    );
+
     const calendarCells = useMemo(() => buildMonthCalendarCells(calendarMonth), [calendarMonth]);
     const today = new Date();
 
@@ -311,6 +712,7 @@ const AdminDashboardPage = () => {
     };
 
     const lowStock = products.filter(p => p.stock < 10);
+    const chartData = useMemo(() => buildChartData(orders), [orders]);
 
     return (
         <div className="w-full">
@@ -332,6 +734,12 @@ const AdminDashboardPage = () => {
 
                 {/* ── Tổng quan ── */}
                 <TabsContent value="overview">
+                    {apiLoading && (
+                        <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Đang tải dữ liệu từ server...
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
                         {[
                             { icon: DollarSign, label: 'Doanh thu', value: '$45,890', change: '+12.5%' },
@@ -356,7 +764,7 @@ const AdminDashboardPage = () => {
                         <Card className="p-5">
                             <h2 className="font-semibold text-foreground mb-4">Doanh thu theo tháng</h2>
                             <ResponsiveContainer width="100%" height={260}>
-                                <LineChart data={CHART_DATA}>
+                                <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                                     <YAxis stroke="#6B7280" fontSize={12} />
@@ -368,7 +776,7 @@ const AdminDashboardPage = () => {
                         <Card className="p-5">
                             <h2 className="font-semibold text-foreground mb-4">Đơn hàng theo tháng</h2>
                             <ResponsiveContainer width="100%" height={260}>
-                                <BarChart data={CHART_DATA}>
+                                <BarChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                                     <YAxis stroke="#6B7280" fontSize={12} />
@@ -453,14 +861,14 @@ const AdminDashboardPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredProducts.map(p => (
+                                    {paginatedProducts.map(p => (
                                         <tr key={p.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                             <td className="p-3">
                                                 <img src={p.image} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
                                             </td>
                                             <td className="p-3 font-medium text-foreground max-w-[180px] truncate">{p.name}</td>
                                             <td className="p-3 text-muted-foreground">{p.category}</td>
-                                            <td className="p-3 font-medium">${p.price.toFixed(2)}</td>
+                                            <td className="p-3 font-medium text-[#448B3D]">{formatVND(p.price)}</td>
                                             <td className="p-3">
                                                 <span className={p.stock === 0 ? 'text-red-600 font-medium' : p.stock < 10 ? 'text-orange-600 font-medium' : 'text-foreground'}>{p.stock}</span>
                                             </td>
@@ -485,51 +893,12 @@ const AdminDashboardPage = () => {
                             </table>
                             {filteredProducts.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy sản phẩm</p>}
                         </div>
-                    </Card>
-                </TabsContent>
-
-                {/* ── Thêm sản phẩm ── */}
-                <TabsContent value="products-add">
-                    <Card className="p-6 max-w-2xl">
-                        <h2 className="text-lg font-semibold text-foreground mb-6">Thêm sản phẩm mới</h2>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Tên sản phẩm</label>
-                                    <Input placeholder="Nhập tên sản phẩm..." />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Danh mục</label>
-                                    <Select>
-                                        <SelectTrigger><SelectValue placeholder="Chọn danh mục" /></SelectTrigger>
-                                        <SelectContent>
-                                            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Giá (USD)</label>
-                                    <Input type="number" placeholder="0.00" min={0} step={0.01} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-foreground">Tồn kho</label>
-                                    <Input type="number" placeholder="0" min={0} />
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground">Mô tả</label>
-                                <textarea
-                                    className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                                    placeholder="Nhập mô tả sản phẩm..."
-                                />
-                            </div>
-                            <div className="flex gap-3 pt-2">
-                                <Button className="bg-[#448B3D] hover:bg-[#336B2D] text-white">
-                                    <Plus className="w-4 h-4" /> Thêm sản phẩm
-                                </Button>
-                                <Button variant="outline">Hủy</Button>
-                            </div>
-                        </div>
+                        <Pagination
+                            currentPage={currentPage.products}
+                            totalItems={filteredProducts.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(page) => setCurrentPage(prev => ({ ...prev, products: page }))}
+                        />
                     </Card>
                 </TabsContent>
 
@@ -538,25 +907,40 @@ const AdminDashboardPage = () => {
                     {/* Form thêm danh mục */}
                     <Card className="p-5 mb-4">
                         <h3 className="text-sm font-semibold text-foreground mb-3">Thêm danh mục mới</h3>
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="Nhập tên danh mục..."
-                                value={newCategoryName}
-                                onChange={e => setNewCategoryName(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && addCategory()}
-                                className="max-w-sm"
-                            />
-                            <Button
-                                onClick={addCategory}
-                                disabled={!newCategoryName.trim() || categories.includes(newCategoryName.trim())}
-                                className="bg-[#448B3D] hover:bg-[#336B2D] text-white shrink-0"
-                            >
-                                <Plus className="w-4 h-4" /> Thêm
-                            </Button>
+                        <div className="space-y-3">
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Nhập tên danh mục..."
+                                    value={newCategoryName}
+                                    onChange={e => setNewCategoryName(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && addCategory()}
+                                    className="max-w-sm"
+                                />
+                                <Button
+                                    onClick={addCategory}
+                                    disabled={!newCategoryName.trim() || categories.includes(newCategoryName.trim())}
+                                    className="bg-[#448B3D] hover:bg-[#336B2D] text-white shrink-0"
+                                >
+                                    <Plus className="w-4 h-4" /> Thêm
+                                </Button>
+                            </div>
+                            <div>
+                                <textarea
+                                    placeholder="Mô tả danh mục (tùy chọn, tối đa 500 ký tự)"
+                                    value={newCategoryDesc}
+                                    onChange={e => setNewCategoryDesc(e.target.value)}
+                                    maxLength={500}
+                                    rows={2}
+                                    className="w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                                />
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    {newCategoryDesc.length}/500 ký tự
+                                </div>
+                            </div>
+                            {newCategoryName.trim() && categories.includes(newCategoryName.trim()) && (
+                                <p className="text-xs text-red-500">Danh mục này đã tồn tại.</p>
+                            )}
                         </div>
-                        {newCategoryName.trim() && categories.includes(newCategoryName.trim()) && (
-                            <p className="text-xs text-red-500 mt-1.5">Danh mục này đã tồn tại.</p>
-                        )}
                     </Card>
 
                     {/* Danh sách danh mục */}
@@ -567,50 +951,88 @@ const AdminDashboardPage = () => {
                                     <tr className="border-b border-border">
                                         <th className="text-left p-3 text-muted-foreground font-medium">#</th>
                                         <th className="text-left p-3 text-muted-foreground font-medium">Tên danh mục</th>
+                                        <th className="text-left p-3 text-muted-foreground font-medium">Mô tả</th>
                                         <th className="text-left p-3 text-muted-foreground font-medium">Số sản phẩm</th>
                                         <th className="text-left p-3 text-muted-foreground font-medium">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {categories.map((cat, idx) => (
-                                        <tr key={cat} className="border-b border-border hover:bg-muted/30 transition-colors">
-                                            <td className="p-3 text-muted-foreground">{idx + 1}</td>
-                                            <td className="p-3 font-medium text-foreground">
-                                                {editingCategory?.index === idx ? (
-                                                    <div className="flex gap-2 items-center">
+                                    {paginatedCategories.map((cat, idx) => {
+                                        const actualIdx = (currentPage.categories - 1) * itemsPerPage + idx;
+                                        return (
+                                            <tr key={cat.categoryId} className="border-b border-border hover:bg-muted/30 transition-colors">
+                                                <td className="p-3 text-muted-foreground">{actualIdx + 1}</td>
+                                                <td className="p-3 font-medium text-foreground">
+                                                    {editingCategory?.index === actualIdx ? (
                                                         <Input
                                                             value={editingCategory.name}
-                                                            onChange={e => setEditingCategory({ index: idx, name: e.target.value })}
+                                                            onChange={e => setEditingCategory({ ...editingCategory, name: e.target.value })}
                                                             onKeyDown={e => { if (e.key === 'Enter') saveEditCategory(); if (e.key === 'Escape') setEditingCategory(null); }}
                                                             className="h-8 max-w-[200px]"
                                                             autoFocus
                                                         />
-                                                        <Button size="sm" onClick={saveEditCategory} className="bg-[#448B3D] hover:bg-[#336B2D] text-white h-8">Lưu</Button>
-                                                        <Button size="sm" variant="outline" onClick={() => setEditingCategory(null)} className="h-8">Hủy</Button>
-                                                    </div>
-                                                ) : cat}
-                                            </td>
-                                            <td className="p-3 text-muted-foreground">
-                                                {products.filter(p => p.category === cat).length}
-                                            </td>
-                                            <td className="p-3">
-                                                <div className="flex items-center gap-1">
-                                                    <Button size="icon-sm" variant="ghost" onClick={() => setEditingCategory({ index: idx, name: cat })}>
-                                                        <Pencil className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                    <Button size="icon-sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deleteCategory(idx)}>
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {categories.length === 0 && (
-                                        <tr><td colSpan={4} className="text-center text-muted-foreground py-8">Chưa có danh mục nào</td></tr>
+                                                    ) : cat.categoryName}
+                                                </td>
+                                                <td className="p-3 text-muted-foreground max-w-xs">
+                                                    {editingCategory?.index === actualIdx ? (
+                                                        <textarea
+                                                            value={editingCategory.description || ''}
+                                                            onChange={e => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                                                            maxLength={500}
+                                                            rows={2}
+                                                            className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm resize-none"
+                                                            placeholder="Mô tả..."
+                                                        />
+                                                    ) : (
+                                                        <span className="text-xs line-clamp-2" title={cat.description}>
+                                                            {cat.description || <span className="text-muted-foreground/50 italic">Chưa có mô tả</span>}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-muted-foreground">
+                                                    {products.filter(p => p.category === cat.categoryName).length}
+                                                </td>
+                                                <td className="p-3">
+                                                    {editingCategory?.index === actualIdx ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <Button size="sm" onClick={saveEditCategory} className="bg-[#448B3D] hover:bg-[#336B2D] text-white h-7 text-xs">Lưu</Button>
+                                                            <Button size="sm" variant="outline" onClick={() => setEditingCategory(null)} className="h-7 text-xs">Hủy</Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1">
+                                                            <Button
+                                                                size="icon-sm"
+                                                                variant="ghost"
+                                                                onClick={() => setEditingCategory({
+                                                                    index: actualIdx,
+                                                                    name: cat.categoryName,
+                                                                    description: cat.description,
+                                                                    id: cat.categoryId
+                                                                })}
+                                                            >
+                                                                <Pencil className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                            <Button size="icon-sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deleteCategory(actualIdx)}>
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                    {apiCategories.length === 0 && (
+                                        <tr><td colSpan={5} className="text-center text-muted-foreground py-8">Chưa có danh mục nào</td></tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
+                        <Pagination
+                            currentPage={currentPage.categories}
+                            totalItems={apiCategories.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(page) => setCurrentPage(prev => ({ ...prev, categories: page }))}
+                        />
                     </Card>
                 </TabsContent>
 
@@ -635,7 +1057,7 @@ const AdminDashboardPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredOrders.map(o => (
+                                    {paginatedOrders.map(o => (
                                         <tr key={o.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                             <td className="p-3 font-medium text-foreground">{o.id}</td>
                                             <td className="p-3 text-muted-foreground">{o.customer}</td>
@@ -676,6 +1098,12 @@ const AdminDashboardPage = () => {
                             </table>
                             {filteredOrders.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy đơn hàng</p>}
                         </div>
+                        <Pagination
+                            currentPage={currentPage.orders}
+                            totalItems={filteredOrders.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(page) => setCurrentPage(prev => ({ ...prev, orders: page }))}
+                        />
                     </Card>
                 </TabsContent>
 
@@ -835,7 +1263,7 @@ const AdminDashboardPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredCustomers.map(c => (
+                                    {paginatedCustomers.map(c => (
                                         <tr key={c.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                                             <td className="p-3 font-medium text-foreground">{c.name}</td>
                                             <td className="p-3 text-muted-foreground">{c.email}</td>
@@ -867,6 +1295,12 @@ const AdminDashboardPage = () => {
                             </table>
                             {filteredCustomers.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy khách hàng</p>}
                         </div>
+                        <Pagination
+                            currentPage={currentPage.customers}
+                            totalItems={filteredCustomers.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(page) => setCurrentPage(prev => ({ ...prev, customers: page }))}
+                        />
                     </Card>
                 </TabsContent>
 
@@ -1154,7 +1588,7 @@ const AdminDashboardPage = () => {
                         <Card className="p-5">
                             <h2 className="font-semibold text-foreground mb-4">Doanh thu theo tháng</h2>
                             <ResponsiveContainer width="100%" height={280}>
-                                <LineChart data={CHART_DATA}>
+                                <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                                     <YAxis stroke="#6B7280" fontSize={12} />
@@ -1166,7 +1600,7 @@ const AdminDashboardPage = () => {
                         <Card className="p-5">
                             <h2 className="font-semibold text-foreground mb-4">Đơn hàng theo tháng</h2>
                             <ResponsiveContainer width="100%" height={280}>
-                                <BarChart data={CHART_DATA}>
+                                <BarChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                     <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
                                     <YAxis stroke="#6B7280" fontSize={12} />
@@ -1313,49 +1747,162 @@ const AdminDashboardPage = () => {
 
             {/* ── Product Modal ── */}
             {productModal && (
-                <Modal title={productModal === 'add' ? 'Thêm sản phẩm' : 'Chỉnh sửa sản phẩm'} onClose={() => setProductModal(null)}>
-                    <div className="space-y-3">
-                        <div>
-                            <Label htmlFor="pname">Tên sản phẩm</Label>
-                            <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
-                        </div>
-                        <div>
-                            <Label>Danh mục</Label>
-                            <Select value={pForm.category} onValueChange={v => setPForm(f => ({ ...f, category: v }))}>
-                                <SelectTrigger className="mt-1 w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
+                <Modal
+                    title={productModal === 'add' ? 'Thêm sản phẩm' : 'Chỉnh sửa sản phẩm'}
+                    onClose={() => setProductModal(null)}
+                    size="large"
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Cột trái - Thông tin cơ bản */}
+                        <div className="space-y-4">
+                            {/* Tên sản phẩm */}
                             <div>
-                                <Label htmlFor="pprice">Giá ($)</Label>
-                                <Input id="pprice" type="number" className="mt-1" placeholder="0.00" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
+                                <Label htmlFor="pname">Tên sản phẩm <span className="text-red-500">*</span></Label>
+                                <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
                             </div>
+
+                            {/* Mô tả */}
                             <div>
-                                <Label htmlFor="pstock">Tồn kho</Label>
-                                <Input id="pstock" type="number" className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
+                                <Label htmlFor="pdesc">Mô tả</Label>
+                                <textarea
+                                    id="pdesc"
+                                    rows={4}
+                                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                                    placeholder="Mô tả sản phẩm (tối đa 500 ký tự)"
+                                    maxLength={500}
+                                    value={pForm.description}
+                                    onChange={e => setPForm(f => ({ ...f, description: e.target.value }))}
+                                />
+                                <div className="text-xs text-muted-foreground mt-1 text-right">
+                                    {pForm.description.length}/500
+                                </div>
+                            </div>
+
+                            {/* Danh mục */}
+                            <div>
+                                <Label>Danh mục <span className="text-red-500">*</span></Label>
+                                <Select value={pForm.categoryId} onValueChange={v => setPForm(f => ({ ...f, categoryId: v }))}>
+                                    <SelectTrigger className="mt-1 w-full">
+                                        <SelectValue placeholder="Chọn danh mục" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {apiCategories.map(c => (
+                                            <SelectItem key={c.categoryId} value={c.categoryId}>{c.categoryName}</SelectItem>
+                                        ))}
+                                        {apiCategories.length === 0 && (
+                                            <div className="px-3 py-2 text-sm text-muted-foreground">Chưa có danh mục</div>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Giá & Tồn kho */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label htmlFor="pprice">Giá (₫) <span className="text-red-500">*</span></Label>
+                                    <Input id="pprice" type="number" min={0} className="mt-1" placeholder="0" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="pstock">Tồn kho <span className="text-red-500">*</span></Label>
+                                    <Input id="pstock" type="number" min={0} className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
+                                </div>
+                            </div>
+
+                            {/* Trạng thái (chỉ hiện khi edit) */}
+                            {productModal === 'edit' && (
+                                <div>
+                                    <Label>Trạng thái</Label>
+                                    <Select value={pForm.status} onValueChange={v => setPForm(f => ({ ...f, status: v as 'active' | 'inactive' }))}>
+                                        <SelectTrigger className="mt-1 w-full">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="active">Hoạt động</SelectItem>
+                                            <SelectItem value="inactive">Ẩn</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Cột phải - Hình ảnh */}
+                        <div className="space-y-4">
+                            <div>
+                                <Label>
+                                    Hình ảnh sản phẩm
+                                    {productModal === 'add' && <span className="text-red-500"> *</span>}
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                                    Click vào ảnh để đặt làm ảnh chính
+                                </p>
+
+                                {/* Khu vực drop/click upload */}
+                                <button
+                                    type="button"
+                                    onClick={() => pImageInputRef.current?.click()}
+                                    className="w-full border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center gap-2 hover:border-[#448B3D] hover:bg-[#448B3D]/5 transition-colors cursor-pointer"
+                                >
+                                    <Camera className="w-8 h-8 text-muted-foreground" />
+                                    <span className="text-sm font-medium text-foreground">Nhấn để chọn ảnh</span>
+                                    <span className="text-xs text-muted-foreground">PNG, JPG, WEBP (tối đa 10MB)</span>
+                                </button>
+                                <input
+                                    ref={pImageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="hidden"
+                                    onChange={handlePImageChange}
+                                />
+
+                                {/* Preview grid */}
+                                {pImagePreviews.length > 0 && (
+                                    <div className="mt-4 grid grid-cols-3 gap-3">
+                                        {pImagePreviews.map((src, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`relative group rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${idx === pPrimaryIdx ? 'border-[#448B3D] ring-2 ring-[#448B3D]/30' : 'border-border hover:border-[#448B3D]/50'}`}
+                                                onClick={() => setPPrimaryIdx(idx)}
+                                            >
+                                                <img src={src} alt={`preview-${idx}`} className="w-full aspect-square object-cover" />
+                                                {/* Badge ảnh chính */}
+                                                {idx === pPrimaryIdx && (
+                                                    <div className="absolute top-1 left-1 bg-[#448B3D] text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+                                                        Chính
+                                                    </div>
+                                                )}
+                                                {/* Nút xóa */}
+                                                <button
+                                                    type="button"
+                                                    onClick={e => { e.stopPropagation(); removePImage(idx); }}
+                                                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {pImagePreviews.length === 0 && (
+                                    <div className="mt-4 text-center text-sm text-muted-foreground py-8 border border-dashed border-border rounded-lg">
+                                        Chưa có ảnh nào được chọn
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div>
-                            <Label>Trạng thái</Label>
-                            <Select value={pForm.status} onValueChange={v => setPForm(f => ({ ...f, status: v as 'active' | 'inactive' }))}>
-                                <SelectTrigger className="mt-1 w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="active">Hoạt động</SelectItem>
-                                    <SelectItem value="inactive">Ẩn</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                            <Button className="flex-1 bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={saveProduct}>Lưu</Button>
-                            <Button variant="outline" className="flex-1" onClick={() => setProductModal(null)}>Hủy</Button>
-                        </div>
+                    </div>
+
+                    {/* Buttons - Full width ở dưới */}
+                    <div className="flex gap-3 pt-6 mt-6 border-t border-border">
+                        <Button
+                            className="flex-1 bg-[#448B3D] hover:bg-[#336B2D] text-white"
+                            onClick={saveProduct}
+                            disabled={pSaving}
+                        >
+                            {pSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Đang lưu...</> : (productModal === 'add' ? 'Thêm sản phẩm' : 'Cập nhật')}
+                        </Button>
+                        <Button variant="outline" className="flex-1" onClick={() => setProductModal(null)} disabled={pSaving}>Hủy</Button>
                     </div>
                 </Modal>
             )}

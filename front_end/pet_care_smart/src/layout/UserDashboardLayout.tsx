@@ -3,14 +3,27 @@ import UserSidebar from '@/components/UserSidebar';
 import ThemeToggle from '@/components/theme/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate, Outlet } from 'react-router';
-import { Menu } from 'lucide-react';
+import { Menu, Loader2 } from 'lucide-react';
 
 const UserDashboardLayout = () => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isLoading, user } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    if (isLoading) {
+        return (
+            <div className='min-h-screen flex items-center justify-center bg-background'>
+                <Loader2 className='w-8 h-8 animate-spin text-[#448B3D]' />
+            </div>
+        );
+    }
 
     if (!isAuthenticated) {
         return <Navigate to='/login' replace />;
+    }
+
+    // Admin không vào dashboard user
+    if (user?.role === 'admin') {
+        return <Navigate to='/admin' replace />;
     }
 
     return (

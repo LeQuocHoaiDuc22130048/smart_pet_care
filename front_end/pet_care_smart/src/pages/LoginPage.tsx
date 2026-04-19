@@ -3,48 +3,34 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Lock, Mail } from 'lucide-react';
+import { Loader2, Lock, User as UserIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-// ─── Tài khoản test ───────────────────────────────────────────────────────────
-// 👤 User:  user@petcare.vn  / 123456
-// 🔑 Admin: admin@petcare.vn / 123456
-// ─────────────────────────────────────────────────────────────────────────────
-
 const LoginPage = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-
-        setTimeout(() => {
-            const success = login(email, password);
-            if (success) {
+        try {
+            const role = await login(username, password);
+            if (role !== null) {
                 toast.success('Đăng nhập thành công!');
-                // Redirect dựa theo role
-                const isAdmin = email === 'admin@petcare.vn';
-                navigate(isAdmin ? '/admin' : '/dashboard');
+                navigate(role === 'admin' ? '/admin' : '/dashboard');
             } else {
-                toast.error('Email hoặc mật khẩu không đúng');
+                toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
             }
+        } catch {
+            toast.error('Không thể kết nối đến máy chủ');
+        } finally {
             setLoading(false);
-        }, 800);
-    };
-
-    const quickLogin = (role: 'user' | 'admin') => {
-        const creds = {
-            user: { email: 'user@petcare.vn', password: '123456' },
-            admin: { email: 'admin@petcare.vn', password: '123456' }
-        };
-        setEmail(creds[role].email);
-        setPassword(creds[role].password);
+        }
     };
 
     return (
@@ -58,42 +44,17 @@ const LoginPage = () => {
                     <p className='text-muted-foreground'>Đăng nhập vào tài khoản PetCare của bạn</p>
                 </div>
 
-                {/* Quick login buttons for testing */}
-                <div className='mb-6 p-4 rounded-xl bg-muted/50 border border-border'>
-                    <p className='text-xs text-muted-foreground mb-3 font-medium'>🧪 Đăng nhập nhanh để test:</p>
-                    <div className='grid grid-cols-2 gap-2'>
-                        <Button
-                            type='button'
-                            variant='outline'
-                            size='sm'
-                            onClick={() => quickLogin('user')}
-                            className='rounded-lg text-xs'
-                        >
-                            👤 Người dùng
-                        </Button>
-                        <Button
-                            type='button'
-                            variant='outline'
-                            size='sm'
-                            onClick={() => quickLogin('admin')}
-                            className='rounded-lg text-xs'
-                        >
-                            🔑 Quản trị viên
-                        </Button>
-                    </div>
-                </div>
-
                 <form onSubmit={handleSubmit} className='space-y-5'>
                     <div>
-                        <Label>Địa chỉ Email</Label>
+                        <Label>Tên đăng nhập</Label>
                         <div className='relative mt-1'>
-                            <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground' />
+                            <UserIcon className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground' />
                             <Input
-                                type='email'
-                                placeholder='ban@example.com'
+                                type='text'
+                                placeholder='username'
                                 className='pl-10 rounded-xl'
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 required
                             />
                         </div>

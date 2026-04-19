@@ -3,39 +3,46 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Lock, Mail, UserIcon } from 'lucide-react';
+import { Loader2, Lock, User as UserIcon, CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const RegisterPage = () => {
     const navigate = useNavigate();
-    const { login } = useAuth();
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const { register } = useAuth();
+    const [form, setForm] = useState({
+        username: '',
+        firstName: '',
+        lastName: '',
+        birthDate: '',
+        password: '',
+    });
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+        setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (password.length < 6) {
-            toast.error('Mật khẩu phải có ít nhất 6 ký tự');
+        if (form.password.length < 8) {
+            toast.error('Mật khẩu phải có ít nhất 8 ký tự');
             return;
         }
         setLoading(true);
-
-        // Simulate register → auto login as mock user
-        setTimeout(() => {
-            // Thử login với mock accounts trước, nếu không khớp thì dùng user mock
-            const success = login(email, password);
-            if (!success) {
-                // Đăng ký thành công → tự động đăng nhập với tài khoản user mock
-                login('user@petcare.vn', '123456');
+        try {
+            const success = await register(form);
+            if (success) {
+                toast.success(`Chào mừng ${form.firstName}! Tài khoản đã được tạo thành công.`);
+                navigate('/dashboard');
+            } else {
+                toast.error('Đăng ký thất bại. Tên đăng nhập có thể đã tồn tại.');
             }
-            toast.success(`Chào mừng ${name}! Tài khoản đã được tạo thành công.`);
-            navigate('/dashboard');
+        } catch {
+            toast.error('Không thể kết nối đến máy chủ');
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
     };
 
     return (
@@ -49,32 +56,56 @@ const RegisterPage = () => {
                     <p className='text-muted-foreground'>Tham gia PetCare ngay hôm nay</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className='space-y-5'>
+                <form onSubmit={handleSubmit} className='space-y-4'>
                     <div>
-                        <Label>Họ và tên</Label>
+                        <Label>Tên đăng nhập</Label>
                         <div className='relative mt-1'>
                             <UserIcon className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground' />
                             <Input
                                 type='text'
-                                placeholder='Nguyễn Văn A'
+                                placeholder='username'
                                 className='pl-10 rounded-xl'
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
+                                value={form.username}
+                                onChange={set('username')}
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className='grid grid-cols-2 gap-3'>
+                        <div>
+                            <Label>Họ</Label>
+                            <Input
+                                type='text'
+                                placeholder='Nguyễn'
+                                className='mt-1 rounded-xl'
+                                value={form.firstName}
+                                onChange={set('firstName')}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <Label>Tên</Label>
+                            <Input
+                                type='text'
+                                placeholder='Văn A'
+                                className='mt-1 rounded-xl'
+                                value={form.lastName}
+                                onChange={set('lastName')}
                                 required
                             />
                         </div>
                     </div>
 
                     <div>
-                        <Label>Địa chỉ Email</Label>
+                        <Label>Ngày sinh</Label>
                         <div className='relative mt-1'>
-                            <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground' />
+                            <CalendarDays className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground' />
                             <Input
-                                type='email'
-                                placeholder='ban@example.com'
+                                type='date'
                                 className='pl-10 rounded-xl'
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                value={form.birthDate}
+                                onChange={set('birthDate')}
                                 required
                             />
                         </div>
@@ -88,10 +119,10 @@ const RegisterPage = () => {
                                 type='password'
                                 placeholder='••••••••'
                                 className='pl-10 rounded-xl'
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                value={form.password}
+                                onChange={set('password')}
                                 required
-                                minLength={6}
+                                minLength={8}
                             />
                         </div>
                     </div>
