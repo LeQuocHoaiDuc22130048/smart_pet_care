@@ -21,6 +21,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import ReturnPolicyPage from './pages/ReturnPolicyPage';
 import ShippingPolicyPage from './pages/ShippingPolicyPage';
 import ContactPage from './pages/ContactPage';
+import GoogleCallbackPage from './pages/GoogleCallbackPage';
 
 import FeedbackPage from './pages/FeedbackPage';
 
@@ -46,6 +47,10 @@ export const routes = createBrowserRouter([
             { path: 'lien-he', Component: ContactPage },
             { path: 'feedback', Component: FeedbackPage },
         ]
+    },
+    {
+        path: '/auth/google/callback',
+        Component: GoogleCallbackPage
     },
     {
         path: '/dashboard',

@@ -43,14 +43,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
                 .authorizeExchange(authorize -> authorize
-                        .pathMatchers(HttpMethod.GET, "/actuator/**").permitAll()
-                        .pathMatchers(HttpMethod.GET, "/swagger-ui.html").permitAll()
-                        .pathMatchers(HttpMethod.GET, "/v3/api-docs/**").permitAll()
-                        .anyExchange().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtDecoder(reactiveJwtDecoder()))
+                        // Allow all requests - authentication is handled by AuthenticationFilter
+                        .anyExchange().permitAll()
                 );
+                // REMOVED: .oauth2ResourceServer() - we use custom AuthenticationFilter instead
 
         return http.build();
     }

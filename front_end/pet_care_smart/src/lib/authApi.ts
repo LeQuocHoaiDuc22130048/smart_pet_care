@@ -98,6 +98,34 @@ export const authApi = {
         });
     },
 
+    /** Google OAuth — Build Google OAuth URL using authorization code flow */
+    getGoogleAuthUrl(redirectUri: string): string {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        
+        if (!clientId) {
+            console.error('VITE_GOOGLE_CLIENT_ID is not configured');
+            return '';
+        }
+
+        const params = new URLSearchParams({
+            client_id: clientId,
+            redirect_uri: redirectUri,
+            response_type: 'token id_token',  // Request ID Token directly
+            scope: 'openid email profile',
+            nonce: Math.random().toString(36).substring(2),
+        });
+
+        return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    },
+
+    /** POST /pet_care_identity/auth/google — Authenticate with Google ID Token */
+    authenticateWithGoogle(data: { idToken: string; accessToken?: string }): Promise<ApiResponse<TokenResponse>> {
+        return apiRequest('/pet_care_identity/auth/google', {
+            method: 'POST',
+            body: data,
+        });
+    },
+
     /** POST /pet_care_identity/auth/introspect — IntrospectRequest */
     introspect(data: IntrospectRequest): Promise<ApiResponse<IntrospectResponse>> {
         return apiRequest('/pet_care_identity/auth/introspect', {

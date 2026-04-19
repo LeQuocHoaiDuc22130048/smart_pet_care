@@ -16,6 +16,10 @@ public enum ErrorCode {
     UNAUTHENTICATED(1006, "unauthenticated", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(1007, "you do not have permission", HttpStatus.FORBIDDEN),
     INVALID_DOB(1008, "Your age must be at least {min}", HttpStatus.BAD_REQUEST),
+    INVALID_GOOGLE_TOKEN(1009, "Invalid Google token", HttpStatus.UNAUTHORIZED),
+    GOOGLE_ACCOUNT_ALREADY_LINKED(1010, "Google account is already linked to another user", HttpStatus.BAD_REQUEST),
+    CANNOT_UNLINK_PRIMARY_AUTH(1011, "Cannot unlink primary authentication method", HttpStatus.BAD_REQUEST),
+    ROLE_NOT_EXISTED(1012, "Role not existed", HttpStatus.NOT_FOUND),
     ;
 
     private int code;

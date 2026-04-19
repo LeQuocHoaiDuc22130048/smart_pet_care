@@ -21,6 +21,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (username: string, password: string) => Promise<'admin' | 'user' | null>;
+    loginWithToken: (token: string) => Promise<'admin' | 'user' | null>;
     logout: () => Promise<void>;
     register: (data: {
         username: string;
@@ -106,6 +107,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // ── Login with Token (for Google OAuth) ──────────────────────────────────
+    const loginWithToken = async (token: string): Promise<'admin' | 'user' | null> => {
+        try {
+            setToken(token);
+
+            const infoRes = await authApi.getMyInfo();
+            const u = infoRes.result;
+            const role = extractRole(u.roles);
+            setUser({
+                id: u.id,
+                username: u.username,
+                firstName: u.firstName,
+                lastName: u.lastName,
+                name: `${u.firstName} ${u.lastName}`,
+                role,
+            });
+
+            return role;
+        } catch {
+            removeToken();
+            return null;
+        }
+    };
+
     // ── Register ──────────────────────────────────────────────────────────────
     const register = async (data: {
         username: string;
@@ -160,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: !!user,
                 isLoading,
                 login,
+                loginWithToken,
                 logout,
                 register,
                 updateUser,

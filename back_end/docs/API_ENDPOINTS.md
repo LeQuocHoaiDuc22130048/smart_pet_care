@@ -16,6 +16,7 @@
 |--------|----------|-------|------|
 | `POST` | `/pet_care_identity/users` | Đăng ký tài khoản | ✅ Public |
 | `POST` | `/pet_care_identity/auth/token` | Đăng nhập → JWT | ✅ Public |
+| `POST` | `/pet_care_identity/auth/google` | Đăng nhập bằng Google → JWT | ✅ Public |
 | `POST` | `/pet_care_identity/auth/introspect` | Kiểm tra token hợp lệ | ✅ Public |
 | `POST` | `/pet_care_identity/auth/log-out` | Đăng xuất (vô hiệu hóa token) | ✅ Public |
 | `POST` | `/pet_care_identity/auth/refresh` | Làm mới token | ✅ Public |
@@ -36,6 +37,27 @@
 {
   "username": "user01",
   "password": "12345678"
+}
+```
+
+**Body đăng nhập Google:**
+```json
+{
+  "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6...",
+  "accessToken": "ya29.a0AfH6SMBx...",
+  "refreshToken": "1//0gHZ9K8..."
+}
+```
+
+**Response đăng nhập:**
+```json
+{
+  "code": 1000,
+  "message": null,
+  "result": {
+    "token": "eyJhbGciOiJIUzUxMiJ9...",
+    "authenticated": true
+  }
 }
 ```
 

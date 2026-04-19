@@ -125,8 +125,8 @@ public class RequestResponseLoggingInterceptor implements HandlerInterceptor {
      */
     private boolean isLoggingDisabled(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        // Don't log health check, metrics, swagger endpoints
-        return uri.contains("/actuator/") || uri.contains("/swagger-ui") || uri.contains("/v3/api-docs");
+        // Don't log health check, metrics endpoints
+        return uri.contains("/actuator/");
     }
 
     /**
