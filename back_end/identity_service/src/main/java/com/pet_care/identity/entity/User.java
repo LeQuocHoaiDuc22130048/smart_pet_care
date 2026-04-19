@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+import com.pet_care.identity.enums.AuthProvider;
 import jakarta.persistence.*;
 
 import lombok.*;

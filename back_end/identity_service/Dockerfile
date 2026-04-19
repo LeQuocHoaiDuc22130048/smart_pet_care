@@ -6,12 +6,15 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Stage 2: Runtime (use JRE instead of JDK)
-FROM amazoncorretto:21.0.4-jre
+FROM amazoncorretto:21.0.4
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-# Create non-root user for security
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+# Create non-root user for security (Amazon Linux uses adduser)
+RUN yum install -y shadow-utils && \
+    useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app && \
+    yum clean all
 USER appuser
 
 # Health check
