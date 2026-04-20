@@ -61,6 +61,17 @@ public class GoogleOAuthService {
             
             // Find or create user
             User user = userRepository.findByEmail(googleUserInfo.getEmail())
+                    .map(existingUser -> {
+                        // If user exists but not linked to Google, link it
+                        if (existingUser.getGoogleId() == null) {
+                            log.info("Linking existing user {} to Google account", existingUser.getUsername());
+                            existingUser.setGoogleId(googleUserInfo.getGoogleId());
+                            existingUser.setAuthProvider(AuthProvider.GOOGLE);
+                            existingUser.setAvatarUrl(googleUserInfo.getPicture());
+                            return userRepository.save(existingUser);
+                        }
+                        return existingUser;
+                    })
                     .orElseGet(() -> createGoogleUser(googleUserInfo));
             
             // Update Google tokens if provided
@@ -102,6 +113,12 @@ public class GoogleOAuthService {
         
         GoogleIdToken.Payload payload = idToken.getPayload();
         
+        // Verify email is verified by Google
+        if (!payload.getEmailVerified()) {
+            log.warn("Google email not verified: {}", payload.getEmail());
+            throw new AppException(ErrorCode.INVALID_GOOGLE_TOKEN);
+        }
+        
         return GoogleUserInfo.builder()
                 .googleId(payload.getSubject())
                 .email(payload.getEmail())
@@ -127,12 +144,20 @@ public class GoogleOAuthService {
         Set<Role> roles = new HashSet<>();
         roles.add(userRole);
         
+        // Handle null names
+        String firstName = googleUserInfo.getGivenName() != null 
+                ? googleUserInfo.getGivenName() 
+                : "User";
+        String lastName = googleUserInfo.getFamilyName() != null 
+                ? googleUserInfo.getFamilyName() 
+                : "";
+        
         // Create user with Google information
         User user = User.builder()
                 .username(generateUsernameFromEmail(googleUserInfo.getEmail()))
                 .email(googleUserInfo.getEmail())
-                .firstName(googleUserInfo.getGivenName())
-                .lastName(googleUserInfo.getFamilyName())
+                .firstName(firstName)
+                .lastName(lastName)
                 .avatarUrl(googleUserInfo.getPicture())
                 .authProvider(AuthProvider.GOOGLE)
                 .googleId(googleUserInfo.getGoogleId())
