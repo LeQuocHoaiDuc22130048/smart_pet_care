@@ -1,0 +1,65 @@
+server:
+  port: 8088
+  servlet:
+    context-path: /pet_care_feedback
+
+spring:
+  application:
+    name: feedback-service
+  
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/pet_care_feedback}
+      auto-index-creation: true
+  
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+  
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080
+          jwk-set-uri: http://localhost:8080/.well-known/jwks.json
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+# JWT Configuration
+jwt:
+  signerKey: ${JWT_SIGNER_KEY:defaultSecretKeyForDevelopmentOnlyPleaseChangeInProduction}
+
+# Cloudinary Configuration
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dwgy7eahq}
+  api-key: ${CLOUDINARY_API_KEY:939868796146753}
+  api-secret: ${CLOUDINARY_API_SECRET:nG_pGMIvFOd70A0bcKCrrhepui4}
+
+# Feign Client Configuration
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+
+# Service URLs
+service:
+  order:
+    url: ${ORDER_SERVICE_URL:http://localhost:8083/pet_care_order}
+  product:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8081/pet_care_product}
+
+# Logging
+logging:
+  level:
+    com.pet_care.feedback: DEBUG
+    org.springframework.data.mongodb: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

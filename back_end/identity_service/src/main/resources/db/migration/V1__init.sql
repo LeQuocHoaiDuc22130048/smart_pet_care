@@ -34,8 +34,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- User-Role join table
-CREATE TABLE IF NOT EXISTS user_roles (
+-- User-Role join table (Hibernate default naming: users_roles)
+CREATE TABLE IF NOT EXISTS users_roles (
     user_id VARCHAR(36) NOT NULL,
     roles_name VARCHAR(255) NOT NULL,
     PRIMARY KEY (user_id, roles_name),

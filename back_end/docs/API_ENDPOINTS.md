@@ -369,3 +369,83 @@ Tất cả response đều theo chuẩn:
 3. POST /products (multipart)          → Tạo sản phẩm
 4. PATCH /admin/orders/{id}/status     → Xác nhận đơn hàng
 ```
+
+
+---
+
+## ⭐ Feedback Service
+**Route prefix:** `/api/v1/pet_care_feedback` → `localhost:8088`
+
+### User Endpoints
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| `POST` | `/pet_care_feedback/feedbacks` | Tạo đánh giá mới | 🔐 JWT |
+| `PUT` | `/pet_care_feedback/feedbacks/{id}` | Cập nhật đánh giá (trong 24h) | 🔐 JWT |
+| `POST` | `/pet_care_feedback/feedbacks/{id}/images` | Thêm hình ảnh vào đánh giá | 🔐 JWT |
+| `DELETE` | `/pet_care_feedback/feedbacks/{id}` | Xóa đánh giá | 🔐 JWT |
+| `GET` | `/pet_care_feedback/feedbacks/{id}` | Chi tiết đánh giá | 🔐 JWT |
+| `GET` | `/pet_care_feedback/feedbacks/my` | Danh sách đánh giá của mình | 🔐 JWT |
+| `GET` | `/pet_care_feedback/feedbacks/product/{productId}` | Đánh giá sản phẩm | ✅ Public |
+| `GET` | `/pet_care_feedback/feedbacks/order/{orderId}` | Đánh giá đơn hàng | 🔐 JWT |
+| `GET` | `/pet_care_feedback/feedbacks/stats/product/{productId}` | Thống kê đánh giá sản phẩm | ✅ Public |
+
+**Body tạo đánh giá** (`multipart/form-data`):
+```
+request: {
+  "type": "PRODUCT",
+  "productId": "uuid-product",
+  "rating": 5,
+  "comment": "Sản phẩm rất tốt, chất lượng!"
+}
+images: [file1.jpg, file2.jpg]
+```
+
+**FeedbackType values:**
+```
+PRODUCT  → Đánh giá sản phẩm
+ORDER    → Đánh giá đơn hàng
+SERVICE  → Đánh giá dịch vụ booking
+SYSTEM   → Phản hồi chung về hệ thống
+```
+
+**Response thống kê:**
+```json
+{
+  "code": 1000,
+  "result": {
+    "totalFeedbacks": 150,
+    "averageRating": 4.5,
+    "ratingDistribution": {
+      "5": 80,
+      "4": 50,
+      "3": 15,
+      "2": 3,
+      "1": 2
+    },
+    "verifiedPurchaseCount": 120
+  }
+}
+```
+
+### Admin Endpoints
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| `POST` | `/pet_care_feedback/feedbacks/{id}/response` | Trả lời đánh giá | 👑 ADMIN |
+| `PATCH` | `/pet_care_feedback/feedbacks/{id}/status` | Cập nhật trạng thái | 👑 ADMIN |
+| `GET` | `/pet_care_feedback/feedbacks/admin/status/{status}` | Lọc theo trạng thái | 👑 ADMIN |
+
+**Body trả lời admin:**
+```json
+{
+  "response": "Cảm ơn bạn đã đánh giá! Chúng tôi rất vui vì bạn hài lòng."
+}
+```
+
+**FeedbackStatus values:**
+```
+PENDING   → Chờ duyệt
+APPROVED  → Đã duyệt
+REJECTED  → Từ chối
+HIDDEN    → Ẩn
+```
+
