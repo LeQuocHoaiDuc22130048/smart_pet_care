@@ -4,55 +4,70 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-// Extend Window type for Google Identity Services
-declare global {
-    interface Window {
-        google?: {
-            accounts: {
-                id: {
-                    initialize: (config: {
-                        client_id: string;
-                        callback: (response: { credential: string }) => void;
-                        auto_select?: boolean;
-                        cancel_on_tap_outside?: boolean;
-                    }) => void;
-                    prompt: (callback?: (notification: {
-                        isNotDisplayed: () => boolean;
-                        isSkippedMoment: () => boolean;
-                        getNotDisplayedReason: () => string;
-                    }) => void) => void;
-                    renderButton: (element: HTMLElement, config: object) => void;
-                    disableAutoSelect: () => void;
-                };
-            };
-        };
-    }
-}
-
 export function useGoogleLogin() {
     const { loginWithToken } = useAuth();
     const navigate = useNavigate();
 
     const handleGoogleLogin = useCallback(async () => {
         const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:5173/auth/google/callback';
 
         if (!clientId) {
             toast.error('Google Client ID chưa được cấu hình');
             return;
         }
 
-        if (!window.google?.accounts?.id) {
-            toast.error('Google Sign-In chưa được tải. Vui lòng thử lại.');
+        // Use OAuth 2.0 popup flow instead of One Tap to avoid FedCM issues
+        const scope = 'openid email profile';
+        const responseType = 'id_token';
+        const nonce = Math.random().toString(36).substring(2);
+        
+        // Build OAuth URL
+        const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+        authUrl.searchParams.set('client_id', clientId);
+        authUrl.searchParams.set('redirect_uri', redirectUri);
+        authUrl.searchParams.set('response_type', responseType);
+        authUrl.searchParams.set('scope', scope);
+        authUrl.searchParams.set('nonce', nonce);
+        authUrl.searchParams.set('prompt', 'select_account');
+
+        // Open popup
+        const width = 500;
+        const height = 600;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popup = window.open(
+            authUrl.toString(),
+            'Google Sign In',
+            `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+        );
+
+        if (!popup) {
+            toast.error('Popup bị chặn. Vui lòng cho phép popup cho trang này.');
             return;
         }
 
+        // Listen for callback
         return new Promise<void>((resolve, reject) => {
-            window.google!.accounts.id.initialize({
-                client_id: clientId,
-                callback: async (response) => {
-                    try {
-                        const idToken = response.credential;
+            let timeoutId: NodeJS.Timeout;
+            
+            const cleanup = () => {
+                window.removeEventListener('message', handleMessage);
+                if (timeoutId) clearTimeout(timeoutId);
+            };
 
+            const handleMessage = async (event: MessageEvent) => {
+                // Verify origin
+                if (event.origin !== window.location.origin) {
+                    return;
+                }
+
+                if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+                    cleanup();
+                    
+                    try {
+                        const idToken = event.data.idToken;
                         const res = await authApi.authenticateWithGoogle({ idToken });
 
                         if (res.result?.token) {
@@ -74,21 +89,21 @@ export function useGoogleLogin() {
                         toast.error(err?.message || 'Đăng nhập Google thất bại');
                         reject(err);
                     }
-                },
-                auto_select: false,
-                cancel_on_tap_outside: true,
-            });
-
-            // Show One Tap popup
-            window.google!.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed()) {
-                    const reason = notification.getNotDisplayedReason();
-                    console.warn('Google One Tap not displayed:', reason);
-                    // Fallback: nếu One Tap không hiện, thử popup thông thường
-                    toast.error('Không thể hiển thị Google Sign-In. Vui lòng thử lại.');
-                    reject(new Error(reason));
+                } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+                    cleanup();
+                    toast.error('Đăng nhập Google thất bại');
+                    reject(new Error(event.data.error));
                 }
-            });
+            };
+
+            window.addEventListener('message', handleMessage);
+
+            // Set timeout for popup (2 minutes)
+            timeoutId = setTimeout(() => {
+                cleanup();
+                toast.error('Đăng nhập Google hết thời gian chờ');
+                reject(new Error('Timeout'));
+            }, 120000); // 2 minutes
         });
     }, [loginWithToken, navigate]);
 

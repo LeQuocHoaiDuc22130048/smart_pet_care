@@ -61,6 +61,10 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             new PublicRoute("GET",  "/pet_care_product/products"),
             new PublicRoute("GET",  "/pet_care_product/categories"),
 
+            // ── Feedback — đọc feedback và stats không cần đăng nhập ──
+            new PublicRoute("GET",  "/pet_care_feedback/feedbacks/product"),
+            new PublicRoute("GET",  "/pet_care_feedback/feedbacks/stats"),
+
             // ── Payment callback — gateway gọi từ VNPay/MoMo ──────
             new PublicRoute("POST", "/pet_care_payment/payments/callback"),
             new PublicRoute("GET",  "/pet_care_payment/payments/vnpay-callback")

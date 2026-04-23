@@ -1,18 +1,27 @@
 import { Star } from 'lucide-react';
 import { type Feedback } from '@/context/FeedbackContext';
+import { type FeedbackStats } from '@/lib/feedbackApi';
 
 interface Props {
-    feedbacks: Feedback[];
-    avgRating: number;
+    feedbacks?: Feedback[];
+    avgRating?: number;
+    stats?: FeedbackStats;
 }
 
-const RatingSummary = ({ feedbacks, avgRating }: Props) => {
-    const total = feedbacks.length;
-    const counts = [5, 4, 3, 2, 1].map(star => ({
-        star,
-        count: feedbacks.filter(f => f.rating === star).length,
-        pct: total === 0 ? 0 : Math.round((feedbacks.filter(f => f.rating === star).length / total) * 100),
-    }));
+const RatingSummary = ({ feedbacks, avgRating: propAvgRating, stats }: Props) => {
+    // Use stats from API if available, otherwise calculate from feedbacks
+    const total = stats?.totalFeedbacks ?? feedbacks?.length ?? 0;
+    const avgRating = stats?.averageRating ?? propAvgRating ?? 0;
+
+    const counts = [5, 4, 3, 2, 1].map(star => {
+        const count = stats?.ratingDistribution?.[star.toString()] ??
+            feedbacks?.filter(f => f.rating === star).length ?? 0;
+        return {
+            star,
+            count,
+            pct: total === 0 ? 0 : Math.round((count / total) * 100),
+        };
+    });
 
     return (
         <div className='flex flex-col sm:flex-row items-center gap-6 p-5 bg-[#448B3D]/5 border border-[#448B3D]/20 rounded-2xl'>

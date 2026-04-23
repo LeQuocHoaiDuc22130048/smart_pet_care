@@ -7,8 +7,10 @@ import { useState, useCallback, useEffect } from 'react';
 import HeroSlider from '@/components/HeroSlider';
 import FeaturedProductsSlider from '@/components/FeaturedProductsSlider';
 import FeedbackCard from '@/components/feedback/FeedbackCard';
-import FeedbackForm from '@/components/feedback/FeedbackForm';
-import { useFeedback } from '@/context/FeedbackContext';
+import { useFeedback, type Feedback } from '@/context/FeedbackContext';
+import { feedbackApi } from '@/lib/feedbackApi';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 const fadeInUp = {
     initial: { opacity: 0, y: 24 },
@@ -19,23 +21,66 @@ const fadeInUp = {
 
 const Homepage = () => {
     const navigate = useNavigate();
-    const { getGeneral, avgRating, feedbacks } = useFeedback();
+    const { avgRating } = useFeedback();
+    const { user } = useAuth();
+
+    // Local state for homepage feedbacks
+    const [homepageFeedbacks, setHomepageFeedbacks] = useState<Feedback[]>([]);
+    const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
 
     // Slider state cho feedback
-    const generalFeedbacks = getGeneral();
     const [fbIndex, setFbIndex] = useState(0);
     const [fbDir, setFbDir] = useState(1);
-    const [showFbForm, setShowFbForm] = useState(false);
+
+    // Load user's feedbacks for homepage display
+    useEffect(() => {
+        const loadFeedbacks = async () => {
+            if (!user) {
+                setHomepageFeedbacks([]);
+                return;
+            }
+
+            try {
+                setLoadingFeedbacks(true);
+                const response = await feedbackApi.getMyFeedbacks(0, 10);
+                const apiFeedbacks = response.result.content.map((apiFb): Feedback => ({
+                    id: apiFb.id,
+                    type: apiFb.type === 'PRODUCT' ? 'product' : apiFb.type === 'ORDER' ? 'service' : 'general',
+                    rating: apiFb.rating,
+                    title: '',
+                    content: apiFb.comment,
+                    authorName: apiFb.username,
+                    date: new Date(apiFb.createdAt).toLocaleDateString('vi-VN'),
+                    productId: apiFb.productId,
+                    serviceId: apiFb.orderId,
+                    helpful: apiFb.helpfulCount,
+                    verified: apiFb.verifiedPurchase,
+                    imageUrls: apiFb.imageUrls,
+                    status: apiFb.status,
+                    adminResponse: apiFb.adminResponse,
+                }));
+                setHomepageFeedbacks(apiFeedbacks);
+            } catch (error) {
+                console.error('Error loading homepage feedbacks:', error);
+                setHomepageFeedbacks([]);
+            } finally {
+                setLoadingFeedbacks(false);
+            }
+        };
+
+        loadFeedbacks();
+    }, [user]);
 
     const nextFb = useCallback(() => {
         setFbDir(1);
-        setFbIndex(i => (i + 1) % Math.max(1, generalFeedbacks.length));
-    }, [generalFeedbacks.length]);
+        setFbIndex(i => (i + 1) % Math.max(1, homepageFeedbacks.length));
+    }, [homepageFeedbacks.length]);
 
     useEffect(() => {
+        if (homepageFeedbacks.length === 0) return;
         const t = setInterval(nextFb, 5000);
         return () => clearInterval(t);
-    }, [nextFb]);
+    }, [nextFb, homepageFeedbacks.length]);
 
     const features = [
         {
@@ -243,62 +288,52 @@ const Homepage = () => {
                             {/* Rating tổng */}
                             <Card className='p-6 rounded-2xl border-2 border-[#448B3D]/20 bg-[#448B3D]/5 text-center'>
                                 <div className='text-6xl font-bold text-[#448B3D] mb-1'>
-                                    {avgRating(feedbacks).toFixed(1)}
+                                    {avgRating(homepageFeedbacks).toFixed(1)}
                                 </div>
                                 <div className='flex justify-center gap-1 mb-2'>
                                     {[1, 2, 3, 4, 5].map(i => (
-                                        <Star key={i} className={`w-5 h-5 ${i <= Math.round(avgRating(feedbacks)) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                        <Star key={i} className={`w-5 h-5 ${i <= Math.round(avgRating(homepageFeedbacks)) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                                     ))}
                                 </div>
-                                <p className='text-sm text-muted-foreground'>{feedbacks.length} đánh giá từ khách hàng</p>
+                                <p className='text-sm text-muted-foreground'>
+                                    {user ? `${homepageFeedbacks.length} đánh giá của bạn` : 'Đăng nhập để xem đánh giá'}
+                                </p>
 
                                 {/* Bar chart nhỏ */}
-                                <div className='mt-4 space-y-1.5'>
-                                    {[5, 4, 3, 2, 1].map(star => {
-                                        const count = feedbacks.filter(f => f.rating === star).length;
-                                        const pct = feedbacks.length === 0 ? 0 : Math.round(count / feedbacks.length * 100);
-                                        return (
-                                            <div key={star} className='flex items-center gap-2 text-xs'>
-                                                <span className='w-3 text-muted-foreground text-right'>{star}</span>
-                                                <Star className='w-3 h-3 fill-yellow-400 text-yellow-400 shrink-0' />
-                                                <div className='flex-1 h-1.5 bg-muted rounded-full overflow-hidden'>
-                                                    <div className='h-full bg-yellow-400 rounded-full' style={{ width: `${pct}%` }} />
+                                {user && homepageFeedbacks.length > 0 && (
+                                    <div className='mt-4 space-y-1.5'>
+                                        {[5, 4, 3, 2, 1].map(star => {
+                                            const count = homepageFeedbacks.filter(f => f.rating === star).length;
+                                            const pct = homepageFeedbacks.length === 0 ? 0 : Math.round(count / homepageFeedbacks.length * 100);
+                                            return (
+                                                <div key={star} className='flex items-center gap-2 text-xs'>
+                                                    <span className='w-3 text-muted-foreground text-right'>{star}</span>
+                                                    <Star className='w-3 h-3 fill-yellow-400 text-yellow-400 shrink-0' />
+                                                    <div className='flex-1 h-1.5 bg-muted rounded-full overflow-hidden'>
+                                                        <div className='h-full bg-yellow-400 rounded-full' style={{ width: `${pct}%` }} />
+                                                    </div>
+                                                    <span className='w-5 text-muted-foreground'>{count}</span>
                                                 </div>
-                                                <span className='w-5 text-muted-foreground'>{count}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </Card>
 
                             {/* Nút viết đánh giá */}
                             <Button
-                                onClick={() => setShowFbForm(v => !v)}
+                                onClick={() => navigate('/products')}
                                 className='w-full rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-12 gap-2'
                             >
                                 <MessageSquarePlus className='w-5 h-5' />
-                                {showFbForm ? 'Đóng form' : 'Viết đánh giá của bạn'}
+                                Viết đánh giá sản phẩm
                             </Button>
 
-                            {/* Form */}
-                            <AnimatePresence>
-                                {showFbForm && (
-                                    <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        transition={{ duration: 0.25 }}
-                                        className='overflow-hidden'
-                                    >
-                                        <Card className='p-5 rounded-2xl border-2 border-[#448B3D]/20'>
-                                            <FeedbackForm
-                                                type='general'
-                                                onSuccess={() => setShowFbForm(false)}
-                                            />
-                                        </Card>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            <Card className='p-4 rounded-2xl border-2 border-[#448B3D]/20 bg-muted/50'>
+                                <p className='text-sm text-muted-foreground text-center'>
+                                    💡 Để viết đánh giá, vui lòng truy cập trang sản phẩm hoặc dịch vụ cụ thể
+                                </p>
+                            </Card>
 
                             <Button
                                 variant='outline'
@@ -312,10 +347,32 @@ const Homepage = () => {
 
                         {/* Cột phải — Slider feedback */}
                         <div className='lg:col-span-2'>
-                            {generalFeedbacks.length === 0 ? (
+                            {loadingFeedbacks ? (
+                                <div className='text-center py-12 text-muted-foreground'>
+                                    <p className='text-4xl mb-3'>⏳</p>
+                                    <p>Đang tải đánh giá...</p>
+                                </div>
+                            ) : !user ? (
+                                <div className='text-center py-12 text-muted-foreground'>
+                                    <p className='text-4xl mb-3'>🔒</p>
+                                    <p className='mb-4'>Đăng nhập để xem đánh giá của bạn</p>
+                                    <Button
+                                        onClick={() => navigate('/login')}
+                                        className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold'
+                                    >
+                                        Đăng nhập ngay
+                                    </Button>
+                                </div>
+                            ) : homepageFeedbacks.length === 0 ? (
                                 <div className='text-center py-12 text-muted-foreground'>
                                     <p className='text-4xl mb-3'>💬</p>
-                                    <p>Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
+                                    <p className='mb-4'>Bạn chưa có đánh giá nào. Hãy là người đầu tiên!</p>
+                                    <Button
+                                        onClick={() => navigate('/products')}
+                                        className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold'
+                                    >
+                                        Mua sắm và đánh giá
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className='space-y-4'>
@@ -335,13 +392,13 @@ const Homepage = () => {
                                                 exit='exit'
                                                 transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
                                             >
-                                                <FeedbackCard feedback={generalFeedbacks[fbIndex % generalFeedbacks.length]} />
+                                                <FeedbackCard feedback={homepageFeedbacks[fbIndex % homepageFeedbacks.length]} />
                                             </motion.div>
                                         </AnimatePresence>
 
                                         {/* Dots */}
                                         <div className='flex justify-center gap-1.5 mt-3'>
-                                            {generalFeedbacks.map((_, i) => (
+                                            {homepageFeedbacks.map((_, i) => (
                                                 <button
                                                     key={i}
                                                     onClick={() => { setFbDir(i > fbIndex ? 1 : -1); setFbIndex(i); }}
@@ -352,10 +409,10 @@ const Homepage = () => {
                                     </div>
 
                                     {/* 2 feedback tiếp theo dạng grid */}
-                                    {generalFeedbacks.length > 1 && (
+                                    {homepageFeedbacks.length > 1 && (
                                         <div className='grid sm:grid-cols-2 gap-4 mt-2'>
-                                            {generalFeedbacks
-                                                .filter((_, i) => i !== fbIndex % generalFeedbacks.length)
+                                            {homepageFeedbacks
+                                                .filter((_, i) => i !== fbIndex % homepageFeedbacks.length)
                                                 .slice(0, 2)
                                                 .map(fb => (
                                                     <FeedbackCard key={fb.id} feedback={fb} />

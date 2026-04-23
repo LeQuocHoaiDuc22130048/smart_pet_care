@@ -1,7 +1,10 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { feedbackApi, type Feedback as ApiFeedback, type FeedbackStats, type CreateFeedbackRequest } from '@/lib/feedbackApi';
+import { toast } from 'sonner';
 
 export type FeedbackType = 'general' | 'product' | 'service';
 
+// Adapter interface for UI compatibility
 export interface Feedback {
     id: string;
     type: FeedbackType;
@@ -20,102 +23,143 @@ export interface Feedback {
     // extra
     helpful: number;          // số lượt "hữu ích"
     verified: boolean;
+    // API fields
+    imageUrls?: string[];
+    status?: string;
+    adminResponse?: string;
+}
+
+// Convert API feedback to UI feedback
+function adaptApiFeedback(apiFeedback: ApiFeedback): Feedback {
+    return {
+        id: apiFeedback.id,
+        type: apiFeedback.type === 'PRODUCT' ? 'product' : apiFeedback.type === 'ORDER' ? 'service' : 'general',
+        rating: apiFeedback.rating,
+        title: '', // API không có title, có thể dùng comment đầu
+        content: apiFeedback.comment,
+        authorName: apiFeedback.username,
+        authorAvatar: undefined,
+        date: new Date(apiFeedback.createdAt).toLocaleDateString('vi-VN'),
+        productId: apiFeedback.productId,
+        productName: undefined,
+        serviceId: apiFeedback.orderId,
+        serviceName: undefined,
+        helpful: apiFeedback.helpfulCount,
+        verified: apiFeedback.verifiedPurchase,
+        imageUrls: apiFeedback.imageUrls,
+        status: apiFeedback.status,
+        adminResponse: apiFeedback.adminResponse,
+    };
 }
 
 interface FeedbackContextType {
     feedbacks: Feedback[];
-    addFeedback: (fb: Omit<Feedback, 'id' | 'date' | 'helpful'>) => void;
+    loading: boolean;
+    addFeedback: (fb: Omit<Feedback, 'id' | 'date' | 'helpful'>, images?: File[]) => Promise<void>;
     markHelpful: (id: string) => void;
-    getByProduct: (productId: string) => Feedback[];
+    getByProduct: (productId: string) => Promise<Feedback[]>;
     getByService: (serviceId: string) => Feedback[];
     getGeneral: () => Feedback[];
     avgRating: (items: Feedback[]) => number;
+    getProductStats: (productId: string) => Promise<FeedbackStats | null>;
+    loadProductFeedbacks: (productId: string) => Promise<void>;
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK: Feedback[] = [
-    // General
-    {
-        id: 'g1', type: 'general', rating: 5,
-        title: 'Dịch vụ tuyệt vời, giao hàng nhanh!',
-        content: 'Tôi đặt hàng lúc sáng, chiều đã nhận được. Sản phẩm đóng gói cẩn thận, chất lượng đúng như mô tả. Sẽ tiếp tục ủng hộ PetCare!',
-        authorName: 'Bác Nguyễn Văn Hùng', date: '10/04/2026', helpful: 12, verified: true,
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hung',
-    },
-    {
-        id: 'g2', type: 'general', rating: 4,
-        title: 'Giá cả hợp lý, nhân viên tư vấn nhiệt tình',
-        content: 'Gọi điện hỏi về thức ăn cho chó, nhân viên tư vấn rất tận tình và hiểu biết. Giá cả phải chăng so với các nơi khác.',
-        authorName: 'Chị Trần Thị Mai', date: '08/04/2026', helpful: 8, verified: true,
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mai',
-    },
-    {
-        id: 'g3', type: 'general', rating: 5,
-        title: 'Ứng dụng dễ dùng, đặt hàng tiện lợi',
-        content: 'Tìm kiếm bằng ảnh rất hay, tôi chụp ảnh túi thức ăn cũ là tìm được ngay sản phẩm tương tự. Rất tiện cho người không biết tên sản phẩm.',
-        authorName: 'Anh Lê Minh Tuấn', date: '05/04/2026', helpful: 15, verified: false,
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=tuan',
-    },
-    // Product
-    {
-        id: 'p1', type: 'product', rating: 5, productId: '1', productName: 'Thức ăn chó hữu cơ cao cấp',
-        title: 'Chó nhà tôi rất thích!',
-        content: 'Mua về cho chú Golden ăn thử, bé ăn hết sạch không bỏ thừa. Lông bóng mượt hơn sau 2 tuần dùng. Sẽ mua lại.',
-        authorName: 'Chị Phạm Lan', date: '09/04/2026', helpful: 6, verified: true,
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lan',
-    },
-    {
-        id: 'p2', type: 'product', rating: 4, productId: '1', productName: 'Thức ăn chó hữu cơ cao cấp',
-        title: 'Chất lượng tốt, giá hơi cao',
-        content: 'Thành phần tốt, chó ăn ngon. Chỉ tiếc giá hơi cao so với các loại thông thường nhưng bù lại chất lượng xứng đáng.',
-        authorName: 'Anh Hoàng Nam', date: '07/04/2026', helpful: 3, verified: true,
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nam',
-    },
-    {
-        id: 'p3', type: 'product', rating: 5, productId: '4', productName: 'Giường thú cưng chỉnh hình',
-        title: 'Chú chó già nhà tôi ngủ ngon hơn nhiều',
-        content: 'Chó nhà tôi 10 tuổi, bị đau khớp. Từ khi dùng giường này bé ngủ sâu hơn, ít kêu đau hơn. Rất hài lòng!',
-        authorName: 'Bà Nguyễn Thị Hoa', date: '03/04/2026', helpful: 9, verified: true,
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hoa',
-    },
-    // Service
-    {
-        id: 's1', type: 'service', rating: 5, serviceId: 'spa', serviceName: 'Tắm & Cắt lông',
-        title: 'Bác sĩ đến đúng giờ, tay nghề cao',
-        content: 'Đặt lịch tắm cho bé Poodle, nhân viên đến đúng giờ, nhẹ nhàng với bé. Sau khi tắm bé thơm tho, lông xù đẹp. Sẽ đặt lại tháng sau.',
-        authorName: 'Chị Vũ Thị Hằng', date: '11/04/2026', helpful: 7, verified: true,
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hang',
-    },
-    {
-        id: 's2', type: 'service', rating: 5, serviceId: 'health', serviceName: 'Khám sức khỏe',
-        title: 'Bác sĩ tận tâm, giải thích rõ ràng',
-        content: 'Bác sĩ khám rất kỹ, giải thích từng vấn đề sức khỏe của bé mèo. Kê đơn thuốc hợp lý, giá cả minh bạch. Rất tin tưởng.',
-        authorName: 'Anh Đỗ Văn Minh', date: '06/04/2026', helpful: 11, verified: true,
-        authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=minh',
-    },
-];
+// ── Mock data (removed - using API only) ─────────────────────────────────────
+const MOCK: Feedback[] = [];
 
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
 export function FeedbackProvider({ children }: { children: ReactNode }) {
-    const [feedbacks, setFeedbacks] = useState<Feedback[]>(MOCK);
+    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+    const [loading, setLoading] = useState(false);
 
-    const addFeedback = (fb: Omit<Feedback, 'id' | 'date' | 'helpful'>) => {
-        const newFb: Feedback = {
-            ...fb,
-            id: Date.now().toString(),
-            date: new Date().toLocaleDateString('vi-VN'),
-            helpful: 0,
-        };
-        setFeedbacks(prev => [newFb, ...prev]);
+    // Add feedback with API integration
+    const addFeedback = async (fb: Omit<Feedback, 'id' | 'date' | 'helpful'>, images?: File[]) => {
+        try {
+            setLoading(true);
+
+            // Validate that we have the required reference ID based on type
+            if (fb.type === 'product' && !fb.productId) {
+                toast.error('Thiếu thông tin sản phẩm để đánh giá');
+                throw new Error('Product ID is required for product feedback');
+            }
+            if (fb.type === 'service' && !fb.serviceId) {
+                toast.error('Thiếu thông tin dịch vụ để đánh giá');
+                throw new Error('Service ID is required for service feedback');
+            }
+            if (fb.type === 'general') {
+                toast.error('Loại đánh giá "general" không được hỗ trợ. Vui lòng chọn sản phẩm hoặc dịch vụ cụ thể.');
+                throw new Error('General feedback type is not supported by the backend');
+            }
+
+            // Prepare API request
+            const request: CreateFeedbackRequest = {
+                type: fb.type === 'product' ? 'PRODUCT' : 'ORDER',
+                rating: fb.rating,
+                comment: fb.content,
+            };
+
+            if (fb.type === 'product' && fb.productId) {
+                request.productId = fb.productId;
+            }
+            if (fb.type === 'service' && fb.serviceId) {
+                request.orderId = fb.serviceId;
+            }
+
+            // Call API
+            const response = await feedbackApi.create(request, images);
+
+            // Add to local state
+            const newFb = adaptApiFeedback(response.result);
+            setFeedbacks(prev => [newFb, ...prev]);
+
+            toast.success('Đánh giá của bạn đã được gửi thành công!');
+        } catch (error) {
+            console.error('Error adding feedback:', error);
+            if (error instanceof Error && error.message.includes('not supported')) {
+                // Already showed toast above
+            } else {
+                toast.error('Không thể gửi đánh giá. Vui lòng thử lại!');
+            }
+            throw error;
+        } finally {
+            setLoading(false);
+        }
     };
 
     const markHelpful = (id: string) => {
         setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, helpful: f.helpful + 1 } : f));
     };
 
-    const getByProduct = (productId: string) =>
-        feedbacks.filter(f => f.type === 'product' && f.productId === productId);
+    // Load product feedbacks from API
+    const loadProductFeedbacks = useCallback(async (productId: string) => {
+        try {
+            setLoading(true);
+            const response = await feedbackApi.getProductFeedbacks(productId, 0, 50, false);
+            const apiFeedbacks = response.result.content.map(adaptApiFeedback);
+
+            // Replace feedbacks (only show API data, no merge)
+            setFeedbacks(apiFeedbacks);
+        } catch (error) {
+            console.error('Error loading product feedbacks:', error);
+            toast.error('Không thể tải đánh giá');
+            setFeedbacks([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const getByProduct = async (productId: string): Promise<Feedback[]> => {
+        try {
+            const response = await feedbackApi.getProductFeedbacks(productId, 0, 50, false);
+            return response.result.content.map(adaptApiFeedback);
+        } catch (error) {
+            console.error('Error getting product feedbacks:', error);
+            toast.error('Không thể tải đánh giá');
+            return [];
+        }
+    };
 
     const getByService = (serviceId: string) =>
         feedbacks.filter(f => f.type === 'service' && f.serviceId === serviceId);
@@ -125,8 +169,29 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     const avgRating = (items: Feedback[]) =>
         items.length === 0 ? 0 : Math.round((items.reduce((s, f) => s + f.rating, 0) / items.length) * 10) / 10;
 
+    const getProductStats = async (productId: string): Promise<FeedbackStats | null> => {
+        try {
+            const response = await feedbackApi.getProductStats(productId, false);
+            return response.result;
+        } catch (error) {
+            console.error('Error getting product stats:', error);
+            return null;
+        }
+    };
+
     return (
-        <FeedbackContext.Provider value={{ feedbacks, addFeedback, markHelpful, getByProduct, getByService, getGeneral, avgRating }}>
+        <FeedbackContext.Provider value={{
+            feedbacks,
+            loading,
+            addFeedback,
+            markHelpful,
+            getByProduct,
+            getByService,
+            getGeneral,
+            avgRating,
+            getProductStats,
+            loadProductFeedbacks,
+        }}>
             {children}
         </FeedbackContext.Provider>
     );
