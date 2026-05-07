@@ -26,6 +26,7 @@ public class UserProfileService {
 
     UserProfileRepository userProfileRepository;
     ImageAsyncService imageAsyncService;
+    CloudinaryService cloudinaryService;
     UserProfileMapper mapper;
 
     public UserProfileResponse getMyProfile() {
@@ -44,6 +45,9 @@ public class UserProfileService {
     @Transactional
     public UserProfileResponse updateMyProfile(UserProfileUpdateRequest request) throws IOException {
         String username = getCurrentUsername();
+        log.info("updateMyProfile called for user '{}' | firstName='{}' lastName='{}' email='{}' phone='{}'",
+                username, request.getFirstName(), request.getLastName(), request.getEmail(), request.getPhone());
+
         UserProfile profile = userProfileRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
 
@@ -54,11 +58,27 @@ public class UserProfileService {
         if (request.getPhone() != null) profile.setPhone(request.getPhone());
 
         UserProfile saved = userProfileRepository.saveAndFlush(profile);
+        log.info("Profile saved for user '{}': firstName='{}' lastName='{}'",
+                username, saved.getFirstName(), saved.getLastName());
 
-        if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
-            imageAsyncService.uploadUserAvatarAsync(saved.getId(),
-                    ImageUploadData.builder().image(request.getAvatar().getBytes()).build());
-        }
+        return mapper.toUserProfileResponse(saved);
+    }
+
+    /**
+     * Upload avatar đồng bộ: upload Cloudinary → lưu avatar_url vào DB → trả về profile đã cập nhật.
+     * Khác với updateMyProfile, method này KHÔNG dùng @Async nên client nhận được avatar_url ngay.
+     */
+    @Transactional
+    public UserProfileResponse updateMyAvatar(org.springframework.web.multipart.MultipartFile avatar) throws IOException {
+        String username = getCurrentUsername();
+        UserProfile profile = userProfileRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
+
+        String avatarUrl = cloudinaryService.uploadUserAvatar(avatar.getBytes());
+        profile.setAvatarUrl(avatarUrl);
+
+        UserProfile saved = userProfileRepository.saveAndFlush(profile);
+        log.info("Avatar updated for user '{}': {}", username, avatarUrl);
 
         return mapper.toUserProfileResponse(saved);
     }

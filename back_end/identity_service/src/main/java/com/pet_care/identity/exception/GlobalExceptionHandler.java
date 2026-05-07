@@ -24,10 +24,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = Exception.class)
     ResponseEntity<ApiResponse<Void>> handlingException(Exception exception) {
         log.error("Uncategorized exception: {}", exception.getMessage(), exception);
+        // Include exception message in response to help debug (remove in production)
+        String detail = exception.getMessage() != null
+                ? exception.getMessage().substring(0, Math.min(exception.getMessage().length(), 200))
+                : "Unknown error";
         return ResponseEntity.status(ErrorCode.UNCATEGORIZED_EXCEPTION.getStatus())
                 .body(ApiResponse.<Void>builder()
                         .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
-                        .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
+                        .message("Internal error: " + detail)
                         .build());
     }
 

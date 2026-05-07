@@ -64,9 +64,35 @@ export async function apiRequest<T>(
             : undefined,
     });
 
-    const data: ApiResponse<T> = await response.json();
+    // Safely parse JSON — guard against empty body (204, network errors, etc.)
+    let data: ApiResponse<T>;
+    const contentType = response.headers.get('content-type') ?? '';
+    const text = await response.text();
+
+    if (!text || !text.trim()) {
+        // Empty body — treat as success if 2xx, otherwise throw
+        if (response.ok) {
+            return { code: 1000, message: null, result: null as T };
+        }
+        throw new ApiError(response.status, `HTTP ${response.status}`, response.status);
+    }
+
+    if (!contentType.includes('application/json')) {
+        // Non-JSON response (HTML error page, plain text, etc.)
+        throw new ApiError(response.status, `Unexpected response format: ${text.slice(0, 100)}`, response.status);
+    }
+
+    try {
+        data = JSON.parse(text) as ApiResponse<T>;
+    } catch {
+        throw new ApiError(response.status, `Invalid JSON response: ${text.slice(0, 100)}`, response.status);
+    }
 
     if (!response.ok && data.code !== 1000) {
+        // Nếu 401 → token hết hạn, xóa token để force re-login
+        if (response.status === 401) {
+            removeToken();
+        }
         throw new ApiError(data.code, data.message ?? 'Lỗi không xác định', response.status);
     }
 

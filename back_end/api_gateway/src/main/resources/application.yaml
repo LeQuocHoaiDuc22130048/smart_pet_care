@@ -92,6 +92,14 @@ spring:
           filters:
             - StripPrefix=2
 
+        # Booking Service
+        - id: booking_service
+          uri: ${BOOKING_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=${app.api-prefix}/pet_care_booking/**
+          filters:
+            - StripPrefix=2
+
         # Feedback Service
         - id: feedback_service
           uri: ${FEEDBACK_SERVICE_URL:http://localhost:8088}

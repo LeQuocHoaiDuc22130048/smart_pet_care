@@ -14,7 +14,6 @@ volumes:
   rabbitmq-data:
   mongodb-data:
 
-
 services:
 
   # ─────────────────────────────────────────────
@@ -237,6 +236,30 @@ services:
     networks:
       - petcare-net
 
+  booking-service:
+    build:
+      context: ./booking_service
+      dockerfile: Dockerfile
+    container_name: petcare-booking
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/pet_care_booking?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      USER_SERVICE_URL: http://user-service:8082/pet_care_user
+      SERVER_SERVLET_CONTEXT_PATH: /pet_care_booking
+    ports:
+      - "8086:8086"
+    networks:
+      - petcare-net
+      - petcare-net
+
   feedback-service:
     build:
       context: ./feedback_service
@@ -280,6 +303,7 @@ services:
       - order-service
       - payment-service
       - cart-service
+      - booking-service
       - feedback-service
     environment:
       GATEWAY_PORT: 8888
@@ -291,6 +315,7 @@ services:
       ORDER_SERVICE_URL: http://order-service:8083
       PAYMENT_SERVICE_URL: http://payment-service:8084
       CART_SERVICE_URL: http://cart-service:8085
+      BOOKING_SERVICE_URL: http://booking-service:8086
       FEEDBACK_SERVICE_URL: http://feedback-service:8088
     ports:
       - "8888:8888"

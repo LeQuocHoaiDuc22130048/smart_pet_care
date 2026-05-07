@@ -1,6 +1,5 @@
 package com.pet_care.user_service.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,26 +14,12 @@ import java.time.LocalDate;
 @Builder
 public class UserProfileUpdateRequest {
 
-    @JsonAlias("first_name")
+    // Spring @ModelAttribute bind theo tên field Java (camelCase)
+    // Frontend gửi FormData với key "firstName", "lastName" — khớp trực tiếp
     private String firstName;
-
-    @JsonAlias("last_name")
     private String lastName;
-
     private String email;
-
     private LocalDate birthday;
-
     private String phone;
-
     private MultipartFile avatar;
-
-    // Setter alias cho multipart/form-data binding
-    public void setFirst_name(String value) {
-        this.firstName = value;
-    }
-
-    public void setLast_name(String value) {
-        this.lastName = value;
-    }
 }

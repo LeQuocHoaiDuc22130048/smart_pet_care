@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authApi } from '@/lib/authApi';
+import { userApi } from '@/lib/userApi';
 import { getToken, setToken, removeToken } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -44,6 +45,16 @@ function extractRole(roles?: { name: string }[]): 'user' | 'admin' {
     return hasAdmin ? 'admin' : 'user';
 }
 
+// ─── Helper: fetch avatar URL from user service (silent fail) ─────────────────
+async function fetchAvatarUrl(): Promise<string | undefined> {
+    try {
+        const res = await userApi.getMyProfile();
+        return res.result?.avatar_url ?? res.result?.avatarUrl ?? undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (res.result?.valid) {
                     const infoRes = await authApi.getMyInfo();
                     const u = infoRes.result;
+                    // Fetch avatar từ user service (identity service không lưu avatar)
+                    const avatar = await fetchAvatarUrl();
                     setUser({
                         id: u.id,
                         username: u.username,
@@ -70,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         lastName: u.lastName,
                         name: `${u.firstName} ${u.lastName}`,
                         role: extractRole(u.roles),
+                        avatar,
                     });
                 } else {
                     removeToken();
@@ -92,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const infoRes = await authApi.getMyInfo();
             const u = infoRes.result;
             const role = extractRole(u.roles);
+            // Fetch avatar từ user service
+            const avatar = await fetchAvatarUrl();
             setUser({
                 id: u.id,
                 username: u.username,
@@ -99,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 lastName: u.lastName,
                 name: `${u.firstName} ${u.lastName}`,
                 role,
+                avatar,
             });
 
             return role;
@@ -115,6 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const infoRes = await authApi.getMyInfo();
             const u = infoRes.result;
             const role = extractRole(u.roles);
+            // Fetch avatar từ user service
+            const avatar = await fetchAvatarUrl();
             setUser({
                 id: u.id,
                 username: u.username,
@@ -122,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 lastName: u.lastName,
                 name: `${u.firstName} ${u.lastName}`,
                 role,
+                avatar,
             });
 
             return role;

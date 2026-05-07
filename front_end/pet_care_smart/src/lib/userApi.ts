@@ -17,13 +17,20 @@ export type PetSpecies =
 export type Gender = 'MALE' | 'FEMALE';
 
 // ─── Response types ───────────────────────────────────────────────────────────
+// Backend dùng @JsonProperty nên trả về snake_case
 export interface UserProfile {
-    userId: string;
-    firstName: string;
-    lastName: string;
+    id: string;
+    username?: string;
+    // Backend trả về "first_name" / "last_name" / "avatar_url"
+    first_name?: string;
+    last_name?: string;
+    // Alias camelCase để tương thích (một số endpoint có thể trả camelCase)
+    firstName?: string;
+    lastName?: string;
     email?: string;
     birthday?: string;      // LocalDate → "yyyy-MM-dd"
     phone?: string;
+    avatar_url?: string;
     avatarUrl?: string;
 }
 
@@ -110,6 +117,21 @@ export const userApi = {
     /** GET /pet_care_user/profiles/{userId} */
     getProfileById(userId: string): Promise<ApiResponse<UserProfile>> {
         return apiRequest(`/pet_care_user/profiles/${userId}`, { requireAuth: true });
+    },
+
+    /**
+     * PUT /pet_care_user/profiles/me/avatar — Upload avatar đồng bộ.
+     * Trả về profile với avatar_url đã lưu DB, không dùng @Async.
+     */
+    updateAvatar(avatar: File): Promise<ApiResponse<UserProfile>> {
+        const formData = new FormData();
+        formData.append('avatar', avatar);
+        return apiRequest('/pet_care_user/profiles/me/avatar', {
+            method: 'PUT',
+            body: formData,
+            isFormData: true,
+            requireAuth: true,
+        });
     },
 
     /**

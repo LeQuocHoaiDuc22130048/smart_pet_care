@@ -47,8 +47,12 @@ const LoginPage = () => {
         setGoogleLoading(true);
         try {
             await handleGoogleLogin();
-        } catch {
-            // error already handled in hook
+        } catch (err) {
+            // Errors are already toasted inside the hook
+            // Only log unexpected errors
+            if (err instanceof Error && err.message !== 'Timeout') {
+                console.error('Google sign-in error:', err.message);
+            }
         } finally {
             setGoogleLoading(false);
         }
