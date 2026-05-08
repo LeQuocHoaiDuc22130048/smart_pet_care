@@ -258,7 +258,6 @@ services:
       - "8086:8086"
     networks:
       - petcare-net
-      - petcare-net
 
   feedback-service:
     build:
@@ -286,6 +285,20 @@ services:
     networks:
       - petcare-net
 
+  chat-service:
+    build:
+      context: ./chat_service
+      dockerfile: Dockerfile
+    container_name: petcare-chat
+    restart: unless-stopped
+    environment:
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    ports:
+      - "8089:8089"
+    networks:
+      - petcare-net
+
   # ─────────────────────────────────────────────
   # API GATEWAY
   # ─────────────────────────────────────────────
@@ -304,7 +317,7 @@ services:
       - payment-service
       - cart-service
       - booking-service
-      - feedback-service
+      - chat-service
     environment:
       GATEWAY_PORT: 8888
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
@@ -317,6 +330,7 @@ services:
       CART_SERVICE_URL: http://cart-service:8085
       BOOKING_SERVICE_URL: http://booking-service:8086
       FEEDBACK_SERVICE_URL: http://feedback-service:8088
+      CHAT_SERVICE_URL: http://chat-service:8089
     ports:
       - "8888:8888"
     networks:

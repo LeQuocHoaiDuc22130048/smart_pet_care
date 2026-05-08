@@ -108,6 +108,14 @@ spring:
           filters:
             - StripPrefix=2
 
+        # Chat Service
+        - id: chat_service
+          uri: ${CHAT_SERVICE_URL:http://localhost:8089}
+          predicates:
+            - Path=${app.api-prefix}/pet_care_chat/**
+          filters:
+            - StripPrefix=2
+
 identity:
   service:
     url: ${IDENTITY_SERVICE_URL:http://localhost:8080}

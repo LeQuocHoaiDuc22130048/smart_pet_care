@@ -15,7 +15,7 @@ import {
     Filter, Grid, List, ShoppingCart,
     SlidersHorizontal, Search, X, Loader2, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { productApi, type Product, type Category } from '@/lib/productApi';
@@ -31,6 +31,93 @@ function getPrimaryImage(product: Product): string {
 
 function getCategoryNames(product: Product): string {
     return product.category?.map((c) => c.categoryName).join(', ') || 'Khác';
+}
+
+// ─── FilterPanel Component ────────────────────────────────────────────────────
+interface FilterPanelProps {
+    priceRange: number[];
+    setPriceRange: (value: number[]) => void;
+    maxPrice: number;
+    categories: Category[];
+    selectedCategories: string[];
+    toggleCategory: (id: string, checked: boolean) => void;
+    activeFilterCount: number;
+    clearAll: () => void;
+}
+
+function FilterPanel({
+    priceRange,
+    setPriceRange,
+    maxPrice,
+    categories,
+    selectedCategories,
+    toggleCategory,
+    activeFilterCount,
+    clearAll,
+}: FilterPanelProps) {
+    return (
+        <div className='space-y-6'>
+            <div className='flex items-center justify-between'>
+                <h3 className='font-semibold text-foreground flex items-center gap-2'>
+                    <SlidersHorizontal className='w-4 h-4' />
+                    Bộ lọc
+                    {activeFilterCount > 0 && (
+                        <span className='bg-[#448B3D] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
+                            {activeFilterCount}
+                        </span>
+                    )}
+                </h3>
+                {activeFilterCount > 0 && (
+                    <button onClick={clearAll} className='text-xs text-[#448B3D] hover:underline font-medium'>
+                        Xóa tất cả
+                    </button>
+                )}
+            </div>
+
+            {/* Price Range */}
+            <div>
+                <div className='flex items-center justify-between mb-3'>
+                    <Label className='font-semibold'>Khoảng giá</Label>
+                    <span className='text-sm font-semibold text-[#448B3D]'>
+                        {priceRange[0].toLocaleString('vi-VN')}₫ – {priceRange[1].toLocaleString('vi-VN')}₫
+                    </span>
+                </div>
+                <Slider
+                    value={priceRange}
+                    onValueChange={setPriceRange}
+                    min={0}
+                    max={maxPrice}
+                    step={50000}
+                    className='py-1'
+                />
+            </div>
+
+            {/* Categories */}
+            {categories.length > 0 && (
+                <div>
+                    <Label className='mb-3 block font-semibold'>Danh mục</Label>
+                    <div className='space-y-2.5'>
+                        {categories.map((cat) => (
+                            <div key={cat.categoryId} className='flex items-center gap-2.5'>
+                                <Checkbox
+                                    id={`cat-${cat.categoryId}`}
+                                    checked={selectedCategories.includes(cat.categoryId)}
+                                    onCheckedChange={(checked) => toggleCategory(cat.categoryId, !!checked)}
+                                    className='size-4 rounded shrink-0'
+                                />
+                                <label
+                                    htmlFor={`cat-${cat.categoryId}`}
+                                    className='text-sm text-muted-foreground cursor-pointer select-none'
+                                >
+                                    {cat.categoryName}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }
 
 // ─── Pagination Component ─────────────────────────────────────────────────────
@@ -152,7 +239,17 @@ const ProductListingPage = () => {
     }, []);
 
     // ── Filter & sort ─────────────────────────────────────────────────────────
-    const maxPrice = Math.max(...products.map((p) => p.price), 5000000);
+    const maxPrice = useMemo(
+        () => (products.length > 0 ? Math.max(...products.map((p) => p.price), 5000000) : 5000000),
+        [products]
+    );
+
+    // Khi data load xong, cập nhật priceRange[1] theo maxPrice thực tế
+    useEffect(() => {
+        if (products.length > 0) {
+            setPriceRange((prev) => [prev[0], maxPrice]);
+        }
+    }, [maxPrice, products.length]);
 
     const filteredProducts = products
         .filter((p) => {
@@ -210,69 +307,7 @@ const ProductListingPage = () => {
     };
 
     // ── Filter panel ──────────────────────────────────────────────────────────
-    const FilterPanel = () => (
-        <div className='space-y-6'>
-            <div className='flex items-center justify-between'>
-                <h3 className='font-semibold text-foreground flex items-center gap-2'>
-                    <SlidersHorizontal className='w-4 h-4' />
-                    Bộ lọc
-                    {activeFilterCount > 0 && (
-                        <span className='bg-[#448B3D] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center'>
-                            {activeFilterCount}
-                        </span>
-                    )}
-                </h3>
-                {activeFilterCount > 0 && (
-                    <button onClick={clearAll} className='text-xs text-[#448B3D] hover:underline font-medium'>
-                        Xóa tất cả
-                    </button>
-                )}
-            </div>
-
-            {/* Price Range */}
-            <div>
-                <div className='flex items-center justify-between mb-3'>
-                    <Label className='font-semibold'>Khoảng giá</Label>
-                    <span className='text-sm font-semibold text-[#448B3D]'>
-                        {priceRange[0].toLocaleString('vi-VN')}₫ – {priceRange[1].toLocaleString('vi-VN')}₫
-                    </span>
-                </div>
-                <Slider
-                    value={priceRange}
-                    onValueChange={setPriceRange}
-                    min={0}
-                    max={maxPrice}
-                    step={50000}
-                    className='py-1'
-                />
-            </div>
-
-            {/* Categories */}
-            {categories.length > 0 && (
-                <div>
-                    <Label className='mb-3 block font-semibold'>Danh mục</Label>
-                    <div className='space-y-2.5'>
-                        {categories.map((cat) => (
-                            <div key={cat.categoryId} className='flex items-center gap-2.5'>
-                                <Checkbox
-                                    id={`cat-${cat.categoryId}`}
-                                    checked={selectedCategories.includes(cat.categoryId)}
-                                    onCheckedChange={(checked) => toggleCategory(cat.categoryId, !!checked)}
-                                    className='size-3.5'
-                                />
-                                <label
-                                    htmlFor={`cat-${cat.categoryId}`}
-                                    className='text-sm text-muted-foreground cursor-pointer select-none'
-                                >
-                                    {cat.categoryName}
-                                </label>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+    // (FilterPanel is defined outside this component to prevent remount on re-render)
 
     // ── Loading state ─────────────────────────────────────────────────────────
     if (loading) {
@@ -383,7 +418,16 @@ const ProductListingPage = () => {
                     {/* Desktop sidebar */}
                     <aside className='hidden lg:block w-56 shrink-0'>
                         <div className='sticky top-20 bg-card border border-border rounded-2xl p-5'>
-                            <FilterPanel />
+                            <FilterPanel
+                                priceRange={priceRange}
+                                setPriceRange={setPriceRange}
+                                maxPrice={maxPrice}
+                                categories={categories}
+                                selectedCategories={selectedCategories}
+                                toggleCategory={toggleCategory}
+                                activeFilterCount={activeFilterCount}
+                                clearAll={clearAll}
+                            />
                         </div>
                     </aside>
 
@@ -568,7 +612,16 @@ const ProductListingPage = () => {
                                 </button>
                             </div>
                             <div className='flex-1 overflow-y-auto p-5'>
-                                <FilterPanel />
+                                <FilterPanel
+                                    priceRange={priceRange}
+                                    setPriceRange={setPriceRange}
+                                    maxPrice={maxPrice}
+                                    categories={categories}
+                                    selectedCategories={selectedCategories}
+                                    toggleCategory={toggleCategory}
+                                    activeFilterCount={activeFilterCount}
+                                    clearAll={clearAll}
+                                />
                             </div>
                             <div className='p-4 border-t border-border'>
                                 <Button

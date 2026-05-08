@@ -1,85 +1,264 @@
-import { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, ChevronDown, Phone } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Bot, Send, ChevronDown, Phone, ChevronRight, ChevronLeft, ShoppingBag, Clock } from 'lucide-react';
 import { Input } from './ui/input';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '@/context/AuthContext';
+import { sendChatMessage } from '@/lib/chatApi';
+import type { ChatMessage as ApiChatMessage, BotReply, SuggestionCard } from '@/lib/chatApi';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Message {
     id: string;
     text: string;
     sender: 'user' | 'bot';
     timestamp: Date;
+    botReply?: BotReply; // chỉ có ở tin bot
 }
 
-const QUICK_REPLIES = [
-    '🛒 Tư vấn sản phẩm',
-    '📅 Đặt lịch dịch vụ',
-    '🚚 Theo dõi đơn hàng',
-    '📞 Gọi hỗ trợ',
+interface QuickReply {
+    label: string;
+    action: 'message' | 'navigate' | 'call';
+    payload: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const QUICK_REPLIES: QuickReply[] = [
+    { label: '🛒 Tư vấn sản phẩm', action: 'message', payload: 'Gợi ý sản phẩm cho thú cưng' },
+    { label: '📅 Đặt lịch dịch vụ', action: 'message', payload: 'Các dịch vụ chăm sóc thú cưng' },
+    { label: '🚚 Theo dõi đơn hàng', action: 'navigate', payload: '/dashboard' },
+    { label: '📞 Gọi hỗ trợ', action: 'call', payload: 'tel:+84702500551' },
 ];
 
-const generateBotResponse = (userInput: string): string => {
-    const lower = userInput.toLowerCase();
-    if (lower.includes('sản phẩm') || lower.includes('mua') || lower.includes('tư vấn'))
-        return 'Bạn cần tìm sản phẩm gì cho vật nuôi? Thức ăn, thuốc hay phụ kiện? Tôi sẽ giúp bạn chọn đúng loại phù hợp nhé! 🐾';
-    if (lower.includes('đặt lịch') || lower.includes('dịch vụ') || lower.includes('khám'))
-        return 'Chúng tôi có các dịch vụ: Tắm & cắt lông, Khám sức khỏe, Tiêm phòng. Bạn muốn đặt lịch dịch vụ nào? Tôi có thể hướng dẫn bạn đặt lịch ngay!';
-    if (lower.includes('đơn hàng') || lower.includes('giao hàng') || lower.includes('theo dõi'))
-        return 'Để theo dõi đơn hàng, bạn vào mục "Trang cá nhân" → "Đơn hàng". Nếu cần hỗ trợ thêm, gọi ngay (84) 702 500 551 nhé!';
-    if (lower.includes('gọi') || lower.includes('điện thoại') || lower.includes('liên hệ'))
-        return 'Hotline hỗ trợ: 📞 (84) 702 500 551\nMở cửa: 7:00 – 18:00 hàng ngày\nBà con cứ gọi, chúng tôi luôn sẵn sàng!';
-    if (lower.includes('giá') || lower.includes('bao nhiêu') || lower.includes('tiền'))
-        return 'Giá sản phẩm rất đa dạng, phù hợp với mọi ngân sách. Bạn xem chi tiết tại trang Sản phẩm hoặc gọi (84) 702 500 551 để được báo giá cụ thể!';
-    return 'Tôi có thể giúp bạn tư vấn sản phẩm, đặt lịch dịch vụ hoặc theo dõi đơn hàng. Bạn cần hỗ trợ gì ạ? 😊';
+const INITIAL_MESSAGE: Message = {
+    id: '1',
+    text: 'Xin chào bạn! 👋 Mình là trợ lý AI của PetCare Smart. Mình có thể giúp bạn tư vấn sản phẩm, đặt lịch dịch vụ hoặc giải đáp thắc mắc về thú cưng. Bạn cần hỗ trợ gì ạ? 🐾',
+    sender: 'bot',
+    timestamp: new Date(),
+    botReply: { text: '', suggestions: [] },
 };
+
+const ERROR_MESSAGE = 'Xin lỗi bạn, mình đang gặp sự cố kỹ thuật. Vui lòng thử lại sau hoặc gọi hotline (84) 702 500 551 nhé! 🙏';
 
 const formatTime = (date: Date) =>
     date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
+const formatPrice = (price: number) =>
+    price.toLocaleString('vi-VN') + 'đ';
+
+// ─── Suggestion Card Component ────────────────────────────────────────────────
+
+const SuggestionCardItem = ({
+    card,
+    onNavigate,
+}: {
+    card: SuggestionCard;
+    onNavigate: (link: string) => void;
+}) => (
+    <button
+        onClick={() => onNavigate(card.link)}
+        className='shrink-0 w-36 rounded-xl border border-border bg-background hover:border-[#448B3D] hover:shadow-md transition-all text-left overflow-hidden group'
+    >
+        {/* Ảnh */}
+        <div className='w-full h-24 bg-muted overflow-hidden'>
+            {card.imageUrl ? (
+                <img
+                    src={card.imageUrl}
+                    alt={card.name}
+                    className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                />
+            ) : (
+                <div className='w-full h-full flex items-center justify-center text-muted-foreground'>
+                    {card.type === 'product'
+                        ? <ShoppingBag className='w-8 h-8 opacity-30' />
+                        : <Bot className='w-8 h-8 opacity-30' />
+                    }
+                </div>
+            )}
+        </div>
+
+        {/* Info */}
+        <div className='p-2 space-y-0.5'>
+            <p className='text-xs font-medium text-foreground line-clamp-2 leading-tight'>{card.name}</p>
+            <p className='text-xs font-bold text-[#448B3D]'>{formatPrice(card.price)}</p>
+            {card.type === 'service' && card.durationMinutes && (
+                <p className='text-[10px] text-muted-foreground flex items-center gap-0.5'>
+                    <Clock className='w-2.5 h-2.5' />{card.durationMinutes} phút
+                </p>
+            )}
+        </div>
+    </button>
+);
+
+// ─── Bot Message Component ────────────────────────────────────────────────────
+
+const BotMessage = ({
+    msg,
+    onNavigate,
+}: {
+    msg: Message;
+    onNavigate: (link: string) => void;
+}) => {
+    const suggestions = msg.botReply?.suggestions ?? [];
+
+    return (
+        <div className='flex items-end gap-2 flex-row'>
+            <div className='w-7 h-7 rounded-full bg-[#448B3D] flex items-center justify-center shrink-0 mb-0.5'>
+                <Bot className='w-4 h-4 text-white' />
+            </div>
+            <div className='flex flex-col gap-1.5 max-w-[85%] items-start'>
+                {/* Text bubble */}
+                <div className='px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm leading-relaxed whitespace-pre-line bg-card text-foreground shadow-sm border border-border'>
+                    {msg.text}
+                </div>
+
+                {/* Product/Service cards */}
+                {suggestions.length > 0 && (
+                    <div className='flex gap-2 overflow-x-auto pb-1 max-w-full' style={{ scrollbarWidth: 'none' }}>
+                        {suggestions.map((card) => (
+                            <SuggestionCardItem key={card.id} card={card} onNavigate={onNavigate} />
+                        ))}
+                    </div>
+                )}
+
+                <span className='text-[10px] text-gray-400 px-1'>{formatTime(msg.timestamp)}</span>
+            </div>
+        </div>
+    );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 const AIChatBot = () => {
+    const { user } = useAuth();
+
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: '1',
-            text: 'Xin chào bà con! 👋 Tôi là trợ lý tư vấn của PetCare. Tôi có thể giúp gì cho bạn hôm nay?',
-            sender: 'bot',
-            timestamp: new Date()
-        }
-    ]);
+    const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+
+    const historyRef = useRef<ApiChatMessage[]>([]);
+    const showQuickReplies = !isTyping && messages[messages.length - 1]?.sender === 'bot';
     const bottomRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+
+    const updateScrollState = useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        setCanScrollLeft(el.scrollLeft > 4);
+        setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    }, []);
+
+    const setScrollRef = useCallback((el: HTMLDivElement | null) => {
+        if (scrollRef.current) {
+            scrollRef.current.removeEventListener('scroll', updateScrollState);
+        }
+        (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        if (el) {
+            el.addEventListener('scroll', updateScrollState);
+            setTimeout(updateScrollState, 50);
+        }
+    }, [updateScrollState]);
+
+    const scrollBy = useCallback((dir: 'left' | 'right') => {
+        scrollRef.current?.scrollBy({ left: dir === 'right' ? 120 : -120, behavior: 'smooth' });
+    }, []);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isTyping]);
 
-    const sendMessage = (text: string) => {
-        if (!text.trim()) return;
+    const handleNavigate = useCallback((link: string) => {
+        setIsOpen(false);
+        window.location.href = link;
+    }, []);
+
+    const sendMessage = useCallback(async (text: string) => {
+        if (!text.trim() || isTyping) return;
 
         const userMsg: Message = {
             id: Date.now().toString(),
             text,
             sender: 'user',
-            timestamp: new Date()
+            timestamp: new Date(),
         };
+
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsTyping(true);
 
-        setTimeout(() => {
-            setMessages(prev => [...prev, {
-                id: (Date.now() + 1).toString(),
-                text: generateBotResponse(text),
-                sender: 'bot',
-                timestamp: new Date()
-            }]);
+        historyRef.current = [
+            ...historyRef.current,
+            { role: 'user', text },
+        ].slice(-10);
+
+        try {
+            const response = await sendChatMessage({
+                message: text,
+                history: historyRef.current.slice(0, -1),
+                userContext: user
+                    ? {
+                        userName: user.firstName
+                            ? `${user.firstName} ${user.lastName ?? ''}`.trim()
+                            : user.username,
+                    }
+                    : undefined,
+            });
+
+            const parsed = response.result?.parsed ?? { text: response.result?.reply ?? ERROR_MESSAGE, suggestions: [] };
+
+            historyRef.current = [
+                ...historyRef.current,
+                { role: 'model', text: parsed.text },
+            ].slice(-10);
+
+            setMessages(prev => [
+                ...prev,
+                {
+                    id: (Date.now() + 1).toString(),
+                    text: parsed.text,
+                    sender: 'bot',
+                    timestamp: new Date(),
+                    botReply: parsed,
+                },
+            ]);
+        } catch {
+            setMessages(prev => [
+                ...prev,
+                {
+                    id: (Date.now() + 1).toString(),
+                    text: ERROR_MESSAGE,
+                    sender: 'bot',
+                    timestamp: new Date(),
+                    botReply: { text: ERROR_MESSAGE, suggestions: [] },
+                },
+            ]);
+        } finally {
             setIsTyping(false);
-        }, 1200);
-    };
+        }
+    }, [isTyping, user]);
+
+    const handleQuickReply = useCallback((reply: QuickReply) => {
+        if (reply.action === 'call') {
+            window.location.href = reply.payload;
+            return;
+        }
+        if (reply.action === 'navigate') {
+            handleNavigate(reply.payload);
+            return;
+        }
+        sendMessage(reply.payload);
+    }, [sendMessage, handleNavigate]);
 
     return (
         <>
-            {/* FAB button */}
+            {/* FAB */}
             <AnimatePresence>
                 {!isOpen && (
                     <motion.button
@@ -94,10 +273,8 @@ const AIChatBot = () => {
                     >
                         <div className='relative'>
                             <Bot className='w-5 h-5' />
-                            {/* Online dot */}
                             <span className='absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-300 rounded-full border-2 border-[#448B3D]' />
                         </div>
-                        
                     </motion.button>
                 )}
             </AnimatePresence>
@@ -112,9 +289,9 @@ const AIChatBot = () => {
                         transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
                         className='fixed z-50 flex flex-col overflow-hidden border border-border bg-card shadow-2xl
                             inset-0 rounded-none
-                            sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[380px] sm:h-[520px] sm:rounded-2xl'
+                            sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[400px] sm:h-[560px] sm:rounded-2xl'
                     >
-                        {/* ── Header ── */}
+                        {/* Header */}
                         <div className='bg-[#448B3D] px-4 py-3 flex items-center justify-between shrink-0'>
                             <div className='flex items-center gap-3'>
                                 <div className='relative'>
@@ -124,8 +301,8 @@ const AIChatBot = () => {
                                     <span className='absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-300 rounded-full border-2 border-[#448B3D]' />
                                 </div>
                                 <div>
-                                    <p className='text-white font-semibold text-sm leading-tight'>Trợ lý PetCare</p>
-                                    <p className='text-white/70 text-xs'>Đang hoạt động</p>
+                                    <p className='text-white font-semibold text-sm leading-tight'>Trợ lý PetCare AI</p>
+                                    <p className='text-white/70 text-xs'>Powered by Gemini ✨</p>
                                 </div>
                             </div>
                             <div className='flex items-center gap-1'>
@@ -146,35 +323,22 @@ const AIChatBot = () => {
                             </div>
                         </div>
 
-                        {/* ── Messages ── */}
+                        {/* Messages */}
                         <div className='flex-1 overflow-y-auto bg-background px-4 py-4 space-y-3'>
-                            {messages.map((msg) => (
-                                <div
-                                    key={msg.id}
-                                    className={`flex items-end gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-                                >
-                                    {/* Avatar bot */}
-                                    {msg.sender === 'bot' && (
-                                        <div className='w-7 h-7 rounded-full bg-[#448B3D] flex items-center justify-center shrink-0 mb-0.5'>
-                                            <Bot className='w-4 h-4 text-white' />
+                            {messages.map((msg) =>
+                                msg.sender === 'bot' ? (
+                                    <BotMessage key={msg.id} msg={msg} onNavigate={handleNavigate} />
+                                ) : (
+                                    <div key={msg.id} className='flex items-end gap-2 flex-row-reverse'>
+                                        <div className='flex flex-col gap-0.5 max-w-[78%] items-end'>
+                                            <div className='px-3.5 py-2.5 rounded-2xl rounded-br-sm text-sm leading-relaxed whitespace-pre-line bg-[#448B3D] text-white'>
+                                                {msg.text}
+                                            </div>
+                                            <span className='text-[10px] text-gray-400 px-1'>{formatTime(msg.timestamp)}</span>
                                         </div>
-                                    )}
-
-                                    <div className={`flex flex-col gap-0.5 max-w-[78%] ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                                        <div
-                                            className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${msg.sender === 'user'
-                                                ? 'bg-[#448B3D] text-white rounded-br-sm'
-                                                : 'bg-card text-foreground rounded-bl-sm shadow-sm border border-border'
-                                                }`}
-                                        >
-                                            {msg.text}
-                                        </div>
-                                        <span className='text-[10px] text-gray-400 px-1'>
-                                            {formatTime(msg.timestamp)}
-                                        </span>
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            )}
 
                             {/* Typing indicator */}
                             {isTyping && (
@@ -198,31 +362,81 @@ const AIChatBot = () => {
                             <div ref={bottomRef} />
                         </div>
 
-                        {/* ── Quick replies ── */}
-                        <div className='bg-background px-4 pb-2 flex gap-2 overflow-x-auto shrink-0' style={{ scrollbarWidth: 'none' }}>
-                            {QUICK_REPLIES.map((q) => (
-                                <button
-                                    key={q}
-                                    onClick={() => sendMessage(q)}
-                                    className='shrink-0 text-xs bg-card border border-[#448B3D]/30 text-[#448B3D] font-medium rounded-full px-3 py-1.5 hover:bg-[#448B3D] hover:text-white transition-colors whitespace-nowrap'
+                        {/* Quick replies */}
+                        <AnimatePresence>
+                            {showQuickReplies && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.18 }}
+                                    className='bg-background shrink-0 border-t border-border/50'
+                                    onAnimationComplete={updateScrollState}
                                 >
-                                    {q}
-                                </button>
-                            ))}
-                        </div>
+                                    <div className='flex items-center gap-1 px-2 py-2'>
+                                        <AnimatePresence>
+                                            {canScrollLeft ? (
+                                                <motion.button
+                                                    key='left'
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.8 }}
+                                                    onClick={() => scrollBy('left')}
+                                                    className='shrink-0 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-card text-[#448B3D] hover:bg-[#448B3D] hover:text-white transition-all shadow-sm'
+                                                >
+                                                    <ChevronLeft className='w-3.5 h-3.5' />
+                                                </motion.button>
+                                            ) : <div key='lp' className='shrink-0 w-7' />}
+                                        </AnimatePresence>
 
-                        {/* ── Input ── */}
+                                        <div
+                                            ref={setScrollRef}
+                                            className='flex gap-2 overflow-x-auto flex-1 min-w-0'
+                                            style={{ scrollbarWidth: 'none' }}
+                                        >
+                                            {QUICK_REPLIES.map((q) => (
+                                                <button
+                                                    key={q.label}
+                                                    onClick={() => handleQuickReply(q)}
+                                                    className='shrink-0 text-xs bg-card border border-[#448B3D]/30 text-[#448B3D] font-medium rounded-full px-3 py-1.5 hover:bg-[#448B3D] hover:text-white active:scale-95 transition-all whitespace-nowrap'
+                                                >
+                                                    {q.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <AnimatePresence>
+                                            {canScrollRight ? (
+                                                <motion.button
+                                                    key='right'
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.8 }}
+                                                    onClick={() => scrollBy('right')}
+                                                    className='shrink-0 w-7 h-7 flex items-center justify-center rounded-full border border-border bg-card text-[#448B3D] hover:bg-[#448B3D] hover:text-white transition-all shadow-sm'
+                                                >
+                                                    <ChevronRight className='w-3.5 h-3.5' />
+                                                </motion.button>
+                                            ) : <div key='rp' className='shrink-0 w-7' />}
+                                        </AnimatePresence>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Input */}
                         <div className='bg-background border-t border-border px-3 py-3 flex items-center gap-2 shrink-0'>
                             <Input
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
+                                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage(input)}
                                 placeholder='Nhập câu hỏi...'
                                 className='flex-1 rounded-xl border-border bg-muted focus:border-[#448B3D] text-sm h-10'
+                                disabled={isTyping}
                             />
                             <button
                                 onClick={() => sendMessage(input)}
-                                disabled={!input.trim()}
+                                disabled={!input.trim() || isTyping}
                                 className='w-10 h-10 rounded-xl bg-[#448B3D] hover:bg-[#336B2D] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0'
                                 aria-label='Gửi'
                             >
