@@ -1,36 +1,37 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import { orderApi, type Order } from '@/lib/orderApi';
 import { userApi, type Pet as ApiPet, type UserProfile } from '@/lib/userApi';
+import {
+    bookingApi,
+    type BookingResponse,
+    bookingStatusLabel,
+    bookingStatusBadge,
+    categoryIcon,
+    formatPrice,
+    formatTime,
+    formatDate as formatBookingDate,
+} from '@/lib/bookingApi';
 import { DashboardThemeSettings } from '@/components/dashboard/DashboardThemeSettings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-    Package, Calendar, ShoppingBag, TrendingUp, Clock,
+    Package, Calendar, ShoppingBag, TrendingUp,
     Plus, Pencil, Trash2, X, PawPrint, Settings, Sparkles, User as UserIcon, Camera, Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface UserBooking {
-    id: string; service: string; pet: string;
-    date: string; time: string;
-    status: 'Chờ xác nhận' | 'Đã xác nhận' | 'Hoàn thành' | 'Đã hủy';
-}
-interface Pet {
-    id: string; name: string; species: string;
-    breed: string; age: string; weight: string; notes: string;
-}
+// ─── Types (unused local Pet type removed — dùng ApiPet từ userApi) ──────────
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -49,12 +50,6 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     );
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const INIT_BOOKINGS: UserBooking[] = [
-    { id: 'BK-001', service: 'Spa thú cưng', pet: 'Max', date: '15/02/2026', time: '10:00', status: 'Đã xác nhận' },
-    { id: 'BK-002', service: 'Khám sức khỏe', pet: 'Bella', date: '20/02/2026', time: '14:00', status: 'Chờ xác nhận' },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function orderStatusLabel(s: string): string {
     const map: Record<string, string> = {
@@ -69,12 +64,6 @@ function orderBadge(s: string) {
     if (s === 'CONFIRMED' || s === 'PAID') return 'bg-green-100 text-green-800 border-0 dark:bg-green-950/60 dark:text-green-300';
     if (s === 'RESERVED' || s === 'PAYMENT_PENDING') return 'bg-blue-100 text-blue-800 border-0 dark:bg-blue-950/60 dark:text-blue-300';
     if (s === 'CANCELLED' || s === 'FAILED' || s === 'PAYMENT_FAILED') return 'bg-red-100 text-red-800 border-0 dark:bg-red-950/60 dark:text-red-300';
-    return 'bg-orange-100 text-orange-800 border-0 dark:bg-orange-950/50 dark:text-orange-300';
-}
-function bookingBadge(s: string) {
-    if (s === 'Hoàn thành') return 'bg-green-100 text-green-800 border-0 dark:bg-green-950/60 dark:text-green-300';
-    if (s === 'Đã xác nhận') return 'bg-blue-100 text-blue-800 border-0 dark:bg-blue-950/60 dark:text-blue-300';
-    if (s === 'Đã hủy') return 'bg-red-100 text-red-800 border-0 dark:bg-red-950/60 dark:text-red-300';
     return 'bg-orange-100 text-orange-800 border-0 dark:bg-orange-950/50 dark:text-orange-300';
 }
 
@@ -114,9 +103,8 @@ const UserDashboardPage = () => {
     const [petsLoading, setPetsLoading] = useState(false);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [profileLoading, setProfileLoading] = useState(false);
-
-    // Bookings remain local (no booking service in API)
-    const [bookings, setBookings] = useState<UserBooking[]>(INIT_BOOKINGS);
+    const [bookings, setBookings] = useState<BookingResponse[]>([]);
+    const [bookingsLoading, setBookingsLoading] = useState(false);
 
     // ── Fetch orders ──────────────────────────────────────────────────────────
     const fetchOrders = useCallback(async () => {
@@ -144,6 +132,19 @@ const UserDashboardPage = () => {
         }
     }, []);
 
+    // ── Fetch bookings ────────────────────────────────────────────────────────
+    const fetchBookings = useCallback(async () => {
+        setBookingsLoading(true);
+        try {
+            const res = await bookingApi.getMyBookings();
+            setBookings(res.result ?? []);
+        } catch {
+            // silently fail
+        } finally {
+            setBookingsLoading(false);
+        }
+    }, []);
+
     // ── Fetch profile ─────────────────────────────────────────────────────────
     const fetchProfile = useCallback(async () => {
         setProfileLoading(true);
@@ -161,15 +162,17 @@ const UserDashboardPage = () => {
         fetchOrders();
         fetchPets();
         fetchProfile();
-    }, [fetchOrders, fetchPets, fetchProfile]);
+        fetchBookings();
+    }, [fetchOrders, fetchPets, fetchProfile, fetchBookings]);
 
     // ── Profile form ──────────────────────────────────────────────────────────
+    // Backend trả về snake_case (first_name, last_name) do @JsonProperty
     const [profileForm, setProfileForm] = useState({ firstName: '', lastName: '', phone: '', email: '' });
     useEffect(() => {
         if (profile) {
             setProfileForm({
-                firstName: profile.firstName ?? '',
-                lastName: profile.lastName ?? '',
+                firstName: profile.first_name ?? profile.firstName ?? '',
+                lastName: profile.last_name ?? profile.lastName ?? '',
                 phone: profile.phone ?? '',
                 email: profile.email ?? '',
             });
@@ -181,20 +184,25 @@ const UserDashboardPage = () => {
     const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        // Local preview
+        // Local preview ngay lập tức
         const reader = new FileReader();
         reader.onload = (ev) => updateUser({ avatar: ev.target?.result as string });
         reader.readAsDataURL(file);
-        // Upload to server
+        // Upload đồng bộ → nhận avatar_url từ DB
         try {
-            await userApi.updateProfile({ avatar: file });
+            const res = await userApi.updateAvatar(file);
+            const savedUrl = res.result.avatar_url ?? res.result.avatarUrl;
+            if (savedUrl) updateUser({ avatar: savedUrl });
             toast.success('Đã cập nhật ảnh đại diện');
         } catch {
             toast.error('Không thể cập nhật ảnh đại diện');
         }
     };
 
+    const [profileSaving, setProfileSaving] = useState(false);
+
     const saveProfile = async () => {
+        setProfileSaving(true);
         try {
             console.log('[UserDashboard] Saving profile:', profileForm);
             const res = await userApi.updateProfile({
@@ -205,11 +213,21 @@ const UserDashboardPage = () => {
             });
             console.log('[UserDashboard] Profile updated:', res);
             setProfile(res.result);
-            updateUser({ firstName: res.result.firstName, lastName: res.result.lastName });
+            // Backend trả về snake_case do @JsonProperty
+            const updatedFirst = res.result.first_name ?? res.result.firstName ?? profileForm.firstName;
+            const updatedLast = res.result.last_name ?? res.result.lastName ?? profileForm.lastName;
+            updateUser({ firstName: updatedFirst, lastName: updatedLast });
             toast.success('Đã cập nhật hồ sơ thành công');
-        } catch (err) {
+        } catch (err: unknown) {
             console.error('[UserDashboard] Error updating profile:', err);
-            toast.error('Không thể cập nhật hồ sơ');
+            const httpStatus = (err as { httpStatus?: number })?.httpStatus;
+            if (httpStatus === 401) {
+                toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+            } else {
+                toast.error('Không thể cập nhật hồ sơ');
+            }
+        } finally {
+            setProfileSaving(false);
         }
     };
 
@@ -224,9 +242,14 @@ const UserDashboardPage = () => {
         }
     };
 
-    const cancelBooking = (id: string) => {
-        setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: 'Đã hủy' } : b));
-        toast.success('Đã hủy lịch đặt');
+    const cancelBooking = async (id: string) => {
+        try {
+            await bookingApi.cancelMyBooking(id);
+            await fetchBookings();
+            toast.success('Đã hủy lịch đặt');
+        } catch {
+            toast.error('Không thể hủy lịch đặt');
+        }
     };
 
     // ── Pet modal ─────────────────────────────────────────────────────────────
@@ -337,7 +360,7 @@ const UserDashboardPage = () => {
             </section>
 
             <Tabs value={activeTab} onValueChange={setTab} className="w-full">
-                <TabsList className="mb-8 flex h-auto w-full flex-wrap justify-start gap-1.5 rounded-2xl bg-muted/70 p-1.5 border border-border">
+                {/* <TabsList className="mb-8 flex h-auto w-full flex-wrap justify-start gap-1.5 rounded-2xl bg-muted/70 p-1.5 border border-border">
                     <TabsTrigger
                         value="overview"
                         className="rounded-xl px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-[#448B3D] data-[state=active]:shadow-sm dark:data-[state=active]:text-[#7CB878]"
@@ -374,7 +397,7 @@ const UserDashboardPage = () => {
                     >
                         Cài đặt
                     </TabsTrigger>
-                </TabsList>
+                </TabsList> */}
 
                 {/* ── Tổng quan ── */}
                 <TabsContent value="overview" className="space-y-6 outline-none">
@@ -445,15 +468,24 @@ const UserDashboardPage = () => {
                                 <h2 className="font-semibold text-foreground">Lịch đặt sắp tới</h2>
                             </div>
                             <div className="space-y-3">
-                                {bookings.slice(0, 2).map(b => (
+                                {bookingsLoading ? (
+                                    <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#448B3D]" /></div>
+                                ) : bookings.filter(b => b.status !== 'CANCELLED' && b.status !== 'COMPLETED' && b.status !== 'NO_SHOW').slice(0, 2).map(b => (
                                     <div key={b.id} className="flex items-center justify-between rounded-xl border border-border/80 bg-muted/30 p-3 dark:bg-muted/20">
                                         <div>
-                                            <p className="text-sm font-medium text-foreground">{b.service}</p>
-                                            <p className="text-xs text-muted-foreground">{b.pet} · {b.date} {b.time}</p>
+                                            <p className="text-sm font-medium text-foreground">
+                                                {categoryIcon(b.servicePackage.category)} {b.servicePackage.name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {b.petName} · {formatBookingDate(b.appointmentDate)} {formatTime(b.appointmentTime)}
+                                            </p>
                                         </div>
-                                        <Badge className={`text-xs ${bookingBadge(b.status)}`}>{b.status}</Badge>
+                                        <Badge className={`text-xs ${bookingStatusBadge(b.status)}`}>{bookingStatusLabel(b.status)}</Badge>
                                     </div>
                                 ))}
+                                {!bookingsLoading && bookings.filter(b => b.status !== 'CANCELLED' && b.status !== 'COMPLETED' && b.status !== 'NO_SHOW').length === 0 && (
+                                    <p className="text-sm text-muted-foreground text-center py-4">Không có lịch đặt sắp tới</p>
+                                )}
                             </div>
                         </Card>
                     </div>
@@ -542,36 +574,121 @@ const UserDashboardPage = () => {
 
                 {/* ── Lịch đặt ── */}
                 <TabsContent value="bookings" className="space-y-4 outline-none">
-                    <div className="space-y-3">
-                        {bookings.map(b => (
-                            <Card key={b.id} className="border-border/80 p-4 shadow-sm transition-shadow hover:shadow-md">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-xl bg-[#448B3D]/15 flex items-center justify-center shrink-0 text-[#448B3D] dark:bg-[#448B3D]/25 dark:text-[#7CB878]">
-                                            <Calendar className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-foreground">{b.service}</p>
-                                            <p className="text-sm text-muted-foreground">Thú cưng: {b.pet}</p>
-                                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{b.date}</span>
-                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{b.time}</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-lg font-bold text-foreground">Lịch đặt của tôi</h2>
+                        <Button size="sm" className="bg-[#448B3D] hover:bg-[#336B2D] text-white rounded-xl" onClick={() => navigate('/booking')}>
+                            <Plus className="w-4 h-4 mr-1" /> Đặt lịch mới
+                        </Button>
+                    </div>
+                    {bookingsLoading ? (
+                        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-[#448B3D]" /></div>
+                    ) : (
+                        <div className="space-y-3">
+                            {bookings.map(b => (
+                                <Card key={b.id} className="border-border/80 p-4 shadow-sm transition-shadow hover:shadow-md">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 rounded-xl bg-[#448B3D]/15 flex items-center justify-center shrink-0 text-2xl dark:bg-[#448B3D]/25">
+                                                {categoryIcon(b.servicePackage.category)}
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-foreground">{b.servicePackage.name}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    🐾 {b.petName} · 👨‍⚕️ {b.staff.name}
+                                                </p>
+                                                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                                    <span>📆 {formatBookingDate(b.appointmentDate)}</span>
+                                                    <span>🕐 {formatTime(b.appointmentTime)}</span>
+                                                    <span className="font-semibold text-[#448B3D]">{formatPrice(b.totalPrice)}</span>
+                                                </div>
                                             </div>
                                         </div>
+                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                            <Badge className={`text-xs ${bookingStatusBadge(b.status)}`}>{bookingStatusLabel(b.status)}</Badge>
+                                            {(b.status === 'PENDING' || b.status === 'CONFIRMED') && (
+                                                <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600" onClick={() => cancelBooking(b.id)}>
+                                                    Hủy
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col items-end gap-2 shrink-0">
-                                        <Badge className={`text-xs ${bookingBadge(b.status)}`}>{b.status}</Badge>
-                                        {b.status === 'Chờ xác nhận' && (
-                                            <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600" onClick={() => cancelBooking(b.id)}>
-                                                Hủy
-                                            </Button>
-                                        )}
-                                    </div>
+                                    {b.notes && (
+                                        <p className="mt-2 text-xs text-muted-foreground border-t border-border pt-2">📝 {b.notes}</p>
+                                    )}
+                                    {b.adminNotes && (
+                                        <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">💬 Ghi chú từ nhân viên: {b.adminNotes}</p>
+                                    )}
+                                </Card>
+                            ))}
+                            {bookings.length === 0 && (
+                                <div className="text-center py-12">
+                                    <p className="text-muted-foreground mb-4">Chưa có lịch đặt nào</p>
+                                    <Button className="bg-[#448B3D] hover:bg-[#336B2D] text-white rounded-xl" onClick={() => navigate('/booking')}>
+                                        Đặt lịch ngay
+                                    </Button>
                                 </div>
-                            </Card>
-                        ))}
-                        {bookings.length === 0 && <p className="text-center text-muted-foreground py-12">Chưa có lịch đặt nào</p>}
+                            )}
+                        </div>
+                    )}
+                </TabsContent>
+
+                {/* ── Thú cưng ── */}
+                <TabsContent value="pets" className="space-y-4 outline-none">
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-lg font-bold text-foreground">Thú cưng của tôi</h2>
+                        <Button size="sm" className="bg-[#448B3D] hover:bg-[#336B2D] text-white rounded-xl" onClick={openAddPet}>
+                            <Plus className="w-4 h-4 mr-1" /> Thêm thú cưng
+                        </Button>
                     </div>
+                    {petsLoading ? (
+                        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-[#448B3D]" /></div>
+                    ) : pets.length === 0 ? (
+                        <div className="text-center py-12">
+                            <PawPrint className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
+                            <p className="text-muted-foreground mb-4">Chưa có thú cưng nào</p>
+                            <Button className="bg-[#448B3D] hover:bg-[#336B2D] text-white rounded-xl" onClick={openAddPet}>
+                                Thêm thú cưng ngay
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            {pets.map(p => (
+                                <Card key={p.id} className="border-border/80 p-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-12 h-12 rounded-xl bg-[#448B3D]/15 flex items-center justify-center shrink-0 dark:bg-[#448B3D]/25">
+                                            {p.imageUrl
+                                                ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover rounded-xl" />
+                                                : <PawPrint className="w-6 h-6 text-[#448B3D]" />
+                                            }
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-foreground truncate">{p.name}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                {SPECIES_OPTIONS.find(s => s.value === p.species)?.label ?? p.species}
+                                                {p.breed ? ` · ${p.breed}` : ''}
+                                            </p>
+                                            <div className="flex flex-wrap gap-2 mt-1.5 text-xs text-muted-foreground">
+                                                {p.age != null && <span>🎂 {p.age} tuổi</span>}
+                                                {p.weight != null && <span>⚖️ {p.weight} kg</span>}
+                                                {p.gender && <span>{p.gender === 'MALE' ? '♂ Đực' : '♀ Cái'}</span>}
+                                            </div>
+                                            {p.healthNotes && (
+                                                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">📝 {p.healthNotes}</p>
+                                            )}
+                                        </div>
+                                        <div className="flex gap-1 shrink-0">
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-[#448B3D]/10" onClick={() => openEditPet(p)}>
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30" onClick={() => deletePet(p.id)}>
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
                 </TabsContent>
 
                 {/* ── Hồ sơ ── */}
@@ -624,7 +741,8 @@ const UserDashboardPage = () => {
                                     <Label htmlFor="prof-phone">Số điện thoại</Label>
                                     <Input id="prof-phone" className="mt-1" value={profileForm.phone} onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
                                 </div>
-                                <Button className="w-full bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={saveProfile}>
+                                <Button className="w-full bg-[#448B3D] hover:bg-[#336B2D] text-white" onClick={saveProfile} disabled={profileSaving}>
+                                    {profileSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                                     Lưu thay đổi
                                 </Button>
                             </div>
@@ -633,7 +751,7 @@ const UserDashboardPage = () => {
                 </TabsContent>
 
                 {/* ── Cài đặt ── */}
-                < TabsContent value="settings" className="outline-none" >
+                <TabsContent value="settings" className="outline-none">
                     <Card className="max-w-xl overflow-hidden border-border/80 shadow-md">
                         <div className="border-b border-border bg-linear-to-r from-[#448B3D]/12 via-transparent to-violet-500/5 px-6 py-5 dark:from-[#448B3D]/25">
                             <div className="flex items-start gap-4">
@@ -652,8 +770,8 @@ const UserDashboardPage = () => {
                             <DashboardThemeSettings />
                         </div>
                     </Card>
-                </TabsContent >
-            </Tabs >
+                </TabsContent>
+            </Tabs>
 
             {/* ── Pet Modal ── */}
             {petModal && (

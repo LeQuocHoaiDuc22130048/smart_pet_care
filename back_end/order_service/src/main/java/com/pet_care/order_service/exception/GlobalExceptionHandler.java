@@ -62,13 +62,13 @@ public class GlobalExceptionHandler {
             log.warn("Unknown validation key: {}", enumKey);
         }
 
-        ApiResponse apiResponse = new ApiResponse();
-        apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(
-                Objects.nonNull(attributes)
-                        ? mapAttribute(errorCode.getMessage(), attributes)
-                        : errorCode.getMessage());
-        return ResponseEntity.status(errorCode.getStatus()).body(apiResponse);
+        return ResponseEntity.status(errorCode.getStatus())
+                .body(ApiResponse.<Void>builder()
+                        .code(errorCode.getCode())
+                        .message(Objects.nonNull(attributes)
+                                ? mapAttribute(errorCode.getMessage(), attributes)
+                                : errorCode.getMessage())
+                        .build());
     }
 
     private String mapAttribute(String message, Map<String, Object> attributes) {

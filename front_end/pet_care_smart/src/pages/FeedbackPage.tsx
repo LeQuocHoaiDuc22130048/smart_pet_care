@@ -1,25 +1,64 @@
-import { useState } from 'react';
-import { Star, MessageSquarePlus, Filter } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import { Star, Filter } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { useFeedback } from '@/context/FeedbackContext';
+import { useAuth } from '@/context/AuthContext';
 import FeedbackCard from '@/components/feedback/FeedbackCard';
-import FeedbackForm from '@/components/feedback/FeedbackForm';
 import RatingSummary from '@/components/feedback/RatingSummary';
-import { motion, AnimatePresence } from 'motion/react';
+import { feedbackApi } from '@/lib/feedbackApi';
+import { toast } from 'sonner';
+import { motion } from 'motion/react';
 
-const FILTERS = ['Tất cả', 'Tổng thể', 'Sản phẩm', 'Dịch vụ'] as const;
+const FILTERS = ['Tất cả', 'Sản phẩm', 'Dịch vụ'] as const;
 const SORT = ['Mới nhất', 'Hữu ích nhất', 'Đánh giá cao', 'Đánh giá thấp'] as const;
 
 const FeedbackPage = () => {
-    const { feedbacks, avgRating } = useFeedback();
-    const [showForm, setShowForm] = useState(false);
+    const { avgRating } = useFeedback();
+    const { isAuthenticated } = useAuth();
+    const [feedbacks, setFeedbacks] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<typeof FILTERS[number]>('Tất cả');
     const [sort, setSort] = useState<typeof SORT[number]>('Mới nhất');
     const [starFilter, setStarFilter] = useState(0);
 
+    // Load user's feedbacks
+    useEffect(() => {
+        if (!isAuthenticated) {
+            setLoading(false);
+            return;
+        }
+
+        const loadMyFeedbacks = async () => {
+            try {
+                setLoading(true);
+                const response = await feedbackApi.getMyFeedbacks(0, 100);
+                const apiFeedbacks = response.result.content.map((f: any) => ({
+                    id: f.id,
+                    type: f.type === 'PRODUCT' ? 'product' : f.type === 'ORDER' ? 'service' : 'general',
+                    rating: f.rating,
+                    title: '',
+                    content: f.comment,
+                    authorName: f.username,
+                    date: new Date(f.createdAt).toLocaleDateString('vi-VN'),
+                    productId: f.productId,
+                    helpful: f.helpfulCount,
+                    verified: f.verifiedPurchase,
+                    imageUrls: f.imageUrls,
+                }));
+                setFeedbacks(apiFeedbacks);
+            } catch (error) {
+                console.error('Error loading feedbacks:', error);
+                toast.error('Không thể tải đánh giá');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadMyFeedbacks();
+    }, [isAuthenticated]);
+
     const filtered = feedbacks
         .filter(f => {
-            if (filter === 'Tổng thể') return f.type === 'general';
             if (filter === 'Sản phẩm') return f.type === 'product';
             if (filter === 'Dịch vụ') return f.type === 'service';
             return true;
@@ -34,13 +73,49 @@ const FeedbackPage = () => {
 
     const avg = avgRating(feedbacks);
 
+    if (!isAuthenticated) {
+        return (
+            <div className='min-h-screen bg-background'>
+                <div className='bg-[#448B3D] py-10 sm:py-14 px-4 text-center'>
+                    <Star className='w-12 h-12 text-yellow-300 mx-auto mb-3 fill-yellow-300' />
+                    <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>Đánh giá của tôi</h1>
+                    <p className='text-white/80 text-sm sm:text-base'>Quản lý tất cả đánh giá của bạn</p>
+                </div>
+                <div className='max-w-4xl mx-auto px-4 sm:px-6 py-8'>
+                    <Card className='p-8 rounded-2xl text-center'>
+                        <p className='text-lg font-semibold text-foreground mb-2'>Vui lòng đăng nhập</p>
+                        <p className='text-sm text-muted-foreground'>Đăng nhập để xem đánh giá của bạn</p>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className='min-h-screen bg-background'>
+                <div className='bg-[#448B3D] py-10 sm:py-14 px-4 text-center'>
+                    <Star className='w-12 h-12 text-yellow-300 mx-auto mb-3 fill-yellow-300' />
+                    <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>Đánh giá của tôi</h1>
+                    <p className='text-white/80 text-sm sm:text-base'>Quản lý tất cả đánh giá của bạn</p>
+                </div>
+                <div className='max-w-4xl mx-auto px-4 sm:px-6 py-8'>
+                    <div className='text-center py-12'>
+                        <div className='w-10 h-10 border-4 border-[#448B3D] border-t-transparent rounded-full animate-spin mx-auto mb-4' />
+                        <p className='text-muted-foreground'>Đang tải đánh giá...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className='min-h-screen bg-background'>
             {/* Hero */}
             <div className='bg-[#448B3D] py-10 sm:py-14 px-4 text-center'>
                 <Star className='w-12 h-12 text-yellow-300 mx-auto mb-3 fill-yellow-300' />
-                <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>Đánh giá & Nhận xét</h1>
-                <p className='text-white/80 text-sm sm:text-base'>Ý kiến của bà con giúp chúng tôi ngày càng tốt hơn</p>
+                <h1 className='text-2xl sm:text-3xl font-bold text-white mb-2'>Đánh giá của tôi</h1>
+                <p className='text-white/80 text-sm sm:text-base'>Quản lý tất cả đánh giá của bạn</p>
             </div>
 
             <div className='max-w-4xl mx-auto px-4 sm:px-6 py-8'>
@@ -52,34 +127,16 @@ const FeedbackPage = () => {
                 {/* Write review button */}
                 <div className='flex items-center justify-between mb-6 flex-wrap gap-3'>
                     <h2 className='text-xl font-bold text-foreground'>
-                        Tất cả đánh giá ({feedbacks.length})
+                        Đánh giá của tôi ({feedbacks.length})
                     </h2>
-                    <Button
-                        onClick={() => setShowForm(v => !v)}
-                        className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white gap-2'
-                    >
-                        <MessageSquarePlus className='w-4 h-4' />
-                        {showForm ? 'Đóng' : 'Viết đánh giá'}
-                    </Button>
                 </div>
 
-                {/* Form */}
-                <AnimatePresence>
-                    {showForm && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.25 }}
-                            className='overflow-hidden mb-6'
-                        >
-                            <div className='bg-card border-2 border-[#448B3D]/20 rounded-2xl p-5 sm:p-6'>
-                                <h3 className='font-bold text-lg text-foreground mb-4'>Chia sẻ trải nghiệm của bạn</h3>
-                                <FeedbackForm type='general' onSuccess={() => setShowForm(false)} />
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Info message */}
+                <Card className='p-4 rounded-2xl border-2 border-[#448B3D]/20 bg-muted/50 mb-6'>
+                    <p className='text-sm text-muted-foreground text-center'>
+                        💡 Để viết đánh giá, vui lòng truy cập trang sản phẩm hoặc dịch vụ cụ thể
+                    </p>
+                </Card>
 
                 {/* Filters */}
                 <div className='flex flex-wrap gap-2 mb-4'>
@@ -88,8 +145,8 @@ const FeedbackPage = () => {
                             key={f}
                             onClick={() => setFilter(f)}
                             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${filter === f
-                                    ? 'bg-[#448B3D] text-white'
-                                    : 'bg-muted text-muted-foreground hover:bg-[#448B3D]/10 hover:text-[#448B3D]'
+                                ? 'bg-[#448B3D] text-white'
+                                : 'bg-muted text-muted-foreground hover:bg-[#448B3D]/10 hover:text-[#448B3D]'
                                 }`}
                         >
                             {f}
@@ -101,8 +158,8 @@ const FeedbackPage = () => {
                             key={s}
                             onClick={() => setStarFilter(starFilter === s ? 0 : s)}
                             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${starFilter === s
-                                    ? 'bg-yellow-400 text-white'
-                                    : 'bg-muted text-muted-foreground hover:bg-yellow-50 hover:text-yellow-600'
+                                ? 'bg-yellow-400 text-white'
+                                : 'bg-muted text-muted-foreground hover:bg-yellow-50 hover:text-yellow-600'
                                 }`}
                         >
                             {s} <Star className='w-3 h-3' />
@@ -119,8 +176,8 @@ const FeedbackPage = () => {
                             key={s}
                             onClick={() => setSort(s)}
                             className={`text-sm px-3 py-1 rounded-lg transition-all ${sort === s
-                                    ? 'bg-[#448B3D]/10 text-[#448B3D] font-semibold'
-                                    : 'text-muted-foreground hover:text-foreground'
+                                ? 'bg-[#448B3D]/10 text-[#448B3D] font-semibold'
+                                : 'text-muted-foreground hover:text-foreground'
                                 }`}
                         >
                             {s}

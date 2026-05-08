@@ -1,6 +1,7 @@
-import { ThumbsUp, Star, BadgeCheck } from 'lucide-react';
+import { ThumbsUp, Star, BadgeCheck, X } from 'lucide-react';
 import { type Feedback, useFeedback } from '@/context/FeedbackContext';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 interface Props {
     feedback: Feedback;
@@ -8,6 +9,7 @@ interface Props {
 
 const FeedbackCard = ({ feedback: f }: Props) => {
     const { markHelpful } = useFeedback();
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     const handleHelpful = () => {
         markHelpful(f.id);
@@ -50,6 +52,48 @@ const FeedbackCard = ({ feedback: f }: Props) => {
                 <p className='font-semibold text-foreground text-sm mb-1'>{f.title}</p>
                 <p className='text-sm text-muted-foreground leading-relaxed'>{f.content}</p>
             </div>
+
+            {/* Images */}
+            {f.imageUrls && f.imageUrls.length > 0 && (
+                <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-2'>
+                    {f.imageUrls.map((url, idx) => (
+                        <div
+                            key={idx}
+                            className='relative aspect-square rounded-lg overflow-hidden bg-muted group cursor-pointer'
+                            onClick={() => setSelectedImage(url)}
+                        >
+                            <img
+                                src={url}
+                                alt={`Feedback image ${idx + 1}`}
+                                className='w-full h-full object-cover transition-transform group-hover:scale-110'
+                                loading='lazy'
+                            />
+                            <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors' />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Image Modal */}
+            {selectedImage && (
+                <div
+                    className='fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4'
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <button
+                        className='absolute top-4 right-4 text-white hover:text-gray-300 transition-colors'
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <X className='w-8 h-8' />
+                    </button>
+                    <img
+                        src={selectedImage}
+                        alt='Feedback image'
+                        className='max-w-full max-h-full object-contain rounded-lg'
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
 
             {/* Footer */}
             <div className='flex items-center justify-between pt-1'>

@@ -35,7 +35,7 @@ const ProductDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { addToCart } = useCart();
-    const { getByProduct, avgRating } = useFeedback();
+    const { feedbacks, avgRating, loadProductFeedbacks } = useFeedback();
     const [showFeedbackForm, setShowFeedbackForm] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [selectedImage, setSelectedImage] = useState(0);
@@ -46,6 +46,9 @@ const ProductDetailPage = () => {
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Filter product feedbacks from state
+    const productFeedbacks = product ? feedbacks.filter(f => f.productId === product.id) : [];
+
     useEffect(() => {
         if (!id) return;
         setLoading(true);
@@ -55,6 +58,14 @@ const ProductDetailPage = () => {
             .catch(() => toast.error('Không thể tải thông tin sản phẩm'))
             .finally(() => setLoading(false));
     }, [id]);
+
+    // Load product feedbacks
+    useEffect(() => {
+        if (!product?.id) return;
+        loadProductFeedbacks(product.id).catch(() => {
+            // Error already handled in context
+        });
+    }, [product?.id, loadProductFeedbacks]);
 
     if (loading) {
         return (
@@ -305,26 +316,22 @@ const ProductDetailPage = () => {
                     <div className='flex items-center justify-between mb-6 flex-wrap gap-3'>
                         <div>
                             <h2 className='text-2xl font-bold text-foreground'>Đánh giá sản phẩm</h2>
-                            {(() => {
-                                const pFbs = getByProduct(product.id);
-                                const avg = avgRating(pFbs);
-                                return pFbs.length > 0 ? (
-                                    <div className='flex items-center gap-2 mt-1'>
-                                        <div className='flex gap-0.5'>
-                                            {[1, 2, 3, 4, 5].map((i) => (
-                                                <Star
-                                                    key={i}
-                                                    className={`w-4 h-4 ${i <= Math.round(avg) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                                                />
-                                            ))}
-                                        </div>
-                                        <span className='font-semibold text-[#448B3D]'>{avg.toFixed(1)}</span>
-                                        <span className='text-sm text-muted-foreground'>({pFbs.length} đánh giá)</span>
+                            {productFeedbacks.length > 0 ? (
+                                <div className='flex items-center gap-2 mt-1'>
+                                    <div className='flex gap-0.5'>
+                                        {[1, 2, 3, 4, 5].map((i) => (
+                                            <Star
+                                                key={i}
+                                                className={`w-4 h-4 ${i <= Math.round(avgRating(productFeedbacks)) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                            />
+                                        ))}
                                     </div>
-                                ) : (
-                                    <p className='text-sm text-muted-foreground mt-1'>Chưa có đánh giá nào</p>
-                                );
-                            })()}
+                                    <span className='font-semibold text-[#448B3D]'>{avgRating(productFeedbacks).toFixed(1)}</span>
+                                    <span className='text-sm text-muted-foreground'>({productFeedbacks.length} đánh giá)</span>
+                                </div>
+                            ) : (
+                                <p className='text-sm text-muted-foreground mt-1'>Chưa có đánh giá nào</p>
+                            )}
                         </div>
                         <Button
                             onClick={() => setShowFeedbackForm((v) => !v)}
@@ -335,12 +342,9 @@ const ProductDetailPage = () => {
                         </Button>
                     </div>
 
-                    {(() => {
-                        const pFbs = getByProduct(product.id);
-                        return pFbs.length > 0 ? (
-                            <RatingSummary feedbacks={pFbs} avgRating={avgRating(pFbs)} />
-                        ) : null;
-                    })()}
+                    {productFeedbacks.length > 0 && (
+                        <RatingSummary feedbacks={productFeedbacks} avgRating={avgRating(productFeedbacks)} />
+                    )}
 
                     <AnimatePresence>
                         {showFeedbackForm && (
@@ -366,24 +370,21 @@ const ProductDetailPage = () => {
                         )}
                     </AnimatePresence>
 
-                    {(() => {
-                        const pFbs = getByProduct(product.id);
-                        return pFbs.length === 0 ? (
-                            <div className='text-center py-10 mt-6'>
-                                <p className='text-4xl mb-3'>💬</p>
-                                <p className='font-semibold text-foreground'>Chưa có đánh giá nào</p>
-                                <p className='text-sm text-muted-foreground mt-1'>
-                                    Hãy là người đầu tiên đánh giá sản phẩm này!
-                                </p>
-                            </div>
-                        ) : (
-                            <div className='space-y-4 mt-6'>
-                                {pFbs.map((fb) => (
-                                    <FeedbackCard key={fb.id} feedback={fb} />
-                                ))}
-                            </div>
-                        );
-                    })()}
+                    {productFeedbacks.length === 0 ? (
+                        <div className='text-center py-10 mt-6'>
+                            <p className='text-4xl mb-3'>💬</p>
+                            <p className='font-semibold text-foreground'>Chưa có đánh giá nào</p>
+                            <p className='text-sm text-muted-foreground mt-1'>
+                                Hãy là người đầu tiên đánh giá sản phẩm này!
+                            </p>
+                        </div>
+                    ) : (
+                        <div className='space-y-4 mt-6'>
+                            {productFeedbacks.map((fb) => (
+                                <FeedbackCard key={fb.id} feedback={fb} />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

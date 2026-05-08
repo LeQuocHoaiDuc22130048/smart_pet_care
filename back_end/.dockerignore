@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Build
+target/
+build/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+
+# Maven
+.m2/
+.maven/
+
+# Node (if frontend code)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Other
+.docker/
+docker-compose.override.yml
+.vagrant/
+

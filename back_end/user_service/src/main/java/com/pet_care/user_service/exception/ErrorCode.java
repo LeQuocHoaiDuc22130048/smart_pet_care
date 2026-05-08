@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatusCode;
 @Getter
 public enum ErrorCode {
     UNCATEGORIZED_EXCEPTION(9999, "Uncategorized error", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_KEY(9998, "Invalid key", HttpStatus.BAD_REQUEST),
     USER_PROFILE_NOT_FOUND(2001, "User profile not found", HttpStatus.NOT_FOUND),
     PET_NOT_FOUND(2002, "Pet not found", HttpStatus.NOT_FOUND),
     ADDRESS_NOT_FOUND(2003, "Address not found", HttpStatus.NOT_FOUND),

@@ -11,14 +11,14 @@ const menuItems: (
     | { icon: typeof Home; label: string; tab: DashTab }
     | { icon: typeof Heart; label: string; href: string }
 )[] = [
-    { icon: Home, label: 'Tổng quan', tab: 'overview' },
-    { icon: Package, label: 'Đơn hàng', tab: 'orders' },
-    { icon: Heart, label: 'Yêu thích', href: '/products' },
-    { icon: Calendar, label: 'Lịch đặt', tab: 'bookings' },
-    { icon: PawPrint, label: 'Thú cưng', tab: 'pets' },
-    { icon: User, label: 'Hồ sơ', tab: 'profile' },
-    { icon: Settings, label: 'Cài đặt', tab: 'settings' },
-];
+        { icon: Home, label: 'Tổng quan', tab: 'overview' },
+        { icon: Package, label: 'Đơn hàng', tab: 'orders' },
+        { icon: Heart, label: 'Yêu thích', href: '/products' },
+        { icon: Calendar, label: 'Lịch đặt', tab: 'bookings' },
+        { icon: PawPrint, label: 'Thú cưng', tab: 'pets' },
+        { icon: User, label: 'Hồ sơ', tab: 'profile' },
+        { icon: Settings, label: 'Cài đặt', tab: 'settings' },
+    ];
 
 function dashboardHref(tab: DashTab) {
     return tab === 'overview' ? '/dashboard' : `/dashboard?tab=${tab}`;
@@ -84,7 +84,7 @@ function SidebarContent({ onClose }: SidebarContentProps) {
             )}
 
             {/* Menu */}
-            <nav className='flex-1 p-3 space-y-0.5 overflow-y-auto'>
+            <nav className='flex-1 p-3 space-y-1 overflow-y-auto'>
                 {menuItems.map((item) => {
                     const active = 'tab' in item && isTabActive(activeTab, item.tab);
                     const className = cn(
@@ -115,7 +115,7 @@ function SidebarContent({ onClose }: SidebarContentProps) {
             </nav>
 
             {/* Footer */}
-            <div className='p-3 border-t border-border space-y-0.5'>
+            <div className='p-3 border-t border-border space-y-1'>
                 <Button
                     variant='ghost'
                     onClick={() => { navigate('/products'); onClose(); }}

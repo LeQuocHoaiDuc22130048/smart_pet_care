@@ -68,6 +68,13 @@ public class AuthenticationService {
         var token = generateToken(user);
         return AuthenticationResponse.builder().token(token).authenticated(true).build();
     }
+    
+    /**
+     * Generate JWT token for a user (used by OAuth services)
+     */
+    public String generateTokenForUser(User user) {
+        return generateToken(user);
+    }
 
     public void logout(LogoutRequest request) throws ParseException, JOSEException {
         try {

@@ -1,0 +1,24 @@
+server:
+  port: 8089
+  servlet:
+    context-path: /pet_care_chat
+
+spring:
+  application:
+    name: chat_service
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY}
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+
+logging:
+  level:
+    com.pet_care.chat: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%highlight(%-5level)] [chat_service] %cyan(%logger{36}) - %msg%n"

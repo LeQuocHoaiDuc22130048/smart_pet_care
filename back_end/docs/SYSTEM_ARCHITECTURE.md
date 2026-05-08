@@ -56,7 +56,7 @@ Hệ thống được chia thành 3 nhóm Service chính:
 
 Mọi service viết bằng Spring Boot đều tuân thủ kiến trúc phân tầng (Layered Architecture) tiêu chuẩn giống như `identity_service`:
 
-* **`configuration/`**: Chứa các file cấu hình bảo mật (`SecurityConfig`), xử lý Token (`CustomJwtDecoder`), và cấu hình Bean/Swagger.
+* **`configuration/`**: Chứa các file cấu hình bảo mật (`SecurityConfig`), xử lý Token (`CustomJwtDecoder`), và cấu hình Bean.
 * **`controller/`**: (Lớp API) Nhận request từ Client/API Gateway, kiểm tra đầu vào và chuyển tiếp cho tầng Service.
 * **`service/`**: Nơi chứa 100% logic nghiệp vụ cốt lõi (Business Logic).
 * **`repository/`**: Lớp tương tác với Cơ sở dữ liệu (Kế thừa `JpaRepository` hoặc `MongoRepository`).

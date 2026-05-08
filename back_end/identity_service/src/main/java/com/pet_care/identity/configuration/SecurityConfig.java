@@ -26,6 +26,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_POST_ENDPOINTS = {
         "/users",               // Đăng ký tài khoản
         "/auth/token",          // Đăng nhập
+        "/auth/google",         // Đăng nhập Google OAuth
         "/auth/introspect",     // Kiểm tra token (dùng bởi API Gateway)
         "/auth/log-out",        // Đăng xuất
         "/auth/refresh",        // Làm mới token

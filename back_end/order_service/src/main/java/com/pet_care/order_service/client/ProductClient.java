@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.List;
 
-@FeignClient(name = "product-service", url = "${services.product-service.url}")
+@FeignClient(name = "product-service", url = "${services.product-service.url}", fallback = ProductClientFallback.class)
 public interface ProductClient {
     @GetMapping("/products/{id}")
     ApiResponse<ProductResponse> getProductById(@PathVariable String id);

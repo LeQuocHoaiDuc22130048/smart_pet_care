@@ -31,6 +31,8 @@ public class Pet {
 
     String breed;
     Integer age;
+
+    @Column(name = "weight", columnDefinition = "DECIMAL(10,2)")
     Double weight;
 
     @Enumerated(EnumType.STRING)

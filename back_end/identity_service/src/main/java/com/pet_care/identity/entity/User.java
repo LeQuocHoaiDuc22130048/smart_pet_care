@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+import com.pet_care.identity.enums.AuthProvider;
 import jakarta.persistence.*;
 
 import lombok.*;
@@ -27,9 +28,30 @@ public class User {
     String username;
 
     String password;
+    
+    @Column(name = "email", unique = true)
+    String email;
+    
     String firstName;
     String lastName;
     LocalDate birthDate;
+    
+    @Column(name = "avatar_url")
+    String avatarUrl;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider")
+    @Builder.Default
+    AuthProvider authProvider = AuthProvider.LOCAL;
+    
+    @Column(name = "google_id")
+    String googleId;
+    
+    @Column(name = "google_access_token")
+    String googleAccessToken;
+    
+    @Column(name = "google_refresh_token")
+    String googleRefreshToken;
 
     @Builder.Default
     Boolean isActive = true;

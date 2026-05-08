@@ -25,6 +25,16 @@ import { DashboardThemeSettings } from '@/components/dashboard/DashboardThemeSet
 import { productApi, type Product as ApiProduct, type Category as ApiCategory } from '@/lib/productApi';
 import { orderApi, type Order as ApiOrder, type OrderStatus } from '@/lib/orderApi';
 import { authApi, type UserIdentity } from '@/lib/authApi';
+import {
+    bookingApi,
+    type BookingResponse,
+    type BookingStatus as ApiBookingStatus,
+    bookingStatusLabel,
+    bookingStatusBadge,
+    categoryIcon,
+    formatTime as formatBookingTime,
+    formatDate as formatBookingDate,
+} from '@/lib/bookingApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -44,11 +54,6 @@ interface Order {
 interface Customer {
     id: string; name: string; email: string; phone: string; address: string;
     orders: number; spent: string; joined: string; status: 'active' | 'blocked';
-}
-interface Booking {
-    id: string; customer: string; service: string; pet: string;
-    date: string; time: string;
-    status: 'Chờ xác nhận' | 'Đã xác nhận' | 'Hoàn thành' | 'Đã hủy';
 }
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
@@ -126,12 +131,9 @@ function Modal({ title, onClose, children, size = 'default' }: {
     );
 }
 
-// ─── Mock data (bookings chưa có service) ────────────────────────────────────
-// ─── Bookings: chưa có booking service — giữ rỗng, hiển thị empty state ──────
-const INIT_BOOKINGS: Booking[] = [];
-
+// ─── Mock data ────────────────────────────────────────────────────────────────
 const ORDER_STATUSES = ['Đang xử lý', 'Đang giao', 'Hoàn thành', 'Đã hủy'] as const;
-const BOOKING_STATUSES = ['Chờ xác nhận', 'Đã xác nhận', 'Hoàn thành', 'Đã hủy'] as const;
+const BOOKING_STATUSES: ApiBookingStatus[] = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 
 // ─── Helper: tính chart data từ orders thực tế ────────────────────────────────
 function buildChartData(orders: Order[]) {
@@ -272,16 +274,20 @@ function orderBadge(s: string) {
     if (s === 'Đã hủy') return 'bg-red-100 text-red-700 border border-red-300';
     return 'bg-orange-100 text-orange-700 border border-orange-300';
 }
-function bookingBadge(s: string) {
-    if (s === 'Hoàn thành') return 'bg-green-100 text-green-700 border border-green-300';
-    if (s === 'Đã xác nhận') return 'bg-blue-100 text-blue-700 border border-blue-300';
-    if (s === 'Đã hủy') return 'bg-red-100 text-red-700 border border-red-300';
-    return 'bg-orange-100 text-orange-700 border border-orange-300';
-}
 
 const WEEKDAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'] as const;
 
 function parseBookingDateStr(s: string): Date | null {
+    // Support both "dd/MM/yyyy" and "yyyy-MM-dd" formats
+    const isoMatch = s.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+        const year = parseInt(isoMatch[1], 10);
+        const month = parseInt(isoMatch[2], 10) - 1;
+        const day = parseInt(isoMatch[3], 10);
+        const d = new Date(year, month, day);
+        if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
+        return d;
+    }
     const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (!m) return null;
     const day = parseInt(m[1], 10);
@@ -353,11 +359,12 @@ const AdminDashboardPage = () => {
     const fetchAdminData = useCallback(async () => {
         setApiLoading(true);
         try {
-            const [productsRes, categoriesRes, ordersRes, usersRes] = await Promise.allSettled([
+            const [productsRes, categoriesRes, ordersRes, usersRes, bookingsRes] = await Promise.allSettled([
                 productApi.getAll(),
                 productApi.getAllCategories(),
                 orderApi.getAllOrders(),
                 authApi.getAllUsers(),
+                bookingApi.getAllBookings(),
             ]);
 
             if (productsRes.status === 'fulfilled' && productsRes.value?.result) {
@@ -407,6 +414,12 @@ const AdminDashboardPage = () => {
             } else {
                 setCustomers([]);
             }
+
+            if (bookingsRes.status === 'fulfilled' && bookingsRes.value?.result) {
+                setBookings(bookingsRes.value.result ?? []);
+            } else {
+                setBookings([]);
+            }
         } catch (err) {
             console.error('Error fetching admin data:', err);
             // Set empty arrays on error
@@ -415,6 +428,7 @@ const AdminDashboardPage = () => {
             setCategories([]);
             setOrders([]);
             setCustomers([]);
+            setBookings([]);
         } finally {
             setApiLoading(false);
         }
@@ -502,7 +516,8 @@ const AdminDashboardPage = () => {
     const [customerPasswords, setCustomerPasswords] = useState<Record<string, string>>({});
     const [showPasswordFor, setShowPasswordFor] = useState<string | null>(null);
     const [editingPassword, setEditingPassword] = useState<{ id: string; value: string } | null>(null);
-    const [bookings, setBookings] = useState<Booking[]>(INIT_BOOKINGS);
+    const [bookings, setBookings] = useState<BookingResponse[]>([]);
+    const [bookingsLoading, setBookingsLoading] = useState(false);
     const [search, setSearch] = useState('');
 
     // Pagination states
@@ -665,19 +680,34 @@ const AdminDashboardPage = () => {
         }
     };
 
-    const updateBookingStatus = (id: string, status: Booking['status']) => {
-        setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-        toast.success('Đã cập nhật trạng thái lịch đặt');
+    const updateBookingStatus = async (id: string, status: ApiBookingStatus) => {
+        try {
+            await bookingApi.updateBookingStatus(id, { status });
+            await fetchAdminData();
+            toast.success('Đã cập nhật trạng thái lịch đặt');
+        } catch {
+            toast.error('Không thể cập nhật trạng thái lịch đặt');
+        }
     };
-    const deleteBooking = (id: string) => {
-        setBookings(prev => prev.filter(b => b.id !== id));
-        toast.success('Đã xóa lịch đặt');
+    const deleteBooking = async (id: string) => {
+        try {
+            await bookingApi.updateBookingStatus(id, { status: 'CANCELLED' });
+            await fetchAdminData();
+            toast.success('Đã hủy lịch đặt');
+        } catch {
+            toast.error('Không thể hủy lịch đặt');
+        }
     };
 
     const filteredProducts = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()));
     const filteredOrders = orders.filter(o => o.id.toLowerCase().includes(search.toLowerCase()) || o.customer.toLowerCase().includes(search.toLowerCase()));
     const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase()));
-    const filteredBookings = bookings.filter(b => b.id.toLowerCase().includes(search.toLowerCase()) || b.customer.toLowerCase().includes(search.toLowerCase()));
+    const filteredBookings = bookings.filter(b =>
+        b.id.toLowerCase().includes(search.toLowerCase()) ||
+        (b.petName ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        b.servicePackage.name.toLowerCase().includes(search.toLowerCase()) ||
+        b.staff.name.toLowerCase().includes(search.toLowerCase())
+    );
 
     // Paginated data
     const paginatedProducts = filteredProducts.slice(
@@ -702,7 +732,7 @@ const AdminDashboardPage = () => {
 
     const bookingsForCalendarDay = (day: Date) =>
         filteredBookings.filter((b) => {
-            const d = parseBookingDateStr(b.date);
+            const d = parseBookingDateStr(b.appointmentDate);
             return d !== null && sameCalendarDay(d, day);
         });
 
@@ -1520,10 +1550,10 @@ const AdminDashboardPage = () => {
                                             {dayBookings.slice(0, 3).map((b) => (
                                                 <div
                                                     key={b.id}
-                                                    className={cn('text-[10px] leading-tight rounded px-1 py-0.5 truncate border', bookingBadge(b.status))}
-                                                    title={`${b.time} · ${b.service} · ${b.customer}`}
+                                                    className={cn('text-[10px] leading-tight rounded px-1 py-0.5 truncate border', bookingStatusBadge(b.status))}
+                                                    title={`${formatBookingTime(b.appointmentTime)} · ${b.servicePackage.name} · ${b.petName}`}
                                                 >
-                                                    <span className="font-semibold">{b.time}</span> {b.pet}
+                                                    <span className="font-semibold">{formatBookingTime(b.appointmentTime)}</span> {b.petName}
                                                 </div>
                                             ))}
                                             {dayBookings.length > 3 && (
@@ -1549,24 +1579,28 @@ const AdminDashboardPage = () => {
                                     {bookingsForCalendarDay(calendarSelectedDay).map((b) => (
                                         <li key={b.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-border bg-muted/20">
                                             <div className="flex-1 min-w-0 space-y-0.5">
-                                                <p className="text-sm font-semibold text-foreground">{b.service}</p>
-                                                <p className="text-xs text-muted-foreground">{b.customer} · {b.pet}</p>
-                                                <p className="text-xs text-muted-foreground">{b.id} · {b.time}</p>
+                                                <p className="text-sm font-semibold text-foreground">
+                                                    {categoryIcon(b.servicePackage.category)} {b.servicePackage.name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">🐾 {b.petName} · 👨‍⚕️ {b.staff.name}</p>
+                                                <p className="text-xs text-muted-foreground">#{b.id.slice(0, 8)} · 🕐 {formatBookingTime(b.appointmentTime)}</p>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <Select value={b.status} onValueChange={(v) => updateBookingStatus(b.id, v as Booking['status'])}>
-                                                    <SelectTrigger size="sm" className="w-40">
+                                                <Select value={b.status} onValueChange={(v) => updateBookingStatus(b.id, v as ApiBookingStatus)}>
+                                                    <SelectTrigger size="sm" className="w-44">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {BOOKING_STATUSES.map((s) => (
-                                                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                                                            <SelectItem key={s} value={s}>{bookingStatusLabel(s)}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
-                                                <Button size="icon-sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deleteBooking(b.id)}>
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </Button>
+                                                {(b.status !== 'CANCELLED' && b.status !== 'COMPLETED' && b.status !== 'NO_SHOW') && (
+                                                    <Button size="icon-sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => deleteBooking(b.id)}>
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </li>
                                     ))}

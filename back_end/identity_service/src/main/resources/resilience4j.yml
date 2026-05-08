@@ -1,0 +1,125 @@
+# Resilience4j Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      # Circuit breaker for User Service calls
+      userService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        eventConsumerBufferSize: 10
+        recordExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+          - java.net.ConnectException
+
+      # Circuit breaker for Product Service calls
+      productService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        eventConsumerBufferSize: 10
+
+      # Circuit breaker for Order Service calls
+      orderService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        eventConsumerBufferSize: 10
+
+      # Circuit breaker for Payment Service calls
+      paymentService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 3s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        eventConsumerBufferSize: 10
+
+  retry:
+    instances:
+      # Retry for transient failures
+      userService:
+        maxAttempts: 3
+        waitDuration: 1s
+        retryExceptions:
+          - java.io.IOException
+          - java.net.ConnectException
+
+      productService:
+        maxAttempts: 3
+        waitDuration: 1s
+
+      orderService:
+        maxAttempts: 3
+        waitDuration: 1s
+
+      paymentService:
+        maxAttempts: 3
+        waitDuration: 1s
+
+  ratelimiter:
+    instances:
+      # Rate limiter - 100 requests per minute
+      userService:
+        registerHealthIndicator: false
+        limitRefreshPeriod: 1m
+        limitForPeriod: 100
+        timeoutDuration: 5s
+
+      productService:
+        registerHealthIndicator: false
+        limitRefreshPeriod: 1m
+        limitForPeriod: 100
+        timeoutDuration: 5s
+
+  timelimiter:
+    instances:
+      # Timeout configuration
+      userService:
+        cancelRunningFuture: true
+        timeoutDuration: 5s
+
+      productService:
+        cancelRunningFuture: true
+        timeoutDuration: 5s
+
+      paymentService:
+        cancelRunningFuture: true
+        timeoutDuration: 10s
+
+  metrics:
+    enabled: true
+
+# Management endpoints to expose metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,circuitbreakers,retries,ratelimiters,timelimiters
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+

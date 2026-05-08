@@ -30,10 +30,10 @@ const WishlistButton = ({ item, size = 'md', className, showLabel = false }: Pro
             onClick={handleClick}
             whileTap={{ scale: 0.85 }}
             className={cn(
-                'flex items-center justify-center rounded-full border-2 transition-all duration-200',
+                'flex items-center justify-center rounded-full transition-all duration-200',
                 liked
-                    ? 'border-red-400 bg-red-50 dark:bg-red-950/30 text-red-500'
-                    : 'border-border bg-card text-muted-foreground hover:border-red-300 hover:text-red-400',
+                    ? 'bg-red-50 dark:bg-red-950/30 text-red-500'
+                    : 'bg-card text-muted-foreground hover:text-red-400',
                 showLabel ? 'gap-1.5 px-3 rounded-xl' : btnSize,
                 className
             )}

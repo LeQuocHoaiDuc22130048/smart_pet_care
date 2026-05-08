@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pet_care.identity.dto.response.AuthenticationResponse;
 import com.pet_care.identity.dto.response.IntrospectResponse;
 import com.pet_care.identity.service.AuthenticationService;
+import com.pet_care.identity.service.GoogleOAuthService;
 import com.nimbusds.jose.JOSEException;
 
 import lombok.AccessLevel;
@@ -24,10 +25,17 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationController {
     AuthenticationService authenticationService;
+    GoogleOAuthService googleOAuthService;
 
     @PostMapping("/token")
     public ApiResponse<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest request) {
         var result = authenticationService.authenticate(request);
+        return ApiResponse.<AuthenticationResponse>builder().result(result).build();
+    }
+    
+    @PostMapping("/google")
+    public ApiResponse<AuthenticationResponse> authenticateWithGoogle(@RequestBody GoogleAuthRequest request) {
+        var result = googleOAuthService.authenticateWithGoogle(request);
         return ApiResponse.<AuthenticationResponse>builder().result(result).build();
     }
 

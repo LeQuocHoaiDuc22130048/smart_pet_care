@@ -1,85 +1,178 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, Phone, ChevronRight, ChevronLeft, Star, MessageSquarePlus } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Phone, ChevronRight, ChevronLeft, Star, MessageSquarePlus, Loader2, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import FeedbackForm from '@/components/feedback/FeedbackForm';
-import FeedbackCard from '@/components/feedback/FeedbackCard';
 import RatingSummary from '@/components/feedback/RatingSummary';
 import { useFeedback } from '@/context/FeedbackContext';
+import { useAuth } from '@/context/AuthContext';
+import { userApi, type Pet } from '@/lib/userApi';
+import {
+    bookingApi,
+    type ServicePackage,
+    type Staff,
+    categoryIcon,
+    formatPrice,
+    formatTime,
+} from '@/lib/bookingApi';
 
-const SERVICES = [
-    { id: 'spa', icon: '🛁', name: 'Tắm & Cắt lông', desc: 'Tắm sạch, cắt tỉa gọn gàng', price: '150.000đ', duration: '~2 giờ' },
-    { id: 'health', icon: '🏥', name: 'Khám sức khỏe', desc: 'Kiểm tra sức khỏe toàn diện', price: '250.000đ', duration: '~1 giờ' },
-    { id: 'vaccine', icon: '💉', name: 'Tiêm phòng', desc: 'Tiêm đầy đủ các loại vắc-xin', price: '200.000đ', duration: '~30 phút' },
-    { id: 'groom', icon: '✂️', name: 'Cắt tỉa lông', desc: 'Cắt tỉa lông chuyên nghiệp', price: '120.000đ', duration: '~1.5 giờ' },
-];
-
-// Tạo danh sách 14 ngày tới (bỏ qua Chủ nhật)
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const getAvailableDates = () => {
     const dates: Date[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     let d = new Date(today);
-    d.setDate(d.getDate() + 1); // bắt đầu từ ngày mai
+    d.setDate(d.getDate() + 1);
     while (dates.length < 12) {
-        if (d.getDay() !== 0) dates.push(new Date(d)); // bỏ Chủ nhật
+        if (d.getDay() !== 0) dates.push(new Date(d));
         d.setDate(d.getDate() + 1);
     }
     return dates;
+};
+
+const toDateString = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 };
 
 const DAYS_VI = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const MONTHS_VI = ['Th.1', 'Th.2', 'Th.3', 'Th.4', 'Th.5', 'Th.6', 'Th.7', 'Th.8', 'Th.9', 'Th.10', 'Th.11', 'Th.12'];
 
 const TIME_SLOTS = [
-    { id: 'morning1', label: '8:00 SA', sub: 'Buổi sáng' },
-    { id: 'morning2', label: '9:30 SA', sub: 'Buổi sáng' },
-    { id: 'morning3', label: '11:00 SA', sub: 'Buổi sáng' },
-    { id: 'afternoon1', label: '1:30 CH', sub: 'Buổi chiều' },
-    { id: 'afternoon2', label: '3:00 CH', sub: 'Buổi chiều' },
-    { id: 'afternoon3', label: '4:30 CH', sub: 'Buổi chiều' },
+    { id: '08:00:00', label: '8:00 SA', sub: 'Buổi sáng' },
+    { id: '09:30:00', label: '9:30 SA', sub: 'Buổi sáng' },
+    { id: '11:00:00', label: '11:00 SA', sub: 'Buổi sáng' },
+    { id: '13:30:00', label: '1:30 CH', sub: 'Buổi chiều' },
+    { id: '15:00:00', label: '3:00 CH', sub: 'Buổi chiều' },
+    { id: '16:30:00', label: '4:30 CH', sub: 'Buổi chiều' },
 ];
 
-const STEPS = ['Chọn dịch vụ', 'Chọn ngày & giờ', 'Thông tin', 'Xác nhận'];
+const STEPS = ['Chọn dịch vụ', 'Chọn ngày & giờ', 'Chọn nhân viên', 'Xác nhận'];
 
 const BookingServicePage = () => {
     const navigate = useNavigate();
     const { getByService, avgRating } = useFeedback();
+    const { isAuthenticated } = useAuth();
+
+    // ── Step state ────────────────────────────────────────────────────────────
     const [step, setStep] = useState(0);
     // step 4 = màn hình hoàn thành + feedback
-    const [selectedService, setSelectedService] = useState('');
+
+    // ── API data ──────────────────────────────────────────────────────────────
+    const [services, setServices] = useState<ServicePackage[]>([]);
+    const [servicesLoading, setServicesLoading] = useState(true);
+    const [staffList, setStaffList] = useState<Staff[]>([]);
+    const [staffLoading, setStaffLoading] = useState(false);
+    const [pets, setPets] = useState<Pet[]>([]);
+    const [petsLoading, setPetsLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+
+    // ── Selections ────────────────────────────────────────────────────────────
+    const [selectedServiceId, setSelectedServiceId] = useState('');
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTime, setSelectedTime] = useState('');
-    const [petName, setPetName] = useState('');
-    const [petType, setPetType] = useState('');
-    const [phone, setPhone] = useState('');
+    const [selectedStaffId, setSelectedStaffId] = useState('');
+    const [selectedPetId, setSelectedPetId] = useState('');
     const [notes, setNotes] = useState('');
+
+    // ── Feedback ──────────────────────────────────────────────────────────────
     const [showFbForm, setShowFbForm] = useState(false);
     const [fbDone, setFbDone] = useState(false);
+    // For feedback tab selection (uses service id)
+    const [feedbackServiceId, setFeedbackServiceId] = useState('');
 
     const availableDates = getAvailableDates();
-    const service = SERVICES.find(s => s.id === selectedService);
+    const selectedService = services.find(s => s.id === selectedServiceId);
+    const selectedStaff = staffList.find(s => s.id === selectedStaffId);
+    const selectedPet = pets.find(p => p.id === selectedPetId);
     const timeSlot = TIME_SLOTS.find(t => t.id === selectedTime);
 
+    // ── Fetch service packages on mount ───────────────────────────────────────
+    useEffect(() => {
+        setServicesLoading(true);
+        bookingApi.getServicePackages()
+            .then(res => {
+                setServices(res.result ?? []);
+                if (res.result?.length) setFeedbackServiceId(res.result[0].id);
+            })
+            .catch(() => toast.error('Không thể tải danh sách dịch vụ'))
+            .finally(() => setServicesLoading(false));
+    }, []);
+
+    // ── Fetch staff when entering step 2 ─────────────────────────────────────
+    useEffect(() => {
+        if (step === 2 && staffList.length === 0) {
+            setStaffLoading(true);
+            bookingApi.getStaff()
+                .then(res => setStaffList(res.result ?? []))
+                .catch(() => toast.error('Không thể tải danh sách nhân viên'))
+                .finally(() => setStaffLoading(false));
+        }
+    }, [step, staffList.length]);
+
+    // ── Fetch pets when entering step 2 (need auth) ───────────────────────────
+    useEffect(() => {
+        if (step === 2 && isAuthenticated && pets.length === 0) {
+            setPetsLoading(true);
+            userApi.getMyPets()
+                .then(res => setPets(res.result ?? []))
+                .catch(() => {/* silently fail — user may not have pets yet */ })
+                .finally(() => setPetsLoading(false));
+        }
+    }, [step, isAuthenticated, pets.length]);
+
     const canNext = () => {
-        if (step === 0) return !!selectedService;
+        if (step === 0) return !!selectedServiceId;
         if (step === 1) return !!selectedDate && !!selectedTime;
-        if (step === 2) return !!petName && !!phone;
+        if (step === 2) return !!selectedStaffId && !!selectedPetId;
         return true;
     };
 
-    const handleConfirm = () => {
-        toast.success('🎉 Đặt lịch thành công! Chúng tôi sẽ gọi xác nhận cho bạn sớm nhất.');
-        setStep(4); // chuyển sang màn hình hoàn thành
+    const handleConfirm = async () => {
+        if (!isAuthenticated) {
+            toast.error('Vui lòng đăng nhập để đặt lịch');
+            navigate('/login');
+            return;
+        }
+        if (!selectedServiceId || !selectedDate || !selectedTime || !selectedStaffId || !selectedPetId) {
+            toast.error('Vui lòng điền đầy đủ thông tin');
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            await bookingApi.createBooking({
+                petId: selectedPetId,
+                servicePackageId: selectedServiceId,
+                staffId: selectedStaffId,
+                appointmentDate: toDateString(selectedDate),
+                appointmentTime: selectedTime,
+                notes: notes || undefined,
+            });
+            toast.success('🎉 Đặt lịch thành công! Chúng tôi sẽ xác nhận sớm nhất.');
+            setStep(4);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Đặt lịch thất bại';
+            if (msg.includes('6106') || msg.toLowerCase().includes('not available')) {
+                toast.error('Nhân viên đã có lịch vào khung giờ này. Vui lòng chọn giờ khác.');
+            } else if (msg.includes('6104') || msg.toLowerCase().includes('pet not found')) {
+                toast.error('Không tìm thấy thú cưng. Vui lòng kiểm tra lại.');
+            } else {
+                toast.error(msg);
+            }
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const formatDate = (d: Date) =>
+    const formatDateDisplay = (d: Date) =>
         `${DAYS_VI[d.getDay()]}, ${d.getDate()} ${MONTHS_VI[d.getMonth()]} ${d.getFullYear()}`;
 
     return (
@@ -132,31 +225,42 @@ const BookingServicePage = () => {
                         {step === 0 && (
                             <Card className='p-6 rounded-2xl'>
                                 <h2 className='text-xl font-bold text-foreground mb-5'>Bạn cần dịch vụ gì?</h2>
-                                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                                    {SERVICES.map(svc => (
-                                        <button
-                                            key={svc.id}
-                                            onClick={() => setSelectedService(svc.id)}
-                                            className={`text-left p-5 rounded-xl border-2 transition-all ${selectedService === svc.id
-                                                ? 'border-[#448B3D] bg-[#448B3D]/8 shadow-md'
-                                                : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
-                                                }`}
-                                        >
-                                            <div className='text-4xl mb-3'>{svc.icon}</div>
-                                            <p className='font-bold text-lg text-foreground mb-1'>{svc.name}</p>
-                                            <p className='text-sm text-muted-foreground mb-3'>{svc.desc}</p>
-                                            <div className='flex items-center justify-between'>
-                                                <span className='text-xl font-bold text-[#448B3D]'>{svc.price}</span>
-                                                <span className='text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full'>{svc.duration}</span>
-                                            </div>
-                                            {selectedService === svc.id && (
-                                                <div className='mt-3 flex items-center gap-1 text-[#448B3D] text-sm font-semibold'>
-                                                    <Check className='w-4 h-4' /> Đã chọn
+                                {servicesLoading ? (
+                                    <div className='flex justify-center py-10'>
+                                        <Loader2 className='w-8 h-8 animate-spin text-[#448B3D]' />
+                                    </div>
+                                ) : services.length === 0 ? (
+                                    <div className='flex flex-col items-center py-10 gap-2 text-muted-foreground'>
+                                        <AlertCircle className='w-8 h-8' />
+                                        <p>Hiện chưa có dịch vụ nào. Vui lòng thử lại sau.</p>
+                                    </div>
+                                ) : (
+                                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                                        {services.map(svc => (
+                                            <button
+                                                key={svc.id}
+                                                onClick={() => setSelectedServiceId(svc.id)}
+                                                className={`text-left p-5 rounded-xl border-2 transition-all ${selectedServiceId === svc.id
+                                                    ? 'border-[#448B3D] bg-[#448B3D]/8 shadow-md'
+                                                    : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
+                                                    }`}
+                                            >
+                                                <div className='text-4xl mb-3'>{categoryIcon(svc.category)}</div>
+                                                <p className='font-bold text-lg text-foreground mb-1'>{svc.name}</p>
+                                                <p className='text-sm text-muted-foreground mb-3'>{svc.description}</p>
+                                                <div className='flex items-center justify-between'>
+                                                    <span className='text-xl font-bold text-[#448B3D]'>{formatPrice(svc.price)}</span>
+                                                    <span className='text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full'>~{svc.durationMinutes} phút</span>
                                                 </div>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
+                                                {selectedServiceId === svc.id && (
+                                                    <div className='mt-3 flex items-center gap-1 text-[#448B3D] text-sm font-semibold'>
+                                                        <Check className='w-4 h-4' /> Đã chọn
+                                                    </div>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </Card>
                         )}
 
@@ -220,69 +324,113 @@ const BookingServicePage = () => {
                             </Card>
                         )}
 
-                        {/* ── BƯỚC 3: Thông tin ── */}
+                        {/* ── BƯỚC 3: Chọn nhân viên & thú cưng ── */}
                         {step === 2 && (
                             <Card className='p-6 rounded-2xl'>
-                                <h2 className='text-xl font-bold text-foreground mb-5'>Thông tin thú cưng</h2>
-                                <div className='space-y-5'>
+                                <h2 className='text-xl font-bold text-foreground mb-5'>Chọn nhân viên & thú cưng</h2>
+                                <div className='space-y-6'>
+                                    {/* Chọn nhân viên */}
                                     <div>
-                                        <Label htmlFor='petName' className='text-base font-semibold'>
-                                            🐾 Tên thú cưng <span className='text-red-500'>*</span>
-                                        </Label>
-                                        <Input
-                                            id='petName'
-                                            value={petName}
-                                            onChange={e => setPetName(e.target.value)}
-                                            placeholder='VD: Milu, Bông, Lucky...'
-                                            className='mt-2 rounded-xl h-12 text-base'
-                                        />
+                                        <p className='text-base font-semibold mb-3'>👨‍⚕️ Chọn nhân viên</p>
+                                        {staffLoading ? (
+                                            <div className='flex justify-center py-6'>
+                                                <Loader2 className='w-6 h-6 animate-spin text-[#448B3D]' />
+                                            </div>
+                                        ) : staffList.length === 0 ? (
+                                            <p className='text-sm text-muted-foreground text-center py-4'>Không có nhân viên khả dụng</p>
+                                        ) : (
+                                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                                                {staffList.map(s => (
+                                                    <button
+                                                        key={s.id}
+                                                        onClick={() => setSelectedStaffId(s.id)}
+                                                        className={`text-left p-4 rounded-xl border-2 transition-all ${selectedStaffId === s.id
+                                                            ? 'border-[#448B3D] bg-[#448B3D]/8 shadow-md'
+                                                            : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
+                                                            }`}
+                                                    >
+                                                        <div className='flex items-center gap-3'>
+                                                            <div className='w-10 h-10 rounded-full bg-[#448B3D]/15 flex items-center justify-center text-lg shrink-0'>
+                                                                {s.avatarUrl
+                                                                    ? <img src={s.avatarUrl} alt={s.name} className='w-10 h-10 rounded-full object-cover' />
+                                                                    : '👤'}
+                                                            </div>
+                                                            <div className='min-w-0'>
+                                                                <p className='font-semibold text-foreground truncate'>{s.name}</p>
+                                                                {s.specialization && (
+                                                                    <p className='text-xs text-muted-foreground truncate'>{s.specialization}</p>
+                                                                )}
+                                                            </div>
+                                                            {selectedStaffId === s.id && (
+                                                                <Check className='w-4 h-4 text-[#448B3D] ml-auto shrink-0' />
+                                                            )}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
+                                    {/* Chọn thú cưng */}
                                     <div>
-                                        <Label className='text-base font-semibold mb-2 block'>
-                                            🐶 Loại thú cưng
-                                        </Label>
-                                        <div className='grid grid-cols-3 gap-3'>
-                                            {['🐕 Chó', '🐈 Mèo', '🐾 Khác'].map(type => (
-                                                <button
-                                                    key={type}
-                                                    onClick={() => setPetType(type)}
-                                                    className={`py-3 rounded-xl border-2 font-semibold text-sm transition-all ${petType === type
-                                                        ? 'border-[#448B3D] bg-[#448B3D] text-white'
-                                                        : 'border-border hover:border-[#448B3D]/50'
-                                                        }`}
-                                                >
-                                                    {type}
+                                        <p className='text-base font-semibold mb-3'>🐾 Chọn thú cưng</p>
+                                        {!isAuthenticated ? (
+                                            <div className='rounded-xl border border-orange-200 bg-orange-50 dark:bg-orange-950/20 p-4 text-sm text-orange-700 dark:text-orange-300'>
+                                                Vui lòng <button onClick={() => navigate('/login')} className='font-bold underline'>đăng nhập</button> để chọn thú cưng của bạn.
+                                            </div>
+                                        ) : petsLoading ? (
+                                            <div className='flex justify-center py-6'>
+                                                <Loader2 className='w-6 h-6 animate-spin text-[#448B3D]' />
+                                            </div>
+                                        ) : pets.length === 0 ? (
+                                            <div className='rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground text-center'>
+                                                Bạn chưa có thú cưng nào.{' '}
+                                                <button onClick={() => navigate('/dashboard?tab=pets')} className='text-[#448B3D] font-semibold underline'>
+                                                    Thêm thú cưng
                                                 </button>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ) : (
+                                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                                                {pets.map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => setSelectedPetId(p.id)}
+                                                        className={`text-left p-4 rounded-xl border-2 transition-all ${selectedPetId === p.id
+                                                            ? 'border-[#448B3D] bg-[#448B3D]/8 shadow-md'
+                                                            : 'border-border hover:border-[#448B3D]/50 hover:bg-muted/40'
+                                                            }`}
+                                                    >
+                                                        <div className='flex items-center gap-3'>
+                                                            <div className='w-10 h-10 rounded-full bg-[#448B3D]/15 flex items-center justify-center text-lg shrink-0'>
+                                                                {p.imageUrl
+                                                                    ? <img src={p.imageUrl} alt={p.name} className='w-10 h-10 rounded-full object-cover' />
+                                                                    : '🐾'}
+                                                            </div>
+                                                            <div className='min-w-0'>
+                                                                <p className='font-semibold text-foreground truncate'>{p.name}</p>
+                                                                <p className='text-xs text-muted-foreground truncate'>
+                                                                    {p.breed ?? p.species}
+                                                                    {p.age ? ` · ${p.age} tuổi` : ''}
+                                                                </p>
+                                                            </div>
+                                                            {selectedPetId === p.id && (
+                                                                <Check className='w-4 h-4 text-[#448B3D] ml-auto shrink-0' />
+                                                            )}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
+                                    {/* Ghi chú */}
                                     <div>
-                                        <Label htmlFor='phone' className='text-base font-semibold'>
-                                            📞 Số điện thoại <span className='text-red-500'>*</span>
-                                        </Label>
-                                        <Input
-                                            id='phone'
-                                            type='tel'
-                                            value={phone}
-                                            onChange={e => setPhone(e.target.value)}
-                                            placeholder='VD: 0912 345 678'
-                                            className='mt-2 rounded-xl h-12 text-base'
-                                        />
-                                        <p className='text-xs text-muted-foreground mt-1'>Chúng tôi sẽ gọi xác nhận lịch qua số này</p>
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor='notes' className='text-base font-semibold'>
-                                            📝 Ghi chú thêm (không bắt buộc)
-                                        </Label>
+                                        <p className='text-base font-semibold mb-2'>📝 Ghi chú thêm (không bắt buộc)</p>
                                         <Textarea
-                                            id='notes'
                                             value={notes}
                                             onChange={e => setNotes(e.target.value)}
                                             placeholder='VD: Chó hay cắn, mèo sợ nước, cần tiêm vắc-xin dại...'
-                                            className='mt-2 rounded-xl text-base min-h-[90px]'
+                                            className='rounded-xl text-base min-h-[80px]'
                                         />
                                     </div>
                                 </div>
@@ -296,12 +444,13 @@ const BookingServicePage = () => {
 
                                 <div className='space-y-3 mb-6'>
                                     {[
-                                        { label: '🛁 Dịch vụ', value: service ? `${service.icon} ${service.name}` : '' },
-                                        { label: '💰 Giá', value: service?.price ?? '' },
-                                        { label: '📆 Ngày', value: selectedDate ? formatDate(selectedDate) : '' },
+                                        { label: '🛁 Dịch vụ', value: selectedService ? `${categoryIcon(selectedService.category)} ${selectedService.name}` : '' },
+                                        { label: '💰 Giá', value: selectedService ? formatPrice(selectedService.price) : '' },
+                                        { label: '⏱ Thời gian', value: selectedService ? `~${selectedService.durationMinutes} phút` : '' },
+                                        { label: '📆 Ngày', value: selectedDate ? formatDateDisplay(selectedDate) : '' },
                                         { label: '🕐 Giờ', value: timeSlot?.label ?? '' },
-                                        { label: '🐾 Thú cưng', value: `${petName}${petType ? ` (${petType})` : ''}` },
-                                        { label: '📞 Điện thoại', value: phone },
+                                        { label: '👨‍⚕️ Nhân viên', value: selectedStaff?.name ?? '' },
+                                        { label: '🐾 Thú cưng', value: selectedPet ? `${selectedPet.name}${selectedPet.breed ? ` (${selectedPet.breed})` : ''}` : '' },
                                         ...(notes ? [{ label: '📝 Ghi chú', value: notes }] : []),
                                     ].map(row => (
                                         <div key={row.label} className='flex gap-3 py-3 border-b border-border last:border-0'>
@@ -313,17 +462,21 @@ const BookingServicePage = () => {
 
                                 <div className='bg-[#448B3D]/8 border border-[#448B3D]/20 rounded-xl p-4 mb-6'>
                                     <p className='text-sm text-foreground leading-relaxed'>
-                                        📌 Sau khi đặt lịch, chúng tôi sẽ <strong>gọi điện xác nhận</strong> trong vòng 30 phút. Nếu cần thay đổi, gọi <a href='tel:+84702500551' className='text-[#448B3D] font-bold underline'>(84) 702 500 551</a>.
+                                        📌 Sau khi đặt lịch, trạng thái sẽ là <strong>Chờ xác nhận</strong>. Bạn có thể theo dõi trong <a href='/dashboard?tab=bookings' className='text-[#448B3D] font-bold underline'>trang cá nhân</a>.
                                     </p>
                                 </div>
 
                                 <Button
                                     size='lg'
                                     onClick={handleConfirm}
+                                    disabled={submitting}
                                     className='w-full rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-14 text-lg'
                                 >
-                                    <Check className='w-5 h-5 mr-2' />
-                                    Xác nhận đặt lịch
+                                    {submitting ? (
+                                        <><Loader2 className='w-5 h-5 mr-2 animate-spin' /> Đang xử lý...</>
+                                    ) : (
+                                        <><Check className='w-5 h-5 mr-2' /> Xác nhận đặt lịch</>
+                                    )}
                                 </Button>
                             </Card>
                         )}
@@ -374,18 +527,22 @@ const BookingServicePage = () => {
                             </div>
                             <h2 className='text-2xl font-bold text-foreground mb-2'>Đặt lịch thành công! 🎉</h2>
                             <p className='text-muted-foreground mb-1'>
-                                Chúng tôi sẽ gọi xác nhận đến <strong>{phone}</strong> trong vòng 30 phút.
+                                Lịch của bạn đang <strong>chờ xác nhận</strong>. Theo dõi trạng thái trong trang cá nhân.
                             </p>
-                            {service && (
+                            {selectedService && (
                                 <p className='text-sm text-muted-foreground'>
-                                    {service.icon} <strong>{service.name}</strong> cho <strong>{petName}</strong>
-                                    {selectedDate && ` · ${formatDate(selectedDate)}`}
+                                    {categoryIcon(selectedService.category)} <strong>{selectedService.name}</strong>
+                                    {selectedPet && ` cho ${selectedPet.name}`}
+                                    {selectedDate && ` · ${formatDateDisplay(selectedDate)}`}
                                     {timeSlot && ` · ${timeSlot.label}`}
                                 </p>
                             )}
                             <div className='flex flex-col sm:flex-row gap-3 justify-center mt-6'>
                                 <Button onClick={() => navigate('/')} variant='outline' className='rounded-xl'>
                                     Về trang chủ
+                                </Button>
+                                <Button onClick={() => navigate('/dashboard?tab=bookings')} variant='outline' className='rounded-xl border-[#448B3D]/40 text-[#448B3D]'>
+                                    Xem lịch đặt
                                 </Button>
                                 <Button onClick={() => navigate('/booking')} className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white'>
                                     Đặt lịch khác
@@ -425,8 +582,8 @@ const BookingServicePage = () => {
                                         >
                                             <FeedbackForm
                                                 type='service'
-                                                serviceId={selectedService}
-                                                serviceName={service?.name}
+                                                serviceId={selectedServiceId}
+                                                serviceName={selectedService?.name}
                                                 onSuccess={() => { setShowFbForm(false); setFbDone(true); }}
                                             />
                                         </motion.div>
@@ -452,35 +609,37 @@ const BookingServicePage = () => {
                         </h2>
 
                         {/* Tabs dịch vụ */}
-                        <div className='flex flex-wrap gap-2 mb-6'>
-                            {SERVICES.map(svc => {
-                                const svcFbs = getByService(svc.id);
-                                const avg = avgRating(svcFbs);
-                                return (
-                                    <button
-                                        key={svc.id}
-                                        onClick={() => setSelectedService(svc.id)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${selectedService === svc.id
+                        {!servicesLoading && services.length > 0 && (
+                            <div className='flex flex-wrap gap-2 mb-6'>
+                                {services.map(svc => {
+                                    const svcFbs = getByService(svc.id);
+                                    const avg = avgRating(svcFbs);
+                                    return (
+                                        <button
+                                            key={svc.id}
+                                            onClick={() => setFeedbackServiceId(svc.id)}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${feedbackServiceId === svc.id
                                                 ? 'border-[#448B3D] bg-[#448B3D]/8 text-[#448B3D]'
                                                 : 'border-border hover:border-[#448B3D]/40'
-                                            }`}
-                                    >
-                                        <span>{svc.icon}</span>
-                                        <span>{svc.name}</span>
-                                        {svcFbs.length > 0 && (
-                                            <span className='flex items-center gap-0.5 text-yellow-500'>
-                                                <Star className='w-3 h-3 fill-yellow-400' />
-                                                {avg.toFixed(1)}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                                }`}
+                                        >
+                                            <span>{categoryIcon(svc.category)}</span>
+                                            <span>{svc.name}</span>
+                                            {svcFbs.length > 0 && (
+                                                <span className='flex items-center gap-0.5 text-yellow-500'>
+                                                    <Star className='w-3 h-3 fill-yellow-400' />
+                                                    {avg.toFixed(1)}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
 
-                        {selectedService && (() => {
-                            const svcFbs = getByService(selectedService);
-                            const svc = SERVICES.find(s => s.id === selectedService);
+                        {feedbackServiceId && (() => {
+                            const svcFbs = getByService(feedbackServiceId);
+                            const svc = services.find(s => s.id === feedbackServiceId);
                             return (
                                 <div className='space-y-5'>
                                     {svcFbs.length > 0 && (
@@ -493,15 +652,9 @@ const BookingServicePage = () => {
                                             <p className='font-semibold text-foreground'>Chưa có đánh giá cho dịch vụ này</p>
                                             <p className='text-sm text-muted-foreground mt-1'>Đặt lịch và chia sẻ trải nghiệm của bạn!</p>
                                         </div>
-                                    ) : (
-                                        <div className='space-y-4'>
-                                            {svcFbs.map(fb => (
-                                                <FeedbackCard key={fb.id} feedback={fb} />
-                                            ))}
-                                        </div>
-                                    )}
+                                    ) : null}
 
-                                    {/* Nút viết đánh giá cho dịch vụ này */}
+                                    {/* Nút viết đánh giá */}
                                     <div>
                                         <button
                                             onClick={() => setShowFbForm(v => !v)}
@@ -523,7 +676,7 @@ const BookingServicePage = () => {
                                                     <Card className='p-5 rounded-2xl border-2 border-[#448B3D]/20'>
                                                         <FeedbackForm
                                                             type='service'
-                                                            serviceId={selectedService}
+                                                            serviceId={feedbackServiceId}
                                                             serviceName={svc?.name}
                                                             onSuccess={() => setShowFbForm(false)}
                                                         />
@@ -536,7 +689,7 @@ const BookingServicePage = () => {
                             );
                         })()}
 
-                        {!selectedService && (
+                        {!feedbackServiceId && (
                             <p className='text-muted-foreground text-sm text-center py-6'>
                                 Chọn một dịch vụ ở trên để xem đánh giá
                             </p>

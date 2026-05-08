@@ -51,10 +51,23 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             new PublicRoute("POST", "/pet_care_identity/auth/introspect"), // Kiểm tra token (API Gateway dùng)
             new PublicRoute("POST", "/pet_care_identity/auth/log-out"),    // Đăng xuất
             new PublicRoute("POST", "/pet_care_identity/auth/refresh"),    // Làm mới token
+            
+            // ── Google OAuth ──────────────────────────────────────
+            new PublicRoute("GET",  "/pet_care_identity/auth/outbound/authentication"), // Initiate Google OAuth
+            new PublicRoute("POST", "/pet_care_identity/auth/google"),                  // Authenticate with Google ID Token
+            new PublicRoute("GET",  "/pet_care_identity/auth/outbound/callback"),       // Google OAuth callback (all providers)
 
             // ── Product — đọc không cần đăng nhập ─────────────────
             new PublicRoute("GET",  "/pet_care_product/products"),
             new PublicRoute("GET",  "/pet_care_product/categories"),
+
+            // ── Feedback — đọc feedback và stats không cần đăng nhập ──
+            new PublicRoute("GET",  "/pet_care_feedback/feedbacks/product"),
+            new PublicRoute("GET",  "/pet_care_feedback/feedbacks/stats"),
+
+            // ── Booking — đọc gói dịch vụ và nhân viên không cần đăng nhập ──
+            new PublicRoute("GET",  "/pet_care_booking/service-packages"),
+            new PublicRoute("GET",  "/pet_care_booking/staff"),
 
             // ── Payment callback — gateway gọi từ VNPay/MoMo ──────
             new PublicRoute("POST", "/pet_care_payment/payments/callback"),
