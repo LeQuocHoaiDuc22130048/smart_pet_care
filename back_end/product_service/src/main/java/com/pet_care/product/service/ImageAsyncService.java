@@ -31,6 +31,10 @@ public class ImageAsyncService {
     ) {
         log.info("Starting async image upload for product id: {}", products.getId());
 
+        // Xóa ảnh cũ TRƯỚC khi upload ảnh mới — đảm bảo thứ tự đúng
+        productImageRepository.deleteByProduct(products);
+        log.info("Deleted old images for product id: {}", products.getId());
+
         List<Image> imageEntities = new ArrayList<>();
 
         for(ImageUploadData imageUploadData: images) {
@@ -48,5 +52,34 @@ public class ImageAsyncService {
         productImageRepository.saveAll(imageEntities);
 
         log.info("Completed async image upload for product id: {}", products.getId());
+    }
+
+    /**
+     * Upload ảnh mới mà KHÔNG xóa ảnh cũ — dùng khi tạo sản phẩm mới.
+     */
+    @Async
+    public void uploadImageAsyncWithoutDelete(
+            Products products,
+            List<ImageUploadData> images
+    ) {
+        log.info("Starting async image upload (no delete) for product id: {}", products.getId());
+
+        List<Image> imageEntities = new ArrayList<>();
+
+        for(ImageUploadData imageUploadData: images) {
+            String url = cloudinaryService.uploadImage(imageUploadData.getImageBytes());
+
+            imageEntities.add(
+                    Image.builder()
+                            .product(products)
+                            .imageUrl(url)
+                            .isPrimary(imageUploadData.isPrimary())
+                            .build()
+            );
+        }
+
+        productImageRepository.saveAll(imageEntities);
+
+        log.info("Completed async image upload (no delete) for product id: {}", products.getId());
     }
 }

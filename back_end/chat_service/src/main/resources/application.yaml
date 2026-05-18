@@ -15,6 +15,10 @@ gemini:
     key: ${GEMINI_API_KEY}
     url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
 
+services:
+  product:
+    url: ${PRODUCT_SERVICE_URL:http://product-service:8081/pet_care_product}
+
 logging:
   level:
     com.pet_care.chat: DEBUG

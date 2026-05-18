@@ -24,10 +24,9 @@ public class ChatController {
     @PostMapping("/message")
     public ApiResponse<ChatResponse> sendMessage(@Valid @RequestBody ChatRequest request) {
         log.debug("Chat request: {}", request.getMessage());
-        String reply = geminiService.chat(request);
         return ApiResponse.<ChatResponse>builder()
                 .code(200)
-                .result(ChatResponse.builder().reply(reply).build())
+                .result(geminiService.chat(request))
                 .build();
     }
 }

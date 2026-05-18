@@ -199,7 +199,11 @@ public class GoogleOAuthService {
                 .birthday(user.getBirthDate())
                 .build();
         
-        userEventPublisher.publishUserCreated(event);
+        try {
+            userEventPublisher.publishUserCreated(event);
+        } catch (Exception e) {
+            log.warn("Could not publish UserCreatedEvent for Google user {}: {}", user.getId(), e.getMessage());
+        }
         
         log.info("Successfully created Google user: {}", user.getUsername());
         return user;

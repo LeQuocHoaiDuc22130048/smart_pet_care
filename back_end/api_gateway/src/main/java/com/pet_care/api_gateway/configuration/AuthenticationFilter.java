@@ -69,6 +69,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             new PublicRoute("GET",  "/pet_care_booking/service-packages"),
             new PublicRoute("GET",  "/pet_care_booking/staff"),
 
+            // ── Chat — khách chưa đăng nhập vẫn có thể hỏi trợ lý AI ──
+            new PublicRoute("POST", "/pet_care_chat/chat/message"),
+
             // ── Payment callback — gateway gọi từ VNPay/MoMo ──────
             new PublicRoute("POST", "/pet_care_payment/payments/callback"),
             new PublicRoute("GET",  "/pet_care_payment/payments/vnpay-callback")

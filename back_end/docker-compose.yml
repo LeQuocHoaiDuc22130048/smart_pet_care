@@ -294,6 +294,7 @@ services:
     environment:
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
     ports:
       - "8089:8089"
     networks:
@@ -317,6 +318,7 @@ services:
       - payment-service
       - cart-service
       - booking-service
+      - feedback-service
       - chat-service
     environment:
       GATEWAY_PORT: 8888

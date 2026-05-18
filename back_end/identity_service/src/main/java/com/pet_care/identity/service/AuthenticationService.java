@@ -164,7 +164,7 @@ public class AuthenticationService {
         boolean isValid = true;
         try {
             verifyToken(token, false);
-        } catch (AppException e) {
+        } catch (AppException | ParseException | JOSEException e) {
             isValid = false;
         }
         return IntrospectResponse.builder().valid(isValid).build();
