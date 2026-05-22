@@ -55,3 +55,10 @@ logging:
     org.springframework.web: WARN
   pattern:
     console: "%d{HH:mm:ss} [%highlight(%-5level)] [product_service] %cyan(%logger{36}) - %msg%n"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true

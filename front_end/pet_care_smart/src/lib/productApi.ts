@@ -57,7 +57,7 @@ export interface Product {
  */
 export interface ProductCreationRequest {
     productName: string;        // @NotBlank
-    description?: string;       // @Size(max=500)
+    description?: string;
     price: number;              // BigDecimal
     stockQuantity: number;
     categoryId: string[];       // Set<String> @NotEmpty — dùng array, backend nhận Set
@@ -72,7 +72,7 @@ export interface ProductCreationRequest {
  */
 export interface ProductUpdateRequest {
     productName: string;        // @NotBlank
-    description?: string;       // @Size(max=500)
+    description?: string;
     price?: number;
     stockQuantity?: number;
     status?: ProductStatus;

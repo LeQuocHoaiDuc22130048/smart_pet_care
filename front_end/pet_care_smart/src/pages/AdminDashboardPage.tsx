@@ -39,7 +39,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
     id: string; name: string; category: string; price: number;
-    stock: number; status: 'active' | 'inactive'; image: string;
+    stock: number; status: 'active' | 'inactive'; image: string; description?: string;
 }
 interface Order {
     id: string;
@@ -67,7 +67,128 @@ function mapApiProduct(p: ApiProduct): Product {
         stock: p.stockQuantity,
         status: p.status === 'ACTIVE' ? 'active' : 'inactive',
         image: primary?.imageUrl ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
+        description: p.description ?? '',
     };
+}
+
+type CkEditorInstance = {
+    setData: (data: string) => void;
+    getData: () => string;
+    destroy: () => void;
+    on: (event: string, callback: () => void) => void;
+};
+
+type CkEditorGlobal = {
+    replace: (element: string | HTMLTextAreaElement, config?: Record<string, unknown>) => CkEditorInstance;
+};
+
+declare global {
+    interface Window {
+        CKEDITOR?: CkEditorGlobal;
+    }
+}
+
+const PRODUCT_DESCRIPTION_EDITOR_ID = 'product-description-editor';
+const CKEDITOR_CDN_URL = 'https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js';
+let ckEditorScriptPromise: Promise<void> | null = null;
+
+function loadCkEditorScript() {
+    if (window.CKEDITOR) {
+        return Promise.resolve();
+    }
+
+    if (!ckEditorScriptPromise) {
+        ckEditorScriptPromise = new Promise((resolve, reject) => {
+            const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${CKEDITOR_CDN_URL}"]`);
+            if (existingScript) {
+                existingScript.addEventListener('load', () => resolve(), { once: true });
+                existingScript.addEventListener('error', () => reject(new Error('Không thể tải CKEditor')), { once: true });
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = CKEDITOR_CDN_URL;
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Không thể tải CKEditor'));
+            document.head.appendChild(script);
+        });
+    }
+
+    return ckEditorScriptPromise;
+}
+
+function ProductDescriptionEditor({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const editorRef = useRef<CkEditorInstance | null>(null);
+    const onChangeRef = useRef(onChange);
+
+    useEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        loadCkEditorScript()
+            .then(() => {
+                if (cancelled || !textareaRef.current || !window.CKEDITOR) return;
+
+                const editor = window.CKEDITOR.replace(PRODUCT_DESCRIPTION_EDITOR_ID, {
+                    height: 260,
+                    removePlugins: 'elementspath',
+                    resize_enabled: true,
+                    toolbarGroups: [
+                        { name: 'basicstyles', groups: ['basicstyles', 'cleanup'] },
+                        { name: 'paragraph', groups: ['list', 'indent', 'blocks', 'align'] },
+                        { name: 'styles' },
+                        { name: 'links' },
+                        { name: 'insert' },
+                        { name: 'tools' },
+                    ],
+                    removeButtons: 'Subscript,Superscript,Anchor,Styles,Specialchar',
+                });
+
+                editorRef.current = editor;
+                editor.setData(value || '');
+                editor.on('change', () => onChangeRef.current(editor.getData()));
+            })
+            .catch(() => toast.error('Không thể tải CKEditor. Vui lòng kiểm tra kết nối mạng.'));
+
+        return () => {
+            cancelled = true;
+            if (editorRef.current) {
+                editorRef.current.destroy();
+                editorRef.current = null;
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (editor && editor.getData() !== value) {
+            editor.setData(value || '');
+        }
+    }, [value]);
+
+    return (
+        <div className="product-description-editor mt-1">
+            <textarea
+                id={PRODUCT_DESCRIPTION_EDITOR_ID}
+                name={PRODUCT_DESCRIPTION_EDITOR_ID}
+                ref={textareaRef}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                placeholder="Nhập chi tiết sản phẩm..."
+            />
+        </div>
+    );
 }
 
 function mapApiOrder(o: ApiOrder): Order {
@@ -108,12 +229,13 @@ function Modal({ title, onClose, children, size = 'default' }: {
     title: string;
     onClose: () => void;
     children: React.ReactNode;
-    size?: 'default' | 'large' | 'xlarge';
+    size?: 'default' | 'large' | 'xlarge' | 'product';
 }) {
     const sizeClasses = {
         default: 'max-w-lg',
         large: 'max-w-3xl',
-        xlarge: 'max-w-5xl'
+        xlarge: 'max-w-5xl',
+        product: 'w-[75vw] max-w-[75vw] max-lg:w-[calc(100vw-2rem)] max-lg:max-w-[calc(100vw-2rem)]'
     };
 
     return (
@@ -559,7 +681,7 @@ const AdminDashboardPage = () => {
     };
     const openEditProduct = (p: Product) => {
         const catId = apiCategories.find(c => c.categoryName === p.category)?.categoryId ?? '';
-        setPForm({ name: p.name, description: '', categoryId: catId, price: String(p.price), stock: String(p.stock), status: p.status });
+        setPForm({ name: p.name, description: p.description ?? '', categoryId: catId, price: String(p.price), stock: String(p.stock), status: p.status });
         setPImages([]);
         setPImagePreviews(p.image ? [p.image] : []);
         setPPrimaryIdx(0);
@@ -1784,35 +1906,25 @@ const AdminDashboardPage = () => {
                 <Modal
                     title={productModal === 'add' ? 'Thêm sản phẩm' : 'Chỉnh sửa sản phẩm'}
                     onClose={() => setProductModal(null)}
-                    size="large"
+                    size="product"
                 >
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Cột trái - Thông tin cơ bản */}
+                    <div className="space-y-5">
+                        {/* Tên sản phẩm */}
+                        <div>
+                            <Label htmlFor="pname">Tên sản phẩm <span className="text-red-500">*</span></Label>
+                            <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
+                        </div>
+
+                        {/* Mô tả */}
+                        <div>
+                            <Label htmlFor="pdesc">Chi tiết sản phẩm</Label>
+                            <ProductDescriptionEditor
+                                value={pForm.description}
+                                onChange={description => setPForm(f => ({ ...f, description }))}
+                            />
+                        </div>
+
                         <div className="space-y-4">
-                            {/* Tên sản phẩm */}
-                            <div>
-                                <Label htmlFor="pname">Tên sản phẩm <span className="text-red-500">*</span></Label>
-                                <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
-                            </div>
-
-                            {/* Mô tả */}
-                            <div>
-                                <Label htmlFor="pdesc">Mô tả</Label>
-                                <textarea
-                                    id="pdesc"
-                                    rows={4}
-                                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                                    placeholder="Mô tả sản phẩm (tối đa 500 ký tự)"
-                                    maxLength={500}
-                                    value={pForm.description}
-                                    onChange={e => setPForm(f => ({ ...f, description: e.target.value }))}
-                                />
-                                <div className="text-xs text-muted-foreground mt-1 text-right">
-                                    {pForm.description.length}/500
-                                </div>
-                            </div>
-
-                            {/* Danh mục */}
                             <div>
                                 <Label>Danh mục <span className="text-red-500">*</span></Label>
                                 <Select value={pForm.categoryId} onValueChange={v => setPForm(f => ({ ...f, categoryId: v }))}>
@@ -1830,19 +1942,6 @@ const AdminDashboardPage = () => {
                                 </Select>
                             </div>
 
-                            {/* Giá & Tồn kho */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <Label htmlFor="pprice">Giá (₫) <span className="text-red-500">*</span></Label>
-                                    <Input id="pprice" type="number" min={0} className="mt-1" placeholder="0" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
-                                </div>
-                                <div>
-                                    <Label htmlFor="pstock">Tồn kho <span className="text-red-500">*</span></Label>
-                                    <Input id="pstock" type="number" min={0} className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
-                                </div>
-                            </div>
-
-                            {/* Trạng thái (chỉ hiện khi edit) */}
                             {productModal === 'edit' && (
                                 <div>
                                     <Label>Trạng thái</Label>
@@ -1859,7 +1958,18 @@ const AdminDashboardPage = () => {
                             )}
                         </div>
 
-                        {/* Cột phải - Hình ảnh */}
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="pprice">Giá (₫) <span className="text-red-500">*</span></Label>
+                                <Input id="pprice" type="number" min={0} className="mt-1" placeholder="0" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
+                            </div>
+                            <div>
+                                <Label htmlFor="pstock">Tồn kho <span className="text-red-500">*</span></Label>
+                                <Input id="pstock" type="number" min={0} className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
+                            </div>
+                        </div>
+
+                        {/* Hình ảnh */}
                         <div className="space-y-4">
                             <div>
                                 <Label>

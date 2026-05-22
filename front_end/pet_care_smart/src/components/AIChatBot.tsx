@@ -87,6 +87,18 @@ const formatTime = (date: Date) =>
 const formatPrice = (price: number) =>
     price.toLocaleString('vi-VN') + 'đ';
 
+function getPlainTextDescription(description?: string): string {
+    if (!description?.trim()) return '';
+
+    if (typeof document === 'undefined') {
+        return description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = description;
+    return (template.content.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
 // ─── Suggestion Card Component ────────────────────────────────────────────────
 
 const SuggestionCardItem = ({
@@ -95,50 +107,54 @@ const SuggestionCardItem = ({
 }: {
     card: SuggestionCard;
     onNavigate: (link: string) => void;
-}) => (
-    <button
-        onClick={() => onNavigate(card.link)}
-        className='w-full flex items-center gap-3 rounded-xl border border-border bg-background hover:border-[#448B3D] hover:shadow-md transition-all text-left overflow-hidden group p-2'
-    >
-        {/* Ảnh vuông bên trái */}
-        <div className='w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0'>
-            {card.imageUrl ? (
-                <img
-                    src={card.imageUrl}
-                    alt={card.name}
-                    className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
-                    onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                />
-            ) : (
-                <div className='w-full h-full flex items-center justify-center text-muted-foreground'>
-                    {card.type === 'product'
-                        ? <ShoppingBag className='w-6 h-6 opacity-30' />
-                        : <Bot className='w-6 h-6 opacity-30' />
-                    }
-                </div>
-            )}
-        </div>
+}) => {
+    const description = getPlainTextDescription(card.description);
 
-        {/* Info bên phải */}
-        <div className='flex-1 min-w-0 space-y-0.5'>
-            <p className='text-xs font-medium text-foreground line-clamp-2 leading-tight'>{card.name}</p>
-            <p className='text-xs font-bold text-[#448B3D]'>{formatPrice(card.price)}</p>
-            {card.type === 'service' && card.durationMinutes && (
-                <p className='text-[10px] text-muted-foreground flex items-center gap-0.5'>
-                    <Clock className='w-2.5 h-2.5' />{card.durationMinutes} phút
-                </p>
-            )}
-            {card.description && (
-                <p className='text-[10px] text-muted-foreground line-clamp-1'>{card.description}</p>
-            )}
-        </div>
+    return (
+        <button
+            onClick={() => onNavigate(card.link)}
+            className='w-full flex items-center gap-3 rounded-xl border border-border bg-background hover:border-[#448B3D] hover:shadow-md transition-all text-left overflow-hidden group p-2'
+        >
+            {/* Ảnh vuông bên trái */}
+            <div className='w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0'>
+                {card.imageUrl ? (
+                    <img
+                        src={card.imageUrl}
+                        alt={card.name}
+                        className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                    />
+                ) : (
+                    <div className='w-full h-full flex items-center justify-center text-muted-foreground'>
+                        {card.type === 'product'
+                            ? <ShoppingBag className='w-6 h-6 opacity-30' />
+                            : <Bot className='w-6 h-6 opacity-30' />
+                        }
+                    </div>
+                )}
+            </div>
 
-        {/* Arrow */}
-        <ChevronRight className='w-4 h-4 text-muted-foreground shrink-0 group-hover:text-[#448B3D] transition-colors' />
-    </button>
-);
+            {/* Info bên phải */}
+            <div className='flex-1 min-w-0 space-y-0.5'>
+                <p className='text-xs font-medium text-foreground line-clamp-2 leading-tight'>{card.name}</p>
+                <p className='text-xs font-bold text-[#448B3D]'>{formatPrice(card.price)}</p>
+                {card.type === 'service' && card.durationMinutes && (
+                    <p className='text-[10px] text-muted-foreground flex items-center gap-0.5'>
+                        <Clock className='w-2.5 h-2.5' />{card.durationMinutes} phút
+                    </p>
+                )}
+                {description && (
+                    <p className='text-[10px] text-muted-foreground line-clamp-1'>{description}</p>
+                )}
+            </div>
+
+            {/* Arrow */}
+            <ChevronRight className='w-4 h-4 text-muted-foreground shrink-0 group-hover:text-[#448B3D] transition-colors' />
+        </button>
+    );
+};
 
 // ─── Bot Message Component ────────────────────────────────────────────────────
 

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -16,6 +17,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -27,6 +29,8 @@ import java.util.regex.Pattern;
 public class ProductSuggestionService {
 
     private static final Pattern DIACRITICS = Pattern.compile("\\p{M}+");
+    private static final Pattern HTML_TAGS = Pattern.compile("<[^>]*>");
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
     private static final Set<String> HEALTH_KEYWORDS = Set.of(
             "da", "do", "ngua", "kich", "ung", "viem", "nep", "gap", "mui", "hoi",
             "ve", "bo", "chet", "nam", "tai", "long", "ray", "tam", "sua", "ve sinh",
@@ -48,6 +52,7 @@ public class ProductSuggestionService {
         if (terms.isEmpty()) {
             return List.of();
         }
+        CompanionSpecies requestedSpecies = inferCompanionSpecies(question);
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
@@ -63,7 +68,8 @@ public class ProductSuggestionService {
 
             List<ScoredProduct> scoredProducts = new ArrayList<>();
             for (JsonNode product : result) {
-                if (!"ACTIVE".equalsIgnoreCase(product.path("status").asText())) {
+                if (!"ACTIVE".equalsIgnoreCase(product.path("status").asText())
+                        || !isSuitableForCompanionSpecies(product, requestedSpecies)) {
                     continue;
                 }
                 int score = scoreProduct(product, terms);
@@ -79,6 +85,118 @@ public class ProductSuggestionService {
                     .toList();
         } catch (Exception e) {
             log.warn("Cannot load product suggestions for chat: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    public List<SuggestionCard> suggestLivestockProducts(String question, String knowledgeContext, int limit) {
+        Set<String> terms = buildSearchTerms(question, knowledgeContext);
+        terms.addAll(Set.of(
+                "gia suc", "con bo", "bo sua", "bo thit", "thuc an bo", "trau", "de", "heo", "chuong trai", "sat trung",
+                "iodine", "con trung", "vitamin", "khoang", "dien giai", "lon"
+        ));
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    productServiceUrl + "/products",
+                    HttpMethod.GET,
+                    null,
+                    String.class
+            );
+            JsonNode result = objectMapper.readTree(response.getBody()).path("result");
+            if (!result.isArray()) {
+                return List.of();
+            }
+
+            List<ScoredProduct> scoredProducts = new ArrayList<>();
+            for (JsonNode product : result) {
+                if (!"ACTIVE".equalsIgnoreCase(product.path("status").asText()) || !isLivestockSuitableProduct(product)) {
+                    continue;
+                }
+                int score = scoreProduct(product, terms);
+                if (score >= 3) {
+                    scoredProducts.add(new ScoredProduct(product, score));
+                }
+            }
+
+            return scoredProducts.stream()
+                    .sorted(Comparator.comparingInt(ScoredProduct::score).reversed())
+                    .limit(Math.max(1, limit))
+                    .map(item -> toSuggestionCard(item.product()))
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Cannot load livestock product suggestions for chat: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    public List<SuggestionCard> findProductsByIds(List<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> orderedIds = new LinkedHashSet<>(productIds);
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    productServiceUrl + "/products",
+                    HttpMethod.GET,
+                    null,
+                    String.class
+            );
+            JsonNode result = objectMapper.readTree(response.getBody()).path("result");
+            if (!result.isArray()) {
+                return List.of();
+            }
+
+            List<SuggestionCard> suggestions = new ArrayList<>();
+            for (String id : orderedIds) {
+                for (JsonNode product : result) {
+                    if (id.equals(product.path("id").asText())
+                            && "ACTIVE".equalsIgnoreCase(product.path("status").asText())) {
+                        suggestions.add(toSuggestionCard(product));
+                        break;
+                    }
+                }
+            }
+            return suggestions;
+        } catch (Exception e) {
+            log.warn("Cannot load products by image AI ids: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    public List<SuggestionCard> findLivestockProductsByIds(List<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> orderedIds = new LinkedHashSet<>(productIds);
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    productServiceUrl + "/products",
+                    HttpMethod.GET,
+                    null,
+                    String.class
+            );
+            JsonNode result = objectMapper.readTree(response.getBody()).path("result");
+            if (!result.isArray()) {
+                return List.of();
+            }
+
+            List<SuggestionCard> suggestions = new ArrayList<>();
+            for (String id : orderedIds) {
+                for (JsonNode product : result) {
+                    if (id.equals(product.path("id").asText())
+                            && "ACTIVE".equalsIgnoreCase(product.path("status").asText())
+                            && isLivestockSuitableProduct(product)) {
+                        suggestions.add(toSuggestionCard(product));
+                        break;
+                    }
+                }
+            }
+            return suggestions;
+        } catch (Exception e) {
+            log.warn("Cannot load livestock products by image AI ids: {}", e.getMessage());
             return List.of();
         }
     }
@@ -184,7 +302,7 @@ public class ProductSuggestionService {
 
     private int scoreProduct(JsonNode product, Set<String> terms) {
         String productName = normalize(product.path("productName").asText());
-        String productText = normalize(product.path("productName").asText() + " " + product.path("description").asText());
+        String productText = productSearchText(product);
         if (isSkinCareQuery(terms) && !looksLikeCareProduct(productName)) {
             return 0;
         }
@@ -196,6 +314,7 @@ public class ProductSuggestionService {
 
         StringBuilder categoryText = new StringBuilder();
         for (JsonNode category : product.path("category")) {
+            categoryText.append(category.path("categoryName").asText()).append(' ');
             categoryText.append(category.path("name").asText()).append(' ');
             categoryText.append(category.path("description").asText()).append(' ');
         }
@@ -210,6 +329,107 @@ public class ProductSuggestionService {
             score += 2;
         }
         return score;
+    }
+
+    private boolean isLivestockSuitableProduct(JsonNode product) {
+        String categoryText = productCategoryText(product);
+        if (containsAny(categoryText,
+                "cho", "meo", "dog", "cat", "puppy", "kitten", "thu cung")) {
+            return false;
+        }
+        if (containsAny(categoryText,
+                "gia suc", "bo", "trau", "de", "heo", "lon", "cattle", "livestock")) {
+            return true;
+        }
+
+        String text = productSearchText(product);
+        if (containsAny(text,
+                "cho meo", "cho va meo", "danh cho cho", "danh cho meo", "cho con",
+                "meo con", "dog", "cat", "puppy", "kitten", "banh thuong", "snack",
+                "treat", "pate", "thuc an hat", "hat cho", "cat ve sinh", "khay ve sinh",
+                "do choi", "vong co", "day dat", "balo", "tui van chuyen", "sua tam cho",
+                "sua tam meo")) {
+            return false;
+        }
+
+        return containsAny(text,
+                "gia suc", "con bo", "bo sua", "bo thit", "thuc an bo", "trau",
+                "de sua", "de thit", "heo", "lon", "cattle", "livestock",
+                "chuong trai", "sat trung chuong", "khu trung chuong", "iodine gia suc",
+                "vitamin gia suc", "vitamin heo", "khoang gia suc", "khoang heo",
+                "dien giai gia suc", "dien giai heo", "premix gia suc", "premix heo");
+    }
+
+    private CompanionSpecies inferCompanionSpecies(String question) {
+        String raw = question == null ? "" : question.toLowerCase(Locale.ROOT);
+        String normalized = normalize(raw);
+
+        boolean hasDog = raw.contains("chó")
+                || containsAny(normalized, "dog", "puppy", "cun", "cún");
+        boolean hasCat = raw.contains("mèo")
+                || containsAny(normalized, "meo", "cat", "kitten");
+
+        if (hasDog && !hasCat) {
+            return CompanionSpecies.DOG;
+        }
+        if (hasCat && !hasDog) {
+            return CompanionSpecies.CAT;
+        }
+        return CompanionSpecies.UNKNOWN;
+    }
+
+    private boolean isSuitableForCompanionSpecies(JsonNode product, CompanionSpecies requestedSpecies) {
+        if (requestedSpecies == CompanionSpecies.UNKNOWN) {
+            return true;
+        }
+
+        String rawText = productRawText(product).toLowerCase(Locale.ROOT);
+        String normalizedText = normalize(rawText);
+        boolean dogProduct = rawText.contains("chó")
+                || containsAny(normalizedText, "dog", "puppy", "cun");
+        boolean catProduct = rawText.contains("mèo")
+                || containsAny(normalizedText, "meo", "cat", "kitten");
+
+        if (requestedSpecies == CompanionSpecies.DOG) {
+            return !catProduct || dogProduct;
+        }
+        if (requestedSpecies == CompanionSpecies.CAT) {
+            return !dogProduct || catProduct;
+        }
+        return true;
+    }
+
+    private String productRawText(JsonNode product) {
+        StringBuilder text = new StringBuilder();
+        text.append(product.path("productName").asText()).append(' ');
+        text.append(product.path("description").asText()).append(' ');
+        for (JsonNode category : product.path("category")) {
+            text.append(category.path("categoryName").asText()).append(' ');
+            text.append(category.path("name").asText()).append(' ');
+            text.append(category.path("description").asText()).append(' ');
+        }
+        return text.toString();
+    }
+
+    private String productSearchText(JsonNode product) {
+        StringBuilder text = new StringBuilder();
+        text.append(product.path("productName").asText()).append(' ');
+        text.append(product.path("description").asText()).append(' ');
+        for (JsonNode category : product.path("category")) {
+            text.append(category.path("categoryName").asText()).append(' ');
+            text.append(category.path("name").asText()).append(' ');
+            text.append(category.path("description").asText()).append(' ');
+        }
+        return normalize(text.toString());
+    }
+
+    private String productCategoryText(JsonNode product) {
+        StringBuilder text = new StringBuilder();
+        for (JsonNode category : product.path("category")) {
+            text.append(category.path("categoryName").asText()).append(' ');
+            text.append(category.path("name").asText()).append(' ');
+        }
+        return normalize(text.toString());
     }
 
     private boolean isSkinCareQuery(Set<String> terms) {
@@ -283,8 +503,17 @@ public class ProductSuggestionService {
     }
 
     private String shorten(String value) {
+        String plainText = toPlainText(value);
+        if (plainText == null) return null;
+        return plainText.length() <= 90 ? plainText : plainText.substring(0, 87).trim() + "...";
+    }
+
+    private String toPlainText(String value) {
         if (value == null || value.isBlank()) return null;
-        return value.length() <= 90 ? value : value.substring(0, 87).trim() + "...";
+        String unescaped = HtmlUtils.htmlUnescape(value);
+        String withoutTags = HTML_TAGS.matcher(unescaped).replaceAll(" ");
+        String normalized = WHITESPACE.matcher(withoutTags.replace('\u00A0', ' ')).replaceAll(" ").trim();
+        return normalized.isBlank() ? null : normalized;
     }
 
     private String normalize(String value) {
@@ -294,5 +523,11 @@ public class ProductSuggestionService {
     }
 
     private record ScoredProduct(JsonNode product, int score) {
+    }
+
+    private enum CompanionSpecies {
+        DOG,
+        CAT,
+        UNKNOWN
     }
 }

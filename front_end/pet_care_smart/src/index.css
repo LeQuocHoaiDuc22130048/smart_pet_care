@@ -146,3 +146,125 @@
     font-size: 16px !important;
   }
 }
+
+@layer components {
+  .ckeditor-content {
+    @apply text-foreground leading-relaxed break-words;
+  }
+
+  .ckeditor-content > :first-child {
+    margin-top: 0;
+  }
+
+  .ckeditor-content > :last-child {
+    margin-bottom: 0;
+  }
+
+  .ckeditor-content p {
+    margin: 0 0 1rem;
+  }
+
+  .ckeditor-content h1,
+  .ckeditor-content h2,
+  .ckeditor-content h3,
+  .ckeditor-content h4 {
+    @apply text-foreground;
+    margin: 1.5rem 0 0.75rem;
+  }
+
+  .ckeditor-content h1 {
+    font-size: 1.75rem;
+  }
+
+  .ckeditor-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .ckeditor-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .ckeditor-content h4 {
+    font-size: 1.125rem;
+  }
+
+  .ckeditor-content ul,
+  .ckeditor-content ol {
+    margin: 0 0 1rem 1.25rem;
+    padding-left: 1rem;
+  }
+
+  .ckeditor-content ul {
+    list-style: disc;
+  }
+
+  .ckeditor-content ol {
+    list-style: decimal;
+  }
+
+  .ckeditor-content li {
+    margin: 0.25rem 0;
+  }
+
+  .ckeditor-content blockquote {
+    @apply border-l-4 border-[#448B3D]/60 bg-[#448B3D]/8 text-muted-foreground;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+  }
+
+  .ckeditor-content a {
+    @apply text-[#448B3D] underline underline-offset-4;
+  }
+
+  .ckeditor-content img {
+    max-width: 100%;
+    height: auto;
+    margin: 1rem 0;
+    border-radius: 0.5rem;
+  }
+
+  .ckeditor-content figure {
+    margin: 1rem 0;
+  }
+
+  .ckeditor-content figcaption {
+    @apply text-sm text-muted-foreground;
+    margin-top: 0.5rem;
+    text-align: center;
+  }
+
+  .ckeditor-content table {
+    width: 100%;
+    margin: 1rem 0;
+    border-collapse: collapse;
+    overflow-wrap: anywhere;
+  }
+
+  .ckeditor-content th,
+  .ckeditor-content td {
+    @apply border border-border;
+    padding: 0.75rem;
+    vertical-align: top;
+  }
+
+  .ckeditor-content th {
+    @apply bg-muted font-semibold;
+  }
+
+  .product-description-editor .cke {
+    @apply overflow-hidden rounded-md border-border;
+  }
+
+  .product-description-editor .cke_top,
+  .product-description-editor .cke_bottom {
+    @apply border-border bg-muted/60;
+  }
+
+  .product-description-editor .cke_chrome {
+    box-shadow: none;
+  }
+
+  .product-description-editor .cke_contents {
+    @apply bg-background;
+  }
+}

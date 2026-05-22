@@ -1,10 +1,10 @@
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { LayoutDashboard, ShoppingBag, Users, Calendar, BarChart, Settings, LogOut, Package, Shield, X, ChevronDown, List, PlusCircle, Tag, FileText, UserSearch } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Calendar, BarChart, Settings, LogOut, Package, Shield, X, ChevronDown, List, Tag, FileText, UserSearch } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth, useLogout } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type SubItem = { icon: React.ElementType; label: string; tab: string };
 
@@ -59,6 +59,11 @@ function isAdminTabActive(current: string, tab: string) {
     return current === tab;
 }
 
+function getExpandedMenuForTab(tab: AdminTab): string | null {
+    const parent = menuItems.find((item) => item.children?.some((child) => isAdminTabActive(tab, child.tab)));
+    return parent?.tab ?? null;
+}
+
 interface SidebarContentProps {
     onClose: () => void;
 }
@@ -70,18 +75,15 @@ function SidebarContent({ onClose }: SidebarContentProps) {
     const [searchParams] = useSearchParams();
     const activeTab = parseAdminTabParam(searchParams.get('tab'));
 
-    // Track which parent menus are expanded
-    const productTabs = ['products', 'products-add', 'product-categories'];
-    const orderTabs = ['orders', 'order-detail'];
-    const customerTabs = ['customers', 'customer-detail'];
-    const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
-        products: productTabs.includes(activeTab),
-        orders: orderTabs.includes(activeTab),
-        customers: customerTabs.includes(activeTab),
-    });
+    // Only one parent menu should be expanded at a time.
+    const [expandedMenu, setExpandedMenu] = useState<string | null>(() => getExpandedMenuForTab(activeTab));
+
+    useEffect(() => {
+        setExpandedMenu(getExpandedMenuForTab(activeTab));
+    }, [activeTab]);
 
     const toggleMenu = (tab: string) => {
-        setExpandedMenus(prev => ({ ...prev, [tab]: !prev[tab] }));
+        setExpandedMenu(prev => prev === tab ? null : tab);
     };
 
     return (
@@ -132,7 +134,7 @@ function SidebarContent({ onClose }: SidebarContentProps) {
                     const isParentActive = hasChildren
                         ? item.children!.some(c => isAdminTabActive(activeTab, c.tab))
                         : isAdminTabActive(activeTab, item.tab);
-                    const isExpanded = expandedMenus[item.tab];
+                    const isExpanded = expandedMenu === item.tab;
 
                     const parentClass = cn(
                         'w-full justify-start rounded-xl h-11 text-white/85 border-0 shadow-none',

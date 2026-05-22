@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+data/*.faiss
+data/product_*.json

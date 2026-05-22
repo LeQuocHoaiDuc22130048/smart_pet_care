@@ -13,6 +13,10 @@ volumes:
   mysql-data:
   rabbitmq-data:
   mongodb-data:
+  image-ai-data:
+
+x-eureka-client-env: &eureka-client-env
+  EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
 
 services:
 
@@ -77,6 +81,20 @@ services:
       timeout: 5s
       retries: 10
 
+  eureka-server:
+    build:
+      context: ./eureka_server
+      dockerfile: Dockerfile
+    container_name: petcare-eureka
+    restart: unless-stopped
+    environment:
+      EUREKA_SERVER_PORT: 8761
+      EUREKA_INSTANCE_HOSTNAME: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - petcare-net
+
   # ─────────────────────────────────────────────
   # BUSINESS SERVICES
   # ─────────────────────────────────────────────
@@ -88,11 +106,14 @@ services:
     container_name: petcare-identity
     restart: unless-stopped
     depends_on:
+      eureka-server:
+        condition: service_started
       mysql:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
+      <<: *eureka-client-env
       DB_URL: jdbc:mysql://mysql:3306/pet_care_identity?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -117,11 +138,14 @@ services:
     container_name: petcare-user
     restart: unless-stopped
     depends_on:
+      eureka-server:
+        condition: service_started
       mysql:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
+      <<: *eureka-client-env
       DB_URL: jdbc:mysql://mysql:3306/pet_care_user?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -143,11 +167,14 @@ services:
     container_name: petcare-product
     restart: unless-stopped
     depends_on:
+      eureka-server:
+        condition: service_started
       mysql:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
+      <<: *eureka-client-env
       DB_URL: jdbc:mysql://mysql:3306/pet_care_product?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -169,6 +196,8 @@ services:
     container_name: petcare-order
     restart: unless-stopped
     depends_on:
+      eureka-server:
+        condition: service_started
       mysql:
         condition: service_healthy
       rabbitmq:
@@ -176,6 +205,7 @@ services:
       product-service:
         condition: service_started
     environment:
+      <<: *eureka-client-env
       DB_URL: jdbc:mysql://mysql:3306/pet_care_order?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -195,11 +225,14 @@ services:
     container_name: petcare-payment
     restart: unless-stopped
     depends_on:
+      eureka-server:
+        condition: service_started
       mysql:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
+      <<: *eureka-client-env
       DB_URL: jdbc:mysql://mysql:3306/pet_care_payment?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -221,11 +254,14 @@ services:
     container_name: petcare-cart
     restart: unless-stopped
     depends_on:
+      eureka-server:
+        condition: service_started
       mysql:
         condition: service_healthy
       product-service:
         condition: service_started
     environment:
+      <<: *eureka-client-env
       DB_URL: jdbc:mysql://mysql:3306/pet_care_cart?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -243,11 +279,14 @@ services:
     container_name: petcare-booking
     restart: unless-stopped
     depends_on:
+      eureka-server:
+        condition: service_started
       mysql:
         condition: service_healthy
       user-service:
         condition: service_started
     environment:
+      <<: *eureka-client-env
       DB_URL: jdbc:mysql://mysql:3306/pet_care_booking?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -266,11 +305,14 @@ services:
     container_name: petcare-feedback
     restart: unless-stopped
     depends_on:
+      eureka-server:
+        condition: service_started
       mongodb:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
+      <<: *eureka-client-env
       MONGODB_URI: mongodb://mongodb:27017/pet_care_feedback
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
       RABBITMQ_HOST: rabbitmq
@@ -291,12 +333,51 @@ services:
       dockerfile: Dockerfile
     container_name: petcare-chat
     restart: unless-stopped
+    depends_on:
+      eureka-server:
+        condition: service_started
+      image-ai-service:
+        condition: service_healthy
     environment:
+      <<: *eureka-client-env
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
+      BOOKING_SERVICE_URL: http://booking-service:8086/pet_care_booking
+      IMAGE_AI_SERVICE_URL: http://image-ai-service:8090
     ports:
       - "8089:8089"
+    networks:
+      - petcare-net
+
+  image-ai-service:
+    build:
+      context: ./image_ai_service
+      dockerfile: Dockerfile
+    container_name: petcare-image-ai
+    restart: unless-stopped
+    depends_on:
+      product-service:
+        condition: service_started
+    environment:
+      PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
+      IMAGE_AI_DATA_DIR: /app/data
+      CLIP_MODEL_NAME: ${CLIP_MODEL_NAME:-ViT-B-32}
+      CLIP_PRETRAINED: ${CLIP_PRETRAINED:-laion2b_s34b_b79k}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.2}
+      IMAGE_ANALYSIS_INCLUDE_BUILT_INS: ${IMAGE_ANALYSIS_INCLUDE_BUILT_INS:-false}
+      HF_TOKEN: ${HF_TOKEN:-}
+    ports:
+      - "8090:8090"
+    volumes:
+      - image-ai-data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8090/health', timeout=3).read()\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     networks:
       - petcare-net
 
@@ -311,6 +392,7 @@ services:
     container_name: petcare-gateway
     restart: unless-stopped
     depends_on:
+      - eureka-server
       - identity-service
       - user-service
       - product-service
@@ -320,7 +402,9 @@ services:
       - booking-service
       - feedback-service
       - chat-service
+      - image-ai-service
     environment:
+      <<: *eureka-client-env
       GATEWAY_PORT: 8888
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
@@ -333,6 +417,7 @@ services:
       BOOKING_SERVICE_URL: http://booking-service:8086
       FEEDBACK_SERVICE_URL: http://feedback-service:8088
       CHAT_SERVICE_URL: http://chat-service:8089
+      IMAGE_AI_SERVICE_URL: http://image-ai-service:8090
     ports:
       - "8888:8888"
     networks:

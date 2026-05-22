@@ -21,7 +21,7 @@ function App() {
                                 <RouterProvider router={routes} />
                                 <AIChatBot />
                                 <ScrollToTop />
-                                <Toaster richColors />
+                                <Toaster richColors position='top-right' />
                             </CartProvider>
                         </WishlistProvider>
                     </FeedbackProvider>

@@ -3,7 +3,6 @@ package com.pet_care.product.dto.request;
 import com.pet_care.product.enums.ProductStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +19,6 @@ public class ProductUpdateRequest {
     @NotBlank
     String productName;
 
-    @Size(max = 500)
     String description;
 
     BigDecimal price;

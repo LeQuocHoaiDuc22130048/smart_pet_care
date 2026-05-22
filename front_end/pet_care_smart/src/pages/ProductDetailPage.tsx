@@ -28,7 +28,145 @@ function getImages(product: Product): string[] {
 }
 
 function getCategoryNames(product: Product): string {
-    return product.categories?.map((c) => c.categoryName).join(', ') || 'Khác';
+    return product.category?.map((c) => c.categoryName).join(', ') || 'Khác';
+}
+
+const BLOCKED_HTML_TAGS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'form']);
+const ALLOWED_HTML_TAGS = new Set([
+    'a',
+    'b',
+    'blockquote',
+    'br',
+    'code',
+    'div',
+    'em',
+    'figcaption',
+    'figure',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'hr',
+    'i',
+    'img',
+    'li',
+    'ol',
+    'p',
+    'pre',
+    's',
+    'span',
+    'strong',
+    'sub',
+    'sup',
+    'table',
+    'tbody',
+    'td',
+    'tfoot',
+    'th',
+    'thead',
+    'tr',
+    'u',
+    'ul',
+]);
+const GLOBAL_HTML_ATTRIBUTES = new Set(['class', 'style', 'title']);
+const TAG_HTML_ATTRIBUTES: Record<string, Set<string>> = {
+    a: new Set(['href', 'target', 'rel']),
+    img: new Set(['src', 'alt', 'width', 'height', 'loading']),
+    td: new Set(['colspan', 'rowspan']),
+    th: new Set(['colspan', 'rowspan', 'scope']),
+};
+const ALLOWED_STYLE_PROPERTIES = new Set([
+    'text-align',
+    'margin-left',
+    'margin-right',
+    'padding-left',
+    'width',
+    'height',
+]);
+
+function isSafeUrl(value: string, allowImageData = false): boolean {
+    const trimmed = value.trim().toLowerCase();
+    return (
+        trimmed.startsWith('http://') ||
+        trimmed.startsWith('https://') ||
+        trimmed.startsWith('/') ||
+        trimmed.startsWith('#') ||
+        trimmed.startsWith('mailto:') ||
+        trimmed.startsWith('tel:') ||
+        (allowImageData && trimmed.startsWith('data:image/'))
+    );
+}
+
+function sanitizeStyle(value: string): string {
+    return value
+        .split(';')
+        .map((rule) => rule.trim())
+        .filter(Boolean)
+        .filter((rule) => {
+            const property = rule.split(':')[0]?.trim().toLowerCase();
+            return ALLOWED_STYLE_PROPERTIES.has(property);
+        })
+        .join('; ');
+}
+
+function sanitizeCkEditorHtml(value?: string): string {
+    if (!value?.trim() || typeof window === 'undefined') {
+        return '';
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = value;
+
+    template.content.querySelectorAll('*').forEach((element) => {
+        const tagName = element.tagName.toLowerCase();
+        if (BLOCKED_HTML_TAGS.has(tagName)) {
+            element.remove();
+            return;
+        }
+
+        if (!ALLOWED_HTML_TAGS.has(tagName)) {
+            element.replaceWith(...Array.from(element.childNodes));
+            return;
+        }
+
+        Array.from(element.attributes).forEach((attribute) => {
+            const attrName = attribute.name.toLowerCase();
+            const attrValue = attribute.value;
+            const isAllowedAttribute = GLOBAL_HTML_ATTRIBUTES.has(attrName) || TAG_HTML_ATTRIBUTES[tagName]?.has(attrName);
+
+            if (!isAllowedAttribute || attrName.startsWith('on') || attrName === 'srcdoc') {
+                element.removeAttribute(attribute.name);
+                return;
+            }
+
+            if (attrName === 'href' && !isSafeUrl(attrValue)) {
+                element.removeAttribute(attribute.name);
+                return;
+            }
+
+            if (attrName === 'src' && !isSafeUrl(attrValue, tagName === 'img')) {
+                element.removeAttribute(attribute.name);
+                return;
+            }
+
+            if (attrName === 'style') {
+                const sanitized = sanitizeStyle(attrValue);
+                if (sanitized) {
+                    element.setAttribute('style', sanitized);
+                } else {
+                    element.removeAttribute(attribute.name);
+                }
+            }
+        });
+
+        if (tagName === 'a') {
+            element.setAttribute('rel', 'noopener noreferrer');
+        }
+    });
+
+    return template.innerHTML;
 }
 
 const ProductDetailPage = () => {
@@ -124,6 +262,7 @@ const ProductDetailPage = () => {
     };
 
     const isOutOfStock = product.status === 'OUT_OF_STOCK' || product.stockQuantity === 0;
+    const productDescriptionHtml = sanitizeCkEditorHtml(product.description);
 
     return (
         <div className='min-h-screen bg-background py-8'>
@@ -303,9 +442,16 @@ const ProductDetailPage = () => {
                                 <TabsTrigger value='description' className='flex-1 rounded-lg'>Mô tả</TabsTrigger>
                             </TabsList>
                             <TabsContent value='description' className='mt-4'>
-                                <p className='text-muted-foreground leading-relaxed'>
-                                    {product.description || 'Chưa có mô tả cho sản phẩm này.'}
-                                </p>
+                                {productDescriptionHtml ? (
+                                    <div
+                                        className='ckeditor-content'
+                                        dangerouslySetInnerHTML={{ __html: productDescriptionHtml }}
+                                    />
+                                ) : (
+                                    <p className='text-muted-foreground leading-relaxed'>
+                                        Chưa có mô tả cho sản phẩm này.
+                                    </p>
+                                )}
                             </TabsContent>
                         </Tabs>
                     </div>

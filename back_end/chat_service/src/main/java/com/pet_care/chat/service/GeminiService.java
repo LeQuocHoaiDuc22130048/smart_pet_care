@@ -11,10 +11,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 @Slf4j
@@ -22,11 +29,14 @@ import java.util.*;
 @RequiredArgsConstructor
 public class GeminiService {
 
+    private static final Duration GEMINI_QUOTA_BACKOFF = Duration.ofMinutes(2);
+
     private final GeminiConfig geminiConfig;
     private final RestTemplate restTemplate;
     private final PetCareKnowledgeService petCareKnowledgeService;
     private final ProductSuggestionService productSuggestionService;
     private final ObjectMapper objectMapper;
+    private volatile Instant geminiBackoffUntil = Instant.MIN;
 
     /**
      * System prompt — định nghĩa vai trò và kiến thức của bot.
@@ -71,59 +81,148 @@ public class GeminiService {
      * Gọi Gemini API và trả về câu trả lời.
      */
     public ChatResponse chat(ChatRequest request) {
+        Optional<ChatResponse> localConversation = buildLocalConversationResponse(request);
+        if (localConversation.isPresent()) {
+            return localConversation.get();
+        }
+
         if (isShoppingRequest(request.getMessage())) {
             return buildShoppingResponse(request);
         }
 
+        if (!geminiConfig.hasApiKey()) {
+            return buildFallbackResponse(request);
+        }
+
+        if (isGeminiBackoffActive()) {
+            return buildAiUnavailableResponse(request);
+        }
+
         try {
-            String url = geminiConfig.getApiUrl() + "?key=" + geminiConfig.getApiKey();
-
-            // Build contents array (lịch sử + tin nhắn hiện tại)
-            List<Map<String, Object>> contents = buildContents(request);
-
-            // Build request body
-            Map<String, Object> body = new HashMap<>();
-            body.put("contents", contents);
-            body.put("systemInstruction", Map.of(
-                    "parts", List.of(Map.of("text", buildSystemPrompt(request)))
-            ));
-            body.put("generationConfig", Map.of(
-                    "temperature", 0.25,
-                    "maxOutputTokens", 900,
-                    "topP", 0.9
-            ));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
-
-            String rawReply = extractReply(response.getBody());
+            log.debug("Calling Gemini chat model {} for message: {}", geminiConfig.getModel(), request.getMessage());
+            String rawReply = callGemini(request);
             BotReply parsed = parseBotReply(rawReply);
-            if (looksLikeBrokenJson(parsed.getText())) {
+            if (isInvalidBotReply(parsed) || looksLikeBrokenJson(parsed.getText())) {
                 parsed.setText(petCareKnowledgeService.buildDatasetAnswer(request.getMessage()));
+                parsed.setSuggestions(List.of());
             }
             enrichSuggestions(request, parsed);
             return ChatResponse.builder()
                     .reply(parsed.getText())
                     .parsed(parsed)
                     .build();
-
+        } catch (HttpClientErrorException.TooManyRequests e) {
+            geminiBackoffUntil = Instant.now().plus(GEMINI_QUOTA_BACKOFF);
+            log.warn("Gemini quota exceeded for chat. Falling back to dataset answers until {}.", geminiBackoffUntil);
+            return buildAiUnavailableResponse(request);
         } catch (Exception e) {
-            log.error("Gemini API error: {}", e.getMessage(), e);
-            String relevantKnowledge = petCareKnowledgeService.buildRelevantContext(request.getMessage());
-            List<SuggestionCard> suggestions = productSuggestionService.suggestProducts(request.getMessage(), relevantKnowledge);
-            BotReply fallback = BotReply.builder()
-                    .text(petCareKnowledgeService.buildDatasetAnswer(request.getMessage()))
-                    .suggestions(suggestions)
-                    .build();
-            return ChatResponse.builder()
-                    .reply(fallback.getText())
-                    .parsed(fallback)
-                    .build();
+            if (isQuotaException(e)) {
+                geminiBackoffUntil = Instant.now().plus(GEMINI_QUOTA_BACKOFF);
+                log.warn("Gemini quota exceeded for chat. Falling back to dataset answers until {}.", geminiBackoffUntil);
+                return buildAiUnavailableResponse(request);
+            } else {
+                log.error("Gemini API error: {}", e.getMessage(), e);
+                return buildAiUnavailableResponse(request);
+            }
         }
+    }
+
+    private String callGemini(ChatRequest request) {
+        String url = geminiConfig.getApiUrl() + "?key=" + geminiConfig.getApiKey();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("contents", buildContents(request));
+        body.put("systemInstruction", Map.of(
+                "parts", List.of(Map.of("text", buildSystemPrompt(request)))
+        ));
+        body.put("generationConfig", Map.of(
+                "temperature", 0.25,
+                "maxOutputTokens", 900,
+                "topP", 0.9,
+                "responseMimeType", "application/json"
+        ));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        ResponseEntity<Map> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                new HttpEntity<>(body, headers),
+                Map.class
+        );
+        return extractReply(response.getBody());
+    }
+
+    private boolean isGeminiBackoffActive() {
+        return Instant.now().isBefore(geminiBackoffUntil);
+    }
+
+    private ChatResponse buildFallbackResponse(ChatRequest request) {
+        Optional<ChatResponse> localConversation = buildLocalConversationResponse(request);
+        if (localConversation.isPresent()) {
+            return localConversation.get();
+        }
+
+        String relevantKnowledge = petCareKnowledgeService.buildRelevantContext(request.getMessage());
+        List<SuggestionCard> suggestions = productSuggestionService.suggestProducts(request.getMessage(), relevantKnowledge);
+        BotReply fallback = BotReply.builder()
+                .text(petCareKnowledgeService.buildDatasetAnswer(request.getMessage()))
+                .suggestions(suggestions)
+                .build();
+        return ChatResponse.builder()
+                .reply(fallback.getText())
+                .parsed(fallback)
+                .build();
+    }
+
+    private ChatResponse buildAiUnavailableResponse(ChatRequest request) {
+        Optional<ChatResponse> localConversation = buildLocalConversationResponse(request);
+        if (localConversation.isPresent()) {
+            return localConversation.get();
+        }
+
+        if (isPetCareInfoRequest(request.getMessage())) {
+            return simpleResponse("Hiện Gemini đang tạm thời không phản hồi do giới hạn API free-tier. PetCare Smart là nền tảng hỗ trợ mua sắm và chăm sóc thú cưng, có sản phẩm cho chó/mèo/vật nuôi, dịch vụ Khám sức khỏe, Tiêm phòng, Tắm & cắt lông, Huấn luyện và Lưu trú thú cưng. Bạn vẫn có thể hỏi mình về sản phẩm hoặc mô tả triệu chứng, mình sẽ tra dữ liệu nội bộ để hỗ trợ tạm thời.");
+        }
+
+        return buildFallbackResponse(request);
+    }
+
+    private Optional<ChatResponse> buildLocalConversationResponse(ChatRequest request) {
+        String message = request == null ? "" : request.getMessage();
+        String value = normalizeForIntent(message);
+        if (value.isBlank()) {
+            return Optional.empty();
+        }
+
+        if (isGreeting(value)) {
+            return Optional.of(simpleResponse("Xin chào bạn, mình là trợ lý PetCare Smart. Mình có thể tư vấn chăm sóc chó, mèo và vật nuôi, hỗ trợ tìm sản phẩm phù hợp hoặc phân tích hình ảnh khi bạn gửi ảnh lên."));
+        }
+
+        if (isThanks(value)) {
+            return Optional.of(simpleResponse("Không có gì đâu bạn. Khi cần tư vấn thêm về sức khỏe, thức ăn, sản phẩm hoặc dịch vụ cho thú cưng, bạn cứ nhắn mình nhé."));
+        }
+
+        if (isGoodbye(value)) {
+            return Optional.of(simpleResponse("Tạm biệt bạn. Chúc bạn và bé luôn khỏe, khi cần PetCare hỗ trợ thì quay lại nhắn mình nhé."));
+        }
+
+        if (asksBotCapabilities(value)) {
+            return Optional.of(simpleResponse("Mình có thể hỗ trợ tư vấn chăm sóc thú cưng, tra gợi ý từ dữ liệu PetCare, tìm sản phẩm phù hợp và phân tích ảnh để đưa ra nhận định tham khảo. Nếu bé có triệu chứng cụ thể, bạn mô tả thêm loài, tuổi, biểu hiện và thời gian bị nhé."));
+        }
+
+        return Optional.empty();
+    }
+
+    private ChatResponse simpleResponse(String text) {
+        BotReply reply = BotReply.builder()
+                .text(text)
+                .suggestions(List.of())
+                .build();
+        return ChatResponse.builder()
+                .reply(text)
+                .parsed(reply)
+                .build();
     }
 
     private ChatResponse buildShoppingResponse(ChatRequest request) {
@@ -197,8 +296,8 @@ public class GeminiService {
             for (int i = start; i < history.size(); i++) {
                 ChatMessage msg = history.get(i);
                 contents.add(Map.of(
-                        "role", msg.getRole(),
-                        "parts", List.of(Map.of("text", msg.getText()))
+                        "role", toGeminiRole(msg.getRole()),
+                        "parts", List.of(Map.of("text", msg.getText() == null ? "" : msg.getText()))
                 ));
             }
         }
@@ -212,9 +311,13 @@ public class GeminiService {
         return contents;
     }
 
-    /**
-     * Trích xuất text từ response của Gemini.
-     */
+    private String toGeminiRole(String role) {
+        if ("assistant".equalsIgnoreCase(role) || "model".equalsIgnoreCase(role)) {
+            return "model";
+        }
+        return "user";
+    }
+
     @SuppressWarnings("unchecked")
     private String extractReply(Map<?, ?> responseBody) {
         try {
@@ -231,6 +334,14 @@ public class GeminiService {
         }
     }
 
+    private boolean isQuotaException(Exception e) {
+        String text = (e.getMessage() == null ? "" : e.getMessage()).toLowerCase(Locale.ROOT);
+        return text.contains("429")
+                || text.contains("quota")
+                || text.contains("rate limit")
+                || text.contains("too many requests");
+    }
+
     private BotReply parseBotReply(String rawReply) {
         String cleaned = cleanJsonText(rawReply);
         try {
@@ -243,13 +354,11 @@ public class GeminiService {
                         .build();
             }
         } catch (Exception e) {
-            log.debug("Gemini did not return valid JSON, using raw text: {}", e.getMessage());
+            log.debug("Gemini did not return valid JSON, falling back to dataset answer: {}", e.getMessage());
         }
 
         return BotReply.builder()
-                .text(rawReply == null || rawReply.isBlank()
-                        ? "Mình chưa hiểu câu hỏi của bạn. Bạn có thể nói rõ hơn không?"
-                        : rawReply.trim())
+                .text("")
                 .suggestions(List.of())
                 .build();
     }
@@ -302,6 +411,19 @@ public class GeminiService {
         return trimmed.startsWith("{") || trimmed.startsWith("\"text\"") || trimmed.contains("\"suggestions\"");
     }
 
+    private boolean isInvalidBotReply(BotReply reply) {
+        if (reply == null || reply.getText() == null || reply.getText().isBlank()) {
+            return true;
+        }
+        String text = reply.getText().trim();
+        return text.length() < 12
+                || text.equals("{}")
+                || text.equals("[]")
+                || text.equalsIgnoreCase("null")
+                || text.endsWith("\":")
+                || text.endsWith(",");
+    }
+
     private boolean isShoppingRequest(String message) {
         if (message == null || message.isBlank()) {
             return false;
@@ -317,6 +439,31 @@ public class GeminiService {
         return hasShoppingVerb && hasProductWord;
     }
 
+    private boolean isGreeting(String value) {
+        return value.matches("^(xin )?(chao|hello|hi|hey|alo|aloo)( ban| shop| petcare| ad| admin)?$")
+                || value.matches("^(chao buoi sang|chao buoi trua|chao buoi chieu|chao buoi toi)$");
+    }
+
+    private boolean isThanks(String value) {
+        return value.matches("^(cam on|cam on ban|thanks|thank you|thank|ok cam on|vang cam on)$");
+    }
+
+    private boolean isGoodbye(String value) {
+        return value.matches("^(tam biet|bye|goodbye|hen gap lai|chao tam biet)$");
+    }
+
+    private boolean asksBotCapabilities(String value) {
+        return value.matches("^(ban co the lam gi|ban lam duoc gi|petcare co the lam gi|tro ly co the lam gi)$")
+                || value.contains("huong dan su dung");
+    }
+
+    private boolean isPetCareInfoRequest(String message) {
+        String value = normalizeForIntent(message);
+        return containsAny(value,
+                "gioi thieu", "petcare smart", "petcare", "cua hang", "dich vu",
+                "nen tang", "website", "hotline", "thong tin");
+    }
+
     private boolean containsAny(String value, String... terms) {
         for (String term : terms) {
             if (value.contains(normalize(term))) {
@@ -330,5 +477,12 @@ public class GeminiService {
         String normalized = java.text.Normalizer.normalize(value.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD);
         normalized = java.util.regex.Pattern.compile("\\p{M}+").matcher(normalized).replaceAll("");
         return normalized.replace('đ', 'd');
+    }
+
+    private String normalizeForIntent(String value) {
+        return normalize(value == null ? "" : value)
+                .replaceAll("[^a-z0-9 ]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 }
