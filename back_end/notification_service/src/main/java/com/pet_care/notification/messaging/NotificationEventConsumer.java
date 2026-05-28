@@ -93,6 +93,103 @@ public class NotificationEventConsumer {
         );
     }
 
+    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_ORDER_STATUS_CHANGED_QUEUE)
+    public void handleOrderStatusChanged(Message message) {
+        Map<String, Object> event = readEvent(message);
+        String userId = valueAsString(event.get("userId"));
+        String orderId = valueAsString(event.get("orderId"));
+        String newStatus = valueAsString(event.get("newStatus"));
+
+        if (userId == null) {
+            log.warn("Skip order status notification because userId is missing: {}", event);
+            return;
+        }
+
+        notificationService.createSystemNotification(
+                userId,
+                "Đơn hàng đã cập nhật",
+                "Đơn hàng " + safeReference(orderId) + " đã chuyển sang trạng thái " + orderStatusLabel(newStatus) + ".",
+                NotificationType.ORDER,
+                orderId
+        );
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_BOOKING_CREATED_QUEUE)
+    public void handleBookingCreated(Message message) {
+        Map<String, Object> event = readEvent(message);
+        String bookingId = valueAsString(event.get("bookingId"));
+        String customerId = valueAsString(event.get("userId"));
+        String petName = valueAsString(event.get("petName"));
+        String serviceName = valueAsString(event.get("serviceName"));
+        String appointmentDate = valueAsString(event.get("appointmentDate"));
+        String appointmentTime = valueAsString(event.get("appointmentTime"));
+
+        notificationService.createSystemNotification(
+                NotificationService.ADMIN_AUDIENCE,
+                "Có lịch hẹn mới",
+                "Khách hàng " + safeText(customerId, "mới")
+                        + " vừa đặt " + safeText(serviceName, "dịch vụ")
+                        + " cho " + safeText(petName, "thú cưng")
+                        + " lúc " + formatAppointmentTime(appointmentDate, appointmentTime) + ".",
+                NotificationType.BOOKING,
+                bookingId
+        );
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_BOOKING_STATUS_CHANGED_QUEUE)
+    public void handleBookingStatusChanged(Message message) {
+        Map<String, Object> event = readEvent(message);
+        String userId = valueAsString(event.get("userId"));
+        String bookingId = valueAsString(event.get("bookingId"));
+        String newStatus = valueAsString(event.get("newStatus"));
+        String serviceName = valueAsString(event.get("serviceName"));
+        String appointmentDate = valueAsString(event.get("appointmentDate"));
+        String appointmentTime = valueAsString(event.get("appointmentTime"));
+
+        if (userId == null) {
+            log.warn("Skip booking status notification because userId is missing: {}", event);
+            return;
+        }
+
+        notificationService.createSystemNotification(
+                userId,
+                "Lịch hẹn đã cập nhật",
+                "Lịch hẹn " + safeReference(bookingId)
+                        + " cho dịch vụ " + safeText(serviceName, "của bạn")
+                        + " lúc " + formatAppointmentTime(appointmentDate, appointmentTime)
+                        + " đã chuyển sang trạng thái " + bookingStatusLabel(newStatus) + ".",
+                NotificationType.BOOKING,
+                bookingId
+        );
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_SERVICE_PACKAGE_UPDATED_QUEUE)
+    public void handleServicePackageUpdated(Message message) {
+        Map<String, Object> event = readEvent(message);
+        String userId = valueAsString(event.get("userId"));
+        String bookingId = valueAsString(event.get("bookingId"));
+        String servicePackageId = valueAsString(event.get("servicePackageId"));
+        String serviceName = valueAsString(event.get("serviceName"));
+        String appointmentDate = valueAsString(event.get("appointmentDate"));
+        String appointmentTime = valueAsString(event.get("appointmentTime"));
+
+        if (userId == null) {
+            log.warn("Skip service package update notification because userId is missing: {}", event);
+            return;
+        }
+
+        notificationService.createSystemNotification(
+                userId,
+                "Dịch vụ đã cập nhật",
+                "Dịch vụ " + safeText(serviceName, "bạn đã đặt")
+                        + " trong lịch hẹn " + safeReference(bookingId)
+                        + " lúc " + formatAppointmentTime(appointmentDate, appointmentTime)
+                        + " vừa được cập nhật. Vui lòng kiểm tra lại thông tin lịch hẹn.",
+                NotificationType.BOOKING,
+                servicePackageId == null ? bookingId : servicePackageId
+        );
+    }
+
     private Map<String, Object> readEvent(Message message) {
         try {
             String json = new String(message.getBody(), StandardCharsets.UTF_8);
@@ -118,5 +215,61 @@ public class NotificationEventConsumer {
         } catch (NumberFormatException exception) {
             return null;
         }
+    }
+
+    private String safeReference(String value) {
+        if (value == null || value.isBlank()) {
+            return "của bạn";
+        }
+        return "#" + value;
+    }
+
+    private String safeText(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private String formatAppointmentTime(String date, String time) {
+        if (date == null && time == null) {
+            return "đã đặt";
+        }
+        if (date == null) {
+            return time;
+        }
+        if (time == null) {
+            return date;
+        }
+        return time + " ngày " + date;
+    }
+
+    private String orderStatusLabel(String status) {
+        if (status == null) {
+            return "mới";
+        }
+        return switch (status) {
+            case "PENDING" -> "đang xử lý";
+            case "RESERVED" -> "đã giữ hàng";
+            case "PAYMENT_PENDING" -> "chờ thanh toán";
+            case "PAID" -> "đã thanh toán";
+            case "CONFIRMED" -> "đã xác nhận";
+            case "FAILED" -> "thất bại";
+            case "PAYMENT_FAILED" -> "thanh toán thất bại";
+            case "CANCELLED" -> "đã hủy";
+            default -> status;
+        };
+    }
+
+    private String bookingStatusLabel(String status) {
+        if (status == null) {
+            return "mới";
+        }
+        return switch (status) {
+            case "PENDING" -> "chờ xác nhận";
+            case "CONFIRMED" -> "đã xác nhận";
+            case "IN_PROGRESS" -> "đang thực hiện";
+            case "COMPLETED" -> "hoàn thành";
+            case "CANCELLED" -> "đã hủy";
+            case "NO_SHOW" -> "không đến";
+            default -> status;
+        };
     }
 }

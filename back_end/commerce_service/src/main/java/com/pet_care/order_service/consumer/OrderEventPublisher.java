@@ -1,5 +1,8 @@
 package com.pet_care.order_service.consumer;
 
+import com.pet_care.order_service.configuration.RabbitMQConfig;
+import com.pet_care.order_service.entity.Orders;
+import com.pet_care.order_service.enums.OrderStatus;
 import com.pet_care.order_service.messaging.BaseEvent;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +12,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -27,5 +31,22 @@ public class OrderEventPublisher {
         event.setData(data);
 
         rabbitTemplate.convertAndSend("order.exchange", routingKey, event);
+    }
+
+    public void publishOrderStatusChanged(Orders order, OrderStatus oldStatus, OrderStatus newStatus) {
+        if (order == null || newStatus == null || oldStatus == newStatus) {
+            return;
+        }
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.NOTIFICATION_EXCHANGE,
+                RabbitMQConfig.ORDER_STATUS_CHANGED_KEY,
+                Map.of(
+                        "orderId", order.getId(),
+                        "userId", order.getUserId(),
+                        "oldStatus", oldStatus.name(),
+                        "newStatus", newStatus.name()
+                )
+        );
     }
 }

@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class NotificationService {
+    public static final String ADMIN_AUDIENCE = "ADMIN";
 
     NotificationRepository notificationRepository;
 
@@ -60,9 +61,34 @@ public class NotificationService {
                 .toList();
     }
 
+    public List<NotificationResponse> getMyNotifications(String userId, boolean admin, boolean unreadOnly) {
+        if (!admin) {
+            return getMyNotifications(userId, unreadOnly);
+        }
+
+        List<String> userIds = List.of(userId, ADMIN_AUDIENCE);
+        List<Notification> notifications = unreadOnly
+                ? notificationRepository.findByUserIdInAndReadFalseOrderByCreatedAtDesc(userIds)
+                : notificationRepository.findByUserIdInOrderByCreatedAtDesc(userIds);
+
+        return notifications.stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public UnreadCountResponse countUnread(String userId) {
         return UnreadCountResponse.builder()
                 .unreadCount(notificationRepository.countByUserIdAndReadFalse(userId))
+                .build();
+    }
+
+    public UnreadCountResponse countUnread(String userId, boolean admin) {
+        if (!admin) {
+            return countUnread(userId);
+        }
+
+        return UnreadCountResponse.builder()
+                .unreadCount(notificationRepository.countByUserIdInAndReadFalse(List.of(userId, ADMIN_AUDIENCE)))
                 .build();
     }
 
@@ -78,8 +104,34 @@ public class NotificationService {
         return toResponse(notificationRepository.save(notification));
     }
 
+    public NotificationResponse markAsRead(String userId, boolean admin, String notificationId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
+
+        boolean belongsToUser = notification.getUserId().equals(userId);
+        boolean belongsToAdminAudience = admin && notification.getUserId().equals(ADMIN_AUDIENCE);
+        if (!belongsToUser && !belongsToAdminAudience) {
+            throw new IllegalArgumentException("Notification does not belong to current user");
+        }
+
+        notification.setRead(true);
+        return toResponse(notificationRepository.save(notification));
+    }
+
     public void markAllAsRead(String userId) {
         List<Notification> notifications = notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId);
+        notifications.forEach(notification -> notification.setRead(true));
+        notificationRepository.saveAll(notifications);
+    }
+
+    public void markAllAsRead(String userId, boolean admin) {
+        if (!admin) {
+            markAllAsRead(userId);
+            return;
+        }
+
+        List<Notification> notifications = notificationRepository
+                .findByUserIdInAndReadFalseOrderByCreatedAtDesc(List.of(userId, ADMIN_AUDIENCE));
         notifications.forEach(notification -> notification.setRead(true));
         notificationRepository.saveAll(notifications);
     }

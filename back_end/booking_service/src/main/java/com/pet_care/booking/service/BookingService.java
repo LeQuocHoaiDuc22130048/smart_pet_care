@@ -13,6 +13,7 @@ import com.pet_care.booking.enums.BookingStatus;
 import com.pet_care.booking.exception.AppException;
 import com.pet_care.booking.exception.ErrorCode;
 import com.pet_care.booking.mapper.BookingMapper;
+import com.pet_care.booking.messaging.NotificationEventPublisher;
 import com.pet_care.booking.repository.BookingRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class BookingService {
     StaffService staffService;
     BookingMapper bookingMapper;
     UserServiceClient userServiceClient;
+    NotificationEventPublisher notificationEventPublisher;
 
     @Transactional
     public BookingResponse create(BookingRequest request, String authorization) {
@@ -79,6 +81,7 @@ public class BookingService {
                 .build();
 
         Booking saved = bookingRepository.save(booking);
+        notificationEventPublisher.publishBookingCreated(saved);
         log.info("Created booking {} for pet {}", saved.getId(), pet.getId());
         return bookingMapper.toResponse(saved);
     }
@@ -122,9 +125,12 @@ public class BookingService {
         if (isTerminal(booking.getStatus())) {
             throw new AppException(ErrorCode.BOOKING_ALREADY_TERMINAL);
         }
+        BookingStatus oldStatus = booking.getStatus();
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setCancelledAt(LocalDateTime.now());
-        return bookingMapper.toResponse(bookingRepository.save(booking));
+        Booking saved = bookingRepository.save(booking);
+        notificationEventPublisher.publishBookingStatusChanged(saved, oldStatus, BookingStatus.CANCELLED);
+        return bookingMapper.toResponse(saved);
     }
 
     @Transactional
@@ -136,6 +142,7 @@ public class BookingService {
         if (!isAllowedNextStatus(booking.getStatus(), request.getStatus())) {
             throw new AppException(ErrorCode.INVALID_STATUS_TRANSITION);
         }
+        BookingStatus oldStatus = booking.getStatus();
         booking.setStatus(request.getStatus());
         booking.setAdminNotes(request.getAdminNotes());
         if (request.getStatus() == BookingStatus.COMPLETED) {
@@ -144,7 +151,9 @@ public class BookingService {
         if (request.getStatus() == BookingStatus.CANCELLED || request.getStatus() == BookingStatus.NO_SHOW) {
             booking.setCancelledAt(LocalDateTime.now());
         }
-        return bookingMapper.toResponse(bookingRepository.save(booking));
+        Booking saved = bookingRepository.save(booking);
+        notificationEventPublisher.publishBookingStatusChanged(saved, oldStatus, request.getStatus());
+        return bookingMapper.toResponse(saved);
     }
 
     private PetResponse getPet(String petId, String authorization) {

@@ -24,6 +24,16 @@ public class RabbitMQConfig {
     public static final String USER_CREATED_KEY = "user.created";
     public static final String NOTIFICATION_USER_CREATED_QUEUE = "notification.user.created.queue";
 
+    public static final String NOTIFICATION_EXCHANGE = "notification.exchange";
+    public static final String BOOKING_CREATED_KEY = "booking.created";
+    public static final String ORDER_STATUS_CHANGED_KEY = "order.status.changed";
+    public static final String BOOKING_STATUS_CHANGED_KEY = "booking.status.changed";
+    public static final String SERVICE_PACKAGE_UPDATED_KEY = "service-package.updated";
+    public static final String NOTIFICATION_ORDER_STATUS_CHANGED_QUEUE = "notification.order.status.changed.queue";
+    public static final String NOTIFICATION_BOOKING_CREATED_QUEUE = "notification.booking.created.queue";
+    public static final String NOTIFICATION_BOOKING_STATUS_CHANGED_QUEUE = "notification.booking.status.changed.queue";
+    public static final String NOTIFICATION_SERVICE_PACKAGE_UPDATED_QUEUE = "notification.service-package.updated.queue";
+
     @Bean
     public TopicExchange paymentExchange() {
         return new TopicExchange(PAYMENT_EXCHANGE, true, false);
@@ -71,6 +81,63 @@ public class RabbitMQConfig {
                 .bind(notificationUserCreatedQueue())
                 .to(userExchange())
                 .with(USER_CREATED_KEY);
+    }
+
+    @Bean
+    public TopicExchange notificationExchange() {
+        return new TopicExchange(NOTIFICATION_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue notificationOrderStatusChangedQueue() {
+        return QueueBuilder.durable(NOTIFICATION_ORDER_STATUS_CHANGED_QUEUE).build();
+    }
+
+    @Bean
+    public Binding notificationOrderStatusChangedBinding() {
+        return BindingBuilder
+                .bind(notificationOrderStatusChangedQueue())
+                .to(notificationExchange())
+                .with(ORDER_STATUS_CHANGED_KEY);
+    }
+
+    @Bean
+    public Queue notificationBookingCreatedQueue() {
+        return QueueBuilder.durable(NOTIFICATION_BOOKING_CREATED_QUEUE).build();
+    }
+
+    @Bean
+    public Binding notificationBookingCreatedBinding() {
+        return BindingBuilder
+                .bind(notificationBookingCreatedQueue())
+                .to(notificationExchange())
+                .with(BOOKING_CREATED_KEY);
+    }
+
+    @Bean
+    public Queue notificationBookingStatusChangedQueue() {
+        return QueueBuilder.durable(NOTIFICATION_BOOKING_STATUS_CHANGED_QUEUE).build();
+    }
+
+    @Bean
+    public Binding notificationBookingStatusChangedBinding() {
+        return BindingBuilder
+                .bind(notificationBookingStatusChangedQueue())
+                .to(notificationExchange())
+                .with(BOOKING_STATUS_CHANGED_KEY);
+    }
+
+    @Bean
+    public Queue notificationServicePackageUpdatedQueue() {
+        return QueueBuilder.durable(NOTIFICATION_SERVICE_PACKAGE_UPDATED_QUEUE).build();
+    }
+
+    @Bean
+    public Binding notificationServicePackageUpdatedBinding() {
+        return BindingBuilder
+                .bind(notificationServicePackageUpdatedQueue())
+                .to(notificationExchange())
+                .with(SERVICE_PACKAGE_UPDATED_KEY);
     }
 
     @Bean

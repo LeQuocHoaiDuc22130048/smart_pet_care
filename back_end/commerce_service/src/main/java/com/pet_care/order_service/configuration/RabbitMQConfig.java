@@ -25,6 +25,10 @@ public class RabbitMQConfig {
     public static final String PAYMENT_SUCCESS_KEY = "payment.success";
     public static final String PAYMENT_FAILED_KEY = "payment.failed";
 
+    // Notification events (publishing)
+    public static final String NOTIFICATION_EXCHANGE = "notification.exchange";
+    public static final String ORDER_STATUS_CHANGED_KEY = "order.status.changed";
+
     // Order Exchange & Queue
     @Bean
     public TopicExchange exchange() {
@@ -48,6 +52,11 @@ public class RabbitMQConfig {
     @Bean
     public TopicExchange paymentExchange() {
         return new TopicExchange(PAYMENT_EXCHANGE);
+    }
+
+    @Bean
+    public TopicExchange notificationExchange() {
+        return new TopicExchange(NOTIFICATION_EXCHANGE, true, false);
     }
 
     @Bean

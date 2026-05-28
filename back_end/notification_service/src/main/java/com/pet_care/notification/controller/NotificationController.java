@@ -35,14 +35,14 @@ public class NotificationController {
             @RequestParam(defaultValue = "false") boolean unreadOnly
     ) {
         return ApiResponse.<List<NotificationResponse>>builder()
-                .result(notificationService.getMyNotifications(resolveUserId(jwt), unreadOnly))
+                .result(notificationService.getMyNotifications(resolveUserId(jwt), isAdmin(jwt), unreadOnly))
                 .build();
     }
 
     @GetMapping("/my/unread-count")
     public ApiResponse<UnreadCountResponse> countUnread(@AuthenticationPrincipal Jwt jwt) {
         return ApiResponse.<UnreadCountResponse>builder()
-                .result(notificationService.countUnread(resolveUserId(jwt)))
+                .result(notificationService.countUnread(resolveUserId(jwt), isAdmin(jwt)))
                 .build();
     }
 
@@ -52,13 +52,13 @@ public class NotificationController {
             @PathVariable String notificationId
     ) {
         return ApiResponse.<NotificationResponse>builder()
-                .result(notificationService.markAsRead(resolveUserId(jwt), notificationId))
+                .result(notificationService.markAsRead(resolveUserId(jwt), isAdmin(jwt), notificationId))
                 .build();
     }
 
     @PatchMapping("/my/read-all")
     public ApiResponse<Void> markAllAsRead(@AuthenticationPrincipal Jwt jwt) {
-        notificationService.markAllAsRead(resolveUserId(jwt));
+        notificationService.markAllAsRead(resolveUserId(jwt), isAdmin(jwt));
         return ApiResponse.<Void>builder()
                 .message("All notifications marked as read")
                 .build();
@@ -77,5 +77,10 @@ public class NotificationController {
             userId = jwt.getSubject();
         }
         return userId;
+    }
+
+    private boolean isAdmin(Jwt jwt) {
+        String scope = jwt.getClaimAsString("scope");
+        return scope != null && scope.contains("ROLE_ADMIN");
     }
 }
