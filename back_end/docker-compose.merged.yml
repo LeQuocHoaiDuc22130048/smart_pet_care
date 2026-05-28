@@ -1,0 +1,198 @@
+# ============================================================
+# PetCareSmart — merged local runtime
+# Runs account_service (identity + user) and commerce_service
+# (cart + order + payment) to reduce local Docker memory usage.
+#
+# Start core stack:
+#   docker compose -f docker-compose.merged.yml up -d --build
+#
+# Stop:
+#   docker compose -f docker-compose.merged.yml down
+# ============================================================
+
+networks:
+  petcare-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  rabbitmq-data:
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: petcare-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - petcare-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: petcare-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - petcare-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  account-service:
+    build:
+      context: ./account_service
+      dockerfile: Dockerfile
+    container_name: petcare-account
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=160m"
+      EUREKA_CLIENT_ENABLED: "false"
+      ACCOUNT_DB_URL: jdbc:mysql://mysql:3306/pet_care_account?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      USER_SERVICE_URL: http://account-service:8080/pet_care_user
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    ports:
+      - "8080:8080"
+      - "8082:8080"
+    networks:
+      petcare-net:
+        aliases:
+          - identity-service
+          - user-service
+
+  product-service:
+    build:
+      context: ./product_service
+      dockerfile: Dockerfile
+    container_name: petcare-product
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"
+      EUREKA_CLIENT_ENABLED: "false"
+      DB_URL: jdbc:mysql://mysql:3306/pet_care_product?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    ports:
+      - "8081:8081"
+    networks:
+      - petcare-net
+
+  commerce-service:
+    build:
+      context: ./commerce_service
+      dockerfile: Dockerfile
+    container_name: petcare-commerce
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=160m"
+      EUREKA_CLIENT_ENABLED: "false"
+      COMMERCE_DB_URL: jdbc:mysql://mysql:3306/pet_care_commerce?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
+      ORDER_SERVICE_URL: http://commerce-service:8083/pet_care_order
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE}
+      VNPAY_SECRET_KEY: ${VNPAY_SECRET_KEY}
+      VNPAY_PAY_URL: ${VNPAY_PAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:8084/pet_care_payment/payments/vnpay-callback}
+      VNPAY_FRONTEND_RETURN_URL: ${VNPAY_FRONTEND_RETURN_URL:-http://localhost:5173/payment-result}
+    ports:
+      - "8083:8083"
+      - "8084:8083"
+      - "8085:8083"
+    networks:
+      petcare-net:
+        aliases:
+          - cart-service
+          - order-service
+          - payment-service
+
+  api-gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    container_name: petcare-gateway
+    restart: unless-stopped
+    depends_on:
+      - account-service
+      - product-service
+      - commerce-service
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"
+      EUREKA_CLIENT_ENABLED: "false"
+      GATEWAY_PORT: 8888
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      IDENTITY_SERVICE_URL: http://account-service:8080
+      USER_SERVICE_URL: http://account-service:8080
+      PRODUCT_SERVICE_URL: http://product-service:8081
+      ORDER_SERVICE_URL: http://commerce-service:8083
+      PAYMENT_SERVICE_URL: http://commerce-service:8083
+      CART_SERVICE_URL: http://commerce-service:8083
+      BOOKING_SERVICE_URL: http://booking-service:8086
+      FEEDBACK_SERVICE_URL: http://feedback-service:8088
+      CHAT_SERVICE_URL: http://chat-service:8089
+      NOTIFICATION_SERVICE_URL: http://notification-service:8091
+      CMS_MARKETING_SERVICE_URL: http://cms-marketing-service:8092
+      IMAGE_AI_SERVICE_URL: http://image-ai-service:8090
+    ports:
+      - "8888:8888"
+    networks:
+      - petcare-net

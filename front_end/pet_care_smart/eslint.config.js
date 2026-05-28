@@ -19,5 +19,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // This project intentionally colocates hooks and shared constants with UI modules.
+      'react-refresh/only-export-components': 'off',
+    },
   },
 ])

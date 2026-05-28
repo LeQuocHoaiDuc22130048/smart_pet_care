@@ -216,7 +216,7 @@ export function GridSkeleton({
         <div
             className='grid gap-6'
             style={{
-                gridTemplateColumns: `repeat(auto-fill, minmax(250px, 1fr))`
+                gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`
             }}
         >
             {[...Array(items)].map((_, i) => (

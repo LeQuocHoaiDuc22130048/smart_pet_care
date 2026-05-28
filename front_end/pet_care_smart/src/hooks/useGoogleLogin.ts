@@ -174,8 +174,6 @@ function openPopupFallback(
         return;
     }
 
-    let timeoutId: ReturnType<typeof setTimeout>;
-
     const cleanup = () => {
         window.removeEventListener('message', handleMessage);
         clearTimeout(timeoutId);
@@ -216,7 +214,7 @@ function openPopupFallback(
 
     window.addEventListener('message', handleMessage);
 
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
         cleanup();
         if (!popup.closed) popup.close();
         toast.error('Đăng nhập Google hết thời gian chờ');

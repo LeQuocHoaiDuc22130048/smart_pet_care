@@ -180,10 +180,20 @@ const UserDashboardPage = () => {
     }, [profile]);
 
     const avatarInputRef = useRef<HTMLInputElement>(null);
+    const [avatarSaving, setAvatarSaving] = useState(false);
 
     const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const input = e.currentTarget;
         const file = e.target.files?.[0];
         if (!file) return;
+        if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) {
+            toast.error('Vui lòng chọn ảnh có dung lượng tối đa 10 MB');
+            input.value = '';
+            return;
+        }
+
+        const previousAvatar = user?.avatar;
+        setAvatarSaving(true);
         // Local preview ngay lập tức
         const reader = new FileReader();
         reader.onload = (ev) => updateUser({ avatar: ev.target?.result as string });
@@ -192,10 +202,17 @@ const UserDashboardPage = () => {
         try {
             const res = await userApi.updateAvatar(file);
             const savedUrl = res.result.avatar_url ?? res.result.avatarUrl;
-            if (savedUrl) updateUser({ avatar: savedUrl });
+            if (savedUrl) {
+                updateUser({ avatar: savedUrl });
+                setProfile(res.result);
+            }
             toast.success('Đã cập nhật ảnh đại diện');
         } catch {
+            updateUser({ avatar: previousAvatar });
             toast.error('Không thể cập nhật ảnh đại diện');
+        } finally {
+            setAvatarSaving(false);
+            input.value = '';
         }
     };
 
@@ -406,7 +423,7 @@ const UserDashboardPage = () => {
                             { icon: Package, label: 'Tổng đơn hàng', value: String(orders.length), color: 'bg-[#448B3D]', ring: 'ring-[#448B3D]/20' },
                             { icon: Calendar, label: 'Lịch đặt', value: String(bookings.length), color: 'bg-blue-500', ring: 'ring-blue-500/20' },
                             { icon: PawPrint, label: 'Thú cưng', value: String(pets.length), color: 'bg-orange-500', ring: 'ring-orange-500/20' },
-                            { icon: TrendingUp, label: 'Tổng chi tiêu', value: orders.reduce((s, o) => s + (o.totalAmount ?? 0), 0).toLocaleString('vi-VN') + '₫', color: 'bg-violet-500', ring: 'ring-violet-500/20' },
+                            { icon: TrendingUp, label: 'Tổng chi tiêu', value: orders.reduce((s, o) => s + (o.totalPrice ?? 0), 0).toLocaleString('vi-VN') + '₫', color: 'bg-violet-500', ring: 'ring-violet-500/20' },
                         ].map(stat => (
                             <Card
                                 key={stat.label}
@@ -450,7 +467,7 @@ const UserDashboardPage = () => {
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-sm font-semibold">{o.totalAmount?.toLocaleString('vi-VN')}₫</p>
+                                            <p className="text-sm font-semibold">{o.totalPrice?.toLocaleString('vi-VN')}₫</p>
                                             <Badge className={`text-xs ${orderBadge(o.status)}`}>{orderStatusLabel(o.status)}</Badge>
                                         </div>
                                     </div>
@@ -557,7 +574,7 @@ const UserDashboardPage = () => {
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 flex flex-col items-end gap-2">
-                                            <p className="font-semibold text-foreground">{o.totalAmount?.toLocaleString('vi-VN')}₫</p>
+                                            <p className="font-semibold text-foreground">{o.totalPrice?.toLocaleString('vi-VN')}₫</p>
                                             {(o.status === 'PENDING' || o.status === 'RESERVED') && (
                                                 <Button size="sm" variant="outline" className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600" onClick={() => cancelOrder(o.id)}>
                                                     Hủy
@@ -712,15 +729,17 @@ const UserDashboardPage = () => {
                                                 : <UserIcon className="w-8 h-8 text-[#448B3D]" />
                                             }
                                         </div>
-                                        <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#448B3D] hover:bg-[#336B2D] text-white flex items-center justify-center shadow-md transition-colors">
-                                            <Camera className="w-3.5 h-3.5" />
+                                        <button type="button" disabled={avatarSaving} onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#448B3D] hover:bg-[#336B2D] disabled:opacity-60 text-white flex items-center justify-center shadow-md transition-colors">
+                                            {avatarSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
                                         </button>
                                         <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                                     </div>
                                     <div>
                                         <p className="font-semibold text-foreground">{user?.name}</p>
                                         <p className="text-sm text-muted-foreground">{user?.username}</p>
-                                        <button type="button" onClick={() => avatarInputRef.current?.click()} className="text-xs text-[#448B3D] hover:underline mt-1 font-medium">Thay đổi ảnh đại diện</button>
+                                        <button type="button" disabled={avatarSaving} onClick={() => avatarInputRef.current?.click()} className="text-xs text-[#448B3D] hover:underline disabled:opacity-60 mt-1 font-medium">
+                                            {avatarSaving ? 'Đang tải ảnh...' : 'Thay đổi ảnh đại diện'}
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">

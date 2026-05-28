@@ -33,13 +33,12 @@ import {
     bookingStatusBadge,
     categoryIcon,
     formatTime as formatBookingTime,
-    formatDate as formatBookingDate,
 } from '@/lib/bookingApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
     id: string; name: string; category: string; price: number;
-    stock: number; status: 'active' | 'inactive'; image: string;
+    stock: number; status: 'active' | 'inactive'; image: string; description?: string;
 }
 interface Order {
     id: string;
@@ -67,7 +66,130 @@ function mapApiProduct(p: ApiProduct): Product {
         stock: p.stockQuantity,
         status: p.status === 'ACTIVE' ? 'active' : 'inactive',
         image: primary?.imageUrl ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&h=80&fit=crop',
+        description: p.description ?? '',
     };
+}
+
+type CkEditorInstance = {
+    setData: (data: string) => void;
+    getData: () => string;
+    destroy: () => void;
+    on: (event: string, callback: () => void) => void;
+};
+
+type CkEditorGlobal = {
+    replace: (element: string | HTMLTextAreaElement, config?: Record<string, unknown>) => CkEditorInstance;
+};
+
+declare global {
+    interface Window {
+        CKEDITOR?: CkEditorGlobal;
+    }
+}
+
+const PRODUCT_DESCRIPTION_EDITOR_ID = 'product-description-editor';
+const CKEDITOR_CDN_URL = 'https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js';
+let ckEditorScriptPromise: Promise<void> | null = null;
+
+function loadCkEditorScript() {
+    if (window.CKEDITOR) {
+        return Promise.resolve();
+    }
+
+    if (!ckEditorScriptPromise) {
+        ckEditorScriptPromise = new Promise((resolve, reject) => {
+            const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${CKEDITOR_CDN_URL}"]`);
+            if (existingScript) {
+                existingScript.addEventListener('load', () => resolve(), { once: true });
+                existingScript.addEventListener('error', () => reject(new Error('Không thể tải CKEditor')), { once: true });
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = CKEDITOR_CDN_URL;
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Không thể tải CKEditor'));
+            document.head.appendChild(script);
+        });
+    }
+
+    return ckEditorScriptPromise;
+}
+
+function ProductDescriptionEditor({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const editorRef = useRef<CkEditorInstance | null>(null);
+    const onChangeRef = useRef(onChange);
+
+    useEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        loadCkEditorScript()
+            .then(() => {
+                if (cancelled || !textareaRef.current || !window.CKEDITOR) return;
+
+                const editor = window.CKEDITOR.replace(PRODUCT_DESCRIPTION_EDITOR_ID, {
+                    height: 260,
+                    removePlugins: 'elementspath',
+                    resize_enabled: true,
+                    toolbarGroups: [
+                        { name: 'basicstyles', groups: ['basicstyles', 'cleanup'] },
+                        { name: 'paragraph', groups: ['list', 'indent', 'blocks', 'align'] },
+                        { name: 'styles' },
+                        { name: 'links' },
+                        { name: 'insert' },
+                        { name: 'tools' },
+                    ],
+                    removeButtons: 'Subscript,Superscript,Anchor,Styles,Specialchar',
+                });
+
+                editorRef.current = editor;
+                editor.setData(value || '');
+                editor.on('change', () => onChangeRef.current(editor.getData()));
+            })
+            .catch(() => toast.error('Không thể tải CKEditor. Vui lòng kiểm tra kết nối mạng.'));
+
+        return () => {
+            cancelled = true;
+            if (editorRef.current) {
+                editorRef.current.destroy();
+                editorRef.current = null;
+            }
+        };
+    // CKEditor is created once; the following effect synchronizes subsequent value changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (editor && editor.getData() !== value) {
+            editor.setData(value || '');
+        }
+    }, [value]);
+
+    return (
+        <div className="product-description-editor mt-1">
+            <textarea
+                id={PRODUCT_DESCRIPTION_EDITOR_ID}
+                name={PRODUCT_DESCRIPTION_EDITOR_ID}
+                ref={textareaRef}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                placeholder="Nhập chi tiết sản phẩm..."
+            />
+        </div>
+    );
 }
 
 function mapApiOrder(o: ApiOrder): Order {
@@ -82,7 +204,7 @@ function mapApiOrder(o: ApiOrder): Order {
         customer: o.userId ?? 'Khách hàng',
         productId: o.items?.[0]?.productId ?? '',
         product: o.items?.[0]?.productName ?? `Đơn hàng #${o.id.slice(0, 8)}`,
-        amount: `${o.totalAmount?.toLocaleString('vi-VN')}₫`,
+        amount: `${o.totalPrice?.toLocaleString('vi-VN')}₫`,
         address: '',
         status: statusMap[o.status] ?? 'Đang xử lý',
         date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '',
@@ -108,12 +230,13 @@ function Modal({ title, onClose, children, size = 'default' }: {
     title: string;
     onClose: () => void;
     children: React.ReactNode;
-    size?: 'default' | 'large' | 'xlarge';
+    size?: 'default' | 'large' | 'xlarge' | 'product';
 }) {
     const sizeClasses = {
         default: 'max-w-lg',
         large: 'max-w-3xl',
-        xlarge: 'max-w-5xl'
+        xlarge: 'max-w-5xl',
+        product: 'w-[75vw] max-w-[75vw] max-lg:w-[calc(100vw-2rem)] max-lg:max-w-[calc(100vw-2rem)]'
     };
 
     return (
@@ -133,7 +256,20 @@ function Modal({ title, onClose, children, size = 'default' }: {
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const ORDER_STATUSES = ['Đang xử lý', 'Đang giao', 'Hoàn thành', 'Đã hủy'] as const;
-const BOOKING_STATUSES: ApiBookingStatus[] = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+function allowedBookingStatuses(current: ApiBookingStatus): ApiBookingStatus[] {
+    switch (current) {
+        case 'PENDING':
+            return ['PENDING', 'CONFIRMED', 'CANCELLED', 'NO_SHOW'];
+        case 'CONFIRMED':
+            return ['CONFIRMED', 'IN_PROGRESS', 'CANCELLED', 'NO_SHOW'];
+        case 'IN_PROGRESS':
+            return ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+        case 'COMPLETED':
+        case 'CANCELLED':
+        case 'NO_SHOW':
+            return [current];
+    }
+}
 
 // ─── Helper: tính chart data từ orders thực tế ────────────────────────────────
 function buildChartData(orders: Order[]) {
@@ -473,19 +609,23 @@ const AdminDashboardPage = () => {
             await productApi.deleteCategory(cat.categoryId);
             toast.success('Đã xóa danh mục');
             await fetchAdminData();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Delete category error:', error);
+            const errorCode = typeof error === 'object' && error !== null && 'code' in error
+                ? error.code
+                : undefined;
+            const errorMessage = error instanceof Error ? error.message : '';
 
             // Kiểm tra error code (ApiError có thuộc tính code)
             // Kiểm tra cả message để đảm bảo
-            if (error?.code === 2103 || error?.message?.includes('used by product')) {
+            if (errorCode === 2103 || errorMessage.includes('used by product')) {
                 toast.error('Không thể xóa! Danh mục đang được sử dụng bởi sản phẩm.', {
                     duration: 5000,
                     description: 'Vui lòng xóa tất cả sản phẩm trong danh mục này trước.'
                 });
             } else {
                 // Hiển thị message từ backend
-                toast.error(error?.message || 'Không thể xóa danh mục');
+                toast.error(errorMessage || 'Không thể xóa danh mục');
             }
         }
     };
@@ -517,7 +657,6 @@ const AdminDashboardPage = () => {
     const [showPasswordFor, setShowPasswordFor] = useState<string | null>(null);
     const [editingPassword, setEditingPassword] = useState<{ id: string; value: string } | null>(null);
     const [bookings, setBookings] = useState<BookingResponse[]>([]);
-    const [bookingsLoading, setBookingsLoading] = useState(false);
     const [search, setSearch] = useState('');
 
     // Pagination states
@@ -559,7 +698,7 @@ const AdminDashboardPage = () => {
     };
     const openEditProduct = (p: Product) => {
         const catId = apiCategories.find(c => c.categoryName === p.category)?.categoryId ?? '';
-        setPForm({ name: p.name, description: '', categoryId: catId, price: String(p.price), stock: String(p.stock), status: p.status });
+        setPForm({ name: p.name, description: p.description ?? '', categoryId: catId, price: String(p.price), stock: String(p.stock), status: p.status });
         setPImages([]);
         setPImagePreviews(p.image ? [p.image] : []);
         setPPrimaryIdx(0);
@@ -1586,12 +1725,16 @@ const AdminDashboardPage = () => {
                                                 <p className="text-xs text-muted-foreground">#{b.id.slice(0, 8)} · 🕐 {formatBookingTime(b.appointmentTime)}</p>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <Select value={b.status} onValueChange={(v) => updateBookingStatus(b.id, v as ApiBookingStatus)}>
+                                                <Select
+                                                    value={b.status}
+                                                    disabled={b.status === 'COMPLETED' || b.status === 'CANCELLED' || b.status === 'NO_SHOW'}
+                                                    onValueChange={(v) => updateBookingStatus(b.id, v as ApiBookingStatus)}
+                                                >
                                                     <SelectTrigger size="sm" className="w-44">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {BOOKING_STATUSES.map((s) => (
+                                                        {allowedBookingStatuses(b.status).map((s) => (
                                                             <SelectItem key={s} value={s}>{bookingStatusLabel(s)}</SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -1784,35 +1927,25 @@ const AdminDashboardPage = () => {
                 <Modal
                     title={productModal === 'add' ? 'Thêm sản phẩm' : 'Chỉnh sửa sản phẩm'}
                     onClose={() => setProductModal(null)}
-                    size="large"
+                    size="product"
                 >
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Cột trái - Thông tin cơ bản */}
+                    <div className="space-y-5">
+                        {/* Tên sản phẩm */}
+                        <div>
+                            <Label htmlFor="pname">Tên sản phẩm <span className="text-red-500">*</span></Label>
+                            <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
+                        </div>
+
+                        {/* Mô tả */}
+                        <div>
+                            <Label htmlFor="pdesc">Chi tiết sản phẩm</Label>
+                            <ProductDescriptionEditor
+                                value={pForm.description}
+                                onChange={description => setPForm(f => ({ ...f, description }))}
+                            />
+                        </div>
+
                         <div className="space-y-4">
-                            {/* Tên sản phẩm */}
-                            <div>
-                                <Label htmlFor="pname">Tên sản phẩm <span className="text-red-500">*</span></Label>
-                                <Input id="pname" className="mt-1" placeholder="Nhập tên sản phẩm" value={pForm.name} onChange={e => setPForm(f => ({ ...f, name: e.target.value }))} />
-                            </div>
-
-                            {/* Mô tả */}
-                            <div>
-                                <Label htmlFor="pdesc">Mô tả</Label>
-                                <textarea
-                                    id="pdesc"
-                                    rows={4}
-                                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                                    placeholder="Mô tả sản phẩm (tối đa 500 ký tự)"
-                                    maxLength={500}
-                                    value={pForm.description}
-                                    onChange={e => setPForm(f => ({ ...f, description: e.target.value }))}
-                                />
-                                <div className="text-xs text-muted-foreground mt-1 text-right">
-                                    {pForm.description.length}/500
-                                </div>
-                            </div>
-
-                            {/* Danh mục */}
                             <div>
                                 <Label>Danh mục <span className="text-red-500">*</span></Label>
                                 <Select value={pForm.categoryId} onValueChange={v => setPForm(f => ({ ...f, categoryId: v }))}>
@@ -1830,19 +1963,6 @@ const AdminDashboardPage = () => {
                                 </Select>
                             </div>
 
-                            {/* Giá & Tồn kho */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <Label htmlFor="pprice">Giá (₫) <span className="text-red-500">*</span></Label>
-                                    <Input id="pprice" type="number" min={0} className="mt-1" placeholder="0" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
-                                </div>
-                                <div>
-                                    <Label htmlFor="pstock">Tồn kho <span className="text-red-500">*</span></Label>
-                                    <Input id="pstock" type="number" min={0} className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
-                                </div>
-                            </div>
-
-                            {/* Trạng thái (chỉ hiện khi edit) */}
                             {productModal === 'edit' && (
                                 <div>
                                     <Label>Trạng thái</Label>
@@ -1859,7 +1979,18 @@ const AdminDashboardPage = () => {
                             )}
                         </div>
 
-                        {/* Cột phải - Hình ảnh */}
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="pprice">Giá (₫) <span className="text-red-500">*</span></Label>
+                                <Input id="pprice" type="number" min={0} className="mt-1" placeholder="0" value={pForm.price} onChange={e => setPForm(f => ({ ...f, price: e.target.value }))} />
+                            </div>
+                            <div>
+                                <Label htmlFor="pstock">Tồn kho <span className="text-red-500">*</span></Label>
+                                <Input id="pstock" type="number" min={0} className="mt-1" placeholder="0" value={pForm.stock} onChange={e => setPForm(f => ({ ...f, stock: e.target.value }))} />
+                            </div>
+                        </div>
+
+                        {/* Hình ảnh */}
                         <div className="space-y-4">
                             <div>
                                 <Label>

@@ -7,13 +7,22 @@ spring:
   application:
     name: chat_service
 
-jwt:
-  signerKey: ${JWT_SIGNER_KEY}
-
 gemini:
   api:
     key: ${GEMINI_API_KEY}
-    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+    url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models/${gemini.api.model}:generateContent}
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY}
+
+services:
+  product:
+    url: ${PRODUCT_SERVICE_URL:http://product-service:8081/pet_care_product}
+  booking:
+    url: ${BOOKING_SERVICE_URL:http://booking-service:8086/pet_care_booking}
+  image-ai:
+    url: ${IMAGE_AI_SERVICE_URL:http://image-ai-service:8090}
 
 logging:
   level:
@@ -22,3 +31,10 @@ logging:
     org.springframework.web: WARN
   pattern:
     console: "%d{HH:mm:ss} [%highlight(%-5level)] [chat_service] %cyan(%logger{36}) - %msg%n"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true

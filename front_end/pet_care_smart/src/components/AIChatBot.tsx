@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, ChevronDown, Phone, ChevronRight, ChevronLeft, ShoppingBag, Clock } from 'lucide-react';
+import { Bot, Send, ChevronDown, Phone, ChevronRight, ChevronLeft, ShoppingBag, Clock, Trash2 } from 'lucide-react';
 import { Input } from './ui/input';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
@@ -13,13 +13,53 @@ interface Message {
     text: string;
     sender: 'user' | 'bot';
     timestamp: Date;
-    botReply?: BotReply; // chỉ có ở tin bot
+    botReply?: BotReply;
 }
 
 interface QuickReply {
     label: string;
     action: 'message' | 'navigate' | 'call';
     payload: string;
+}
+
+// ─── Storage helpers ──────────────────────────────────────────────────────────
+
+const STORAGE_KEY_PREFIX = 'pcs_chat_history';
+const MAX_STORED_MESSAGES = 50;
+
+function getStorageKey(userId?: string) {
+    return userId ? `${STORAGE_KEY_PREFIX}_${userId}` : STORAGE_KEY_PREFIX;
+}
+
+/** Serialize Message[] → JSON (timestamp as ISO string) */
+function saveMessages(messages: Message[], userId?: string) {
+    try {
+        const key = getStorageKey(userId);
+        const data = messages.slice(-MAX_STORED_MESSAGES).map(m => ({
+            ...m,
+            timestamp: m.timestamp.toISOString(),
+        }));
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch { /* quota exceeded hoặc private mode */ }
+}
+
+/** Deserialize JSON → Message[] */
+function loadMessages(userId?: string): Message[] {
+    try {
+        const key = getStorageKey(userId);
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        const data = JSON.parse(raw) as Array<Message & { timestamp: string }>;
+        return data.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+    } catch {
+        return [];
+    }
+}
+
+function clearMessages(userId?: string) {
+    try {
+        localStorage.removeItem(getStorageKey(userId));
+    } catch { /* ignore */ }
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -47,6 +87,18 @@ const formatTime = (date: Date) =>
 const formatPrice = (price: number) =>
     price.toLocaleString('vi-VN') + 'đ';
 
+function getPlainTextDescription(description?: string): string {
+    if (!description?.trim()) return '';
+
+    if (typeof document === 'undefined') {
+        return description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = description;
+    return (template.content.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
 // ─── Suggestion Card Component ────────────────────────────────────────────────
 
 const SuggestionCardItem = ({
@@ -55,44 +107,54 @@ const SuggestionCardItem = ({
 }: {
     card: SuggestionCard;
     onNavigate: (link: string) => void;
-}) => (
-    <button
-        onClick={() => onNavigate(card.link)}
-        className='shrink-0 w-36 rounded-xl border border-border bg-background hover:border-[#448B3D] hover:shadow-md transition-all text-left overflow-hidden group'
-    >
-        {/* Ảnh */}
-        <div className='w-full h-24 bg-muted overflow-hidden'>
-            {card.imageUrl ? (
-                <img
-                    src={card.imageUrl}
-                    alt={card.name}
-                    className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
-                    onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                />
-            ) : (
-                <div className='w-full h-full flex items-center justify-center text-muted-foreground'>
-                    {card.type === 'product'
-                        ? <ShoppingBag className='w-8 h-8 opacity-30' />
-                        : <Bot className='w-8 h-8 opacity-30' />
-                    }
-                </div>
-            )}
-        </div>
+}) => {
+    const description = getPlainTextDescription(card.description);
 
-        {/* Info */}
-        <div className='p-2 space-y-0.5'>
-            <p className='text-xs font-medium text-foreground line-clamp-2 leading-tight'>{card.name}</p>
-            <p className='text-xs font-bold text-[#448B3D]'>{formatPrice(card.price)}</p>
-            {card.type === 'service' && card.durationMinutes && (
-                <p className='text-[10px] text-muted-foreground flex items-center gap-0.5'>
-                    <Clock className='w-2.5 h-2.5' />{card.durationMinutes} phút
-                </p>
-            )}
-        </div>
-    </button>
-);
+    return (
+        <button
+            onClick={() => onNavigate(card.link)}
+            className='w-full flex items-center gap-3 rounded-xl border border-border bg-background hover:border-[#448B3D] hover:shadow-md transition-all text-left overflow-hidden group p-2'
+        >
+            {/* Ảnh vuông bên trái */}
+            <div className='w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0'>
+                {card.imageUrl ? (
+                    <img
+                        src={card.imageUrl}
+                        alt={card.name}
+                        className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                    />
+                ) : (
+                    <div className='w-full h-full flex items-center justify-center text-muted-foreground'>
+                        {card.type === 'product'
+                            ? <ShoppingBag className='w-6 h-6 opacity-30' />
+                            : <Bot className='w-6 h-6 opacity-30' />
+                        }
+                    </div>
+                )}
+            </div>
+
+            {/* Info bên phải */}
+            <div className='flex-1 min-w-0 space-y-0.5'>
+                <p className='text-xs font-medium text-foreground line-clamp-2 leading-tight'>{card.name}</p>
+                <p className='text-xs font-bold text-[#448B3D]'>{formatPrice(card.price)}</p>
+                {card.type === 'service' && card.durationMinutes && (
+                    <p className='text-[10px] text-muted-foreground flex items-center gap-0.5'>
+                        <Clock className='w-2.5 h-2.5' />{card.durationMinutes} phút
+                    </p>
+                )}
+                {description && (
+                    <p className='text-[10px] text-muted-foreground line-clamp-1'>{description}</p>
+                )}
+            </div>
+
+            {/* Arrow */}
+            <ChevronRight className='w-4 h-4 text-muted-foreground shrink-0 group-hover:text-[#448B3D] transition-colors' />
+        </button>
+    );
+};
 
 // ─── Bot Message Component ────────────────────────────────────────────────────
 
@@ -106,25 +168,24 @@ const BotMessage = ({
     const suggestions = msg.botReply?.suggestions ?? [];
 
     return (
-        <div className='flex items-end gap-2 flex-row'>
-            <div className='w-7 h-7 rounded-full bg-[#448B3D] flex items-center justify-center shrink-0 mb-0.5'>
+        <div className='flex items-start gap-2 flex-row'>
+            <div className='w-7 h-7 rounded-full bg-[#448B3D] flex items-center justify-center shrink-0 mt-1'>
                 <Bot className='w-4 h-4 text-white' />
             </div>
-            <div className='flex flex-col gap-1.5 max-w-[85%] items-start'>
+            <div className='flex flex-col gap-1.5 min-w-0 flex-1 items-start'>
                 {/* Text bubble */}
-                <div className='px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm leading-relaxed whitespace-pre-line bg-card text-foreground shadow-sm border border-border'>
+                <div className='px-3.5 py-2.5 rounded-2xl rounded-bl-sm text-sm leading-relaxed whitespace-pre-line bg-card text-foreground shadow-sm border border-border max-w-[85%]'>
                     {msg.text}
                 </div>
 
-                {/* Product/Service cards */}
+                {/* Product/Service cards — danh sách dọc */}
                 {suggestions.length > 0 && (
-                    <div className='flex gap-2 overflow-x-auto pb-1 max-w-full' style={{ scrollbarWidth: 'none' }}>
+                    <div className='flex flex-col gap-2 w-full'>
                         {suggestions.map((card) => (
-                            <SuggestionCardItem key={card.id} card={card} onNavigate={onNavigate} />
+                            <SuggestionCardItem key={`${card.id}-${card.type}`} card={card} onNavigate={onNavigate} />
                         ))}
                     </div>
                 )}
-
                 <span className='text-[10px] text-gray-400 px-1'>{formatTime(msg.timestamp)}</span>
             </div>
         </div>
@@ -134,7 +195,8 @@ const BotMessage = ({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const AIChatBot = () => {
-    const { user } = useAuth();
+    const { user, isLoading: authLoading } = useAuth();
+    const userId = user?.id;
 
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
@@ -142,11 +204,53 @@ const AIChatBot = () => {
     const [isTyping, setIsTyping] = useState(false);
 
     const historyRef = useRef<ApiChatMessage[]>([]);
-    const showQuickReplies = !isTyping && messages[messages.length - 1]?.sender === 'bot';
+    const initializedRef = useRef(false);
+    const prevUserIdRef = useRef<string | undefined>(undefined);
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
+    const showQuickReplies = !isTyping && messages[messages.length - 1]?.sender === 'bot';
+
+    // Load history sau khi auth xong
+    useEffect(() => {
+        if (authLoading) return; // chờ auth load xong
+        if (initializedRef.current) return; // chỉ load 1 lần
+        initializedRef.current = true;
+
+        const stored = loadMessages(userId);
+        if (stored.length > 0) {
+            setMessages(stored);
+            historyRef.current = stored
+                .filter(m => m.id !== '1')
+                .map((m): ApiChatMessage => ({ role: m.sender === 'user' ? 'user' : 'model', text: m.text }))
+                .slice(-10);
+        }
+    }, [authLoading, userId]);
+
+    // Khi user login/logout → load lại history của user đó
+    useEffect(() => {
+        if (authLoading) return;
+        if (prevUserIdRef.current === userId) return; // không thay đổi
+        prevUserIdRef.current = userId;
+
+        // Lưu history hiện tại trước khi switch
+        // (đã được save bởi effect bên dưới)
+
+        const stored = loadMessages(userId);
+        const loaded = stored.length > 0 ? stored : [INITIAL_MESSAGE];
+        setMessages(loaded);
+        historyRef.current = loaded
+            .filter(m => m.id !== '1')
+            .map((m): ApiChatMessage => ({ role: m.sender === 'user' ? 'user' : 'model', text: m.text }))
+            .slice(-10);
+    }, [userId, authLoading]);
+
+    // Lưu messages vào localStorage mỗi khi thay đổi
+    useEffect(() => {
+        if (!initializedRef.current) return;
+        saveMessages(messages, userId);
+    }, [messages, userId]);
 
     const updateScrollState = useCallback(() => {
         const el = scrollRef.current;
@@ -179,6 +283,12 @@ const AIChatBot = () => {
         window.location.href = link;
     }, []);
 
+    const handleClearHistory = useCallback(() => {
+        clearMessages(userId);
+        setMessages([INITIAL_MESSAGE]);
+        historyRef.current = [];
+    }, [userId]);
+
     const sendMessage = useCallback(async (text: string) => {
         if (!text.trim() || isTyping) return;
 
@@ -193,10 +303,8 @@ const AIChatBot = () => {
         setInput('');
         setIsTyping(true);
 
-        historyRef.current = [
-            ...historyRef.current,
-            { role: 'user', text },
-        ].slice(-10);
+        const userHistoryEntry: ApiChatMessage = { role: 'user', text };
+        historyRef.current = [...historyRef.current, userHistoryEntry].slice(-10);
 
         try {
             const response = await sendChatMessage({
@@ -213,10 +321,8 @@ const AIChatBot = () => {
 
             const parsed = response.result?.parsed ?? { text: response.result?.reply ?? ERROR_MESSAGE, suggestions: [] };
 
-            historyRef.current = [
-                ...historyRef.current,
-                { role: 'model', text: parsed.text },
-            ].slice(-10);
+            const botHistoryEntry: ApiChatMessage = { role: 'model', text: parsed.text };
+            historyRef.current = [...historyRef.current, botHistoryEntry].slice(-10);
 
             setMessages(prev => [
                 ...prev,
@@ -313,6 +419,14 @@ const AIChatBot = () => {
                                 >
                                     <Phone className='w-4 h-4' />
                                 </a>
+                                <button
+                                    onClick={handleClearHistory}
+                                    className='w-8 h-8 rounded-lg flex items-center justify-center text-white hover:bg-white/20 transition-colors'
+                                    aria-label='Xóa lịch sử'
+                                    title='Xóa lịch sử chat'
+                                >
+                                    <Trash2 className='w-4 h-4' />
+                                </button>
                                 <button
                                     onClick={() => setIsOpen(false)}
                                     className='w-8 h-8 rounded-lg flex items-center justify-center text-white hover:bg-white/20 transition-colors'

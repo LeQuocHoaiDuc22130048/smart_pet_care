@@ -21,7 +21,7 @@ public class ChatRequest {
 
     /**
      * Lịch sử hội thoại trước đó (tối đa 10 tin nhắn gần nhất).
-     * Frontend gửi lên để Gemini có context.
+     * Frontend gửi lên để AI có context.
      */
     private List<ChatMessage> history;
 

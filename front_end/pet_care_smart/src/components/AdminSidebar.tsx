@@ -1,10 +1,10 @@
-import { Link, useNavigate, useSearchParams } from 'react-router';
-import { LayoutDashboard, ShoppingBag, Users, Calendar, BarChart, Settings, LogOut, Package, Shield, X, ChevronDown, List, PlusCircle, Tag, FileText, UserSearch } from 'lucide-react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { LayoutDashboard, ShoppingBag, Users, Calendar, BarChart, Settings, LogOut, Package, X, ChevronDown, List, Tag, FileText, UserSearch, Megaphone } from 'lucide-react';
 import { Button } from './ui/button';
-import { useAuth, useLogout } from '@/context/AuthContext';
+import { useLogout } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type SubItem = { icon: React.ElementType; label: string; tab: string };
 
@@ -35,13 +35,14 @@ const menuItems: MenuItem[] = [
         ]
     },
     { icon: Calendar, label: 'Lịch đặt', tab: 'bookings' },
+    { icon: Megaphone, label: 'CMS & Marketing', tab: 'cms-marketing' },
     { icon: BarChart, label: 'Thống kê', tab: 'stats' },
     { icon: Settings, label: 'Cài đặt', tab: 'settings' },
 ];
 
 const ALL_TABS = [
     'overview', 'products', 'products-add', 'product-categories',
-    'orders', 'order-detail', 'customers', 'customer-detail', 'bookings', 'stats', 'settings'
+    'orders', 'order-detail', 'customers', 'customer-detail', 'bookings', 'cms-marketing', 'stats', 'settings'
 ] as const;
 type AdminTab = typeof ALL_TABS[number];
 
@@ -51,6 +52,7 @@ function parseAdminTabParam(raw: string | null): AdminTab {
 }
 
 function adminHref(tab: string) {
+    if (tab === 'cms-marketing') return '/admin/cms-marketing';
     return tab === 'overview' ? '/admin' : `/admin?tab=${tab}`;
 }
 
@@ -59,29 +61,33 @@ function isAdminTabActive(current: string, tab: string) {
     return current === tab;
 }
 
+function getExpandedMenuForTab(tab: AdminTab): string | null {
+    const parent = menuItems.find((item) => item.children?.some((child) => isAdminTabActive(tab, child.tab)));
+    return parent?.tab ?? null;
+}
+
 interface SidebarContentProps {
     onClose: () => void;
 }
 
 function SidebarContent({ onClose }: SidebarContentProps) {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const location = useLocation();
     const logout = useLogout();
     const [searchParams] = useSearchParams();
-    const activeTab = parseAdminTabParam(searchParams.get('tab'));
+    const activeTab = location.pathname === '/admin/cms-marketing'
+        ? 'cms-marketing'
+        : parseAdminTabParam(searchParams.get('tab'));
 
-    // Track which parent menus are expanded
-    const productTabs = ['products', 'products-add', 'product-categories'];
-    const orderTabs = ['orders', 'order-detail'];
-    const customerTabs = ['customers', 'customer-detail'];
-    const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
-        products: productTabs.includes(activeTab),
-        orders: orderTabs.includes(activeTab),
-        customers: customerTabs.includes(activeTab),
-    });
+    // Only one parent menu should be expanded at a time.
+    const [expandedMenu, setExpandedMenu] = useState<string | null>(() => getExpandedMenuForTab(activeTab));
+
+    useEffect(() => {
+        setExpandedMenu(getExpandedMenuForTab(activeTab));
+    }, [activeTab]);
 
     const toggleMenu = (tab: string) => {
-        setExpandedMenus(prev => ({ ...prev, [tab]: !prev[tab] }));
+        setExpandedMenu(prev => prev === tab ? null : tab);
     };
 
     return (
@@ -107,23 +113,8 @@ function SidebarContent({ onClose }: SidebarContentProps) {
                 </button>
             </div>
 
-            {/* Admin info */}
-            {user && (
-                <div className='p-4 border-b border-white/10 bg-black/5'>
-                    <div className='flex items-center space-x-3'>
-                        <div className='w-10 h-10 rounded-full bg-white/15 ring-1 ring-white/15 flex items-center justify-center overflow-hidden shrink-0'>
-                            {user.avatar
-                                ? <img src={user.avatar} alt={user.name} className='w-full h-full object-cover' />
-                                : <Shield className='w-5 h-5 text-emerald-200' />
-                            }
-                        </div>
-                        <div className='flex-1 min-w-0'>
-                            <p className='font-semibold text-sm text-white truncate'>{user.name}</p>
-                            <p className='text-xs text-emerald-200/90 font-medium'>Quản trị viên</p>
-                        </div>
-                    </div>
-                </div>
-            )}
+            
+            
 
             {/* Menu */}
             <nav className='flex-1 p-3 space-y-0.5 overflow-y-auto'>
@@ -132,7 +123,7 @@ function SidebarContent({ onClose }: SidebarContentProps) {
                     const isParentActive = hasChildren
                         ? item.children!.some(c => isAdminTabActive(activeTab, c.tab))
                         : isAdminTabActive(activeTab, item.tab);
-                    const isExpanded = expandedMenus[item.tab];
+                    const isExpanded = expandedMenu === item.tab;
 
                     const parentClass = cn(
                         'w-full justify-start rounded-xl h-11 text-white/85 border-0 shadow-none',

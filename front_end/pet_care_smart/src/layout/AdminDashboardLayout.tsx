@@ -11,16 +11,14 @@ const ADMIN_SIDEBAR_STORAGE_KEY = 'petcare-admin-sidebar-desktop';
 const AdminDashboardLayout = () => {
     const { isAuthenticated, isLoading, user } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
-
-    useEffect(() => {
+    const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(() => {
         try {
             const v = localStorage.getItem(ADMIN_SIDEBAR_STORAGE_KEY);
-            if (v === '0') setDesktopSidebarOpen(false);
+            return v !== '0';
         } catch {
-            /* ignore */
+            return true;
         }
-    }, []);
+    });
 
     useEffect(() => {
         try {

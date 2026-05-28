@@ -23,7 +23,7 @@ public class Products {
     @Column(nullable = false)
     String productName;
 
-    @Column(length = 500)
+
     String description;
 
     BigDecimal price;

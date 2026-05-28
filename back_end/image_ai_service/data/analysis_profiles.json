@@ -1,0 +1,789 @@
+[
+  {
+    "label": "bird_parasites",
+    "prompts": [
+      "bird with fleas, ticks, mites or visible parasites",
+      "bird scratching skin because of parasites",
+      "bird with irritated skin, scabs or hair loss from parasites",
+      "pet bird with parasite problem",
+      "sick bird with parasite problem"
+    ],
+    "scoreBias": 0.01,
+    "summary": "Ảnh có thể liên quan đến chim với ký sinh trùng. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến ve, bọ chét, ghẻ, giun hoặc ký sinh trùng khác."
+    ],
+    "careTips": [
+      "Giữ chim ấm trong lồng yên tĩnh, tránh gây căng thẳng và liên hệ bác sĩ thú y chuyên chim ngay."
+    ],
+    "warnings": [
+      "Nếu chim đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc chim",
+      "thuốc ký sinh trùng",
+      "xịt ve",
+      "sát trùng",
+      "vệ sinh môi trường"
+    ],
+    "sourceRows": 11
+  },
+  {
+    "label": "cat_digestive",
+    "prompts": [
+      "cat with vomiting, diarrhea or digestive illness",
+      "cat looking weak with digestive problems",
+      "cat near feces, vomit, food bowl or signs of stomach upset",
+      "domestic cat with digestive illness",
+      "sick cat with digestive illness"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến mèo với vấn đề tiêu hóa. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến tình trạng tiêu hóa hoặc ăn uống bất thường."
+    ],
+    "careTips": [
+      "Tạm ngưng cho ăn khoảng 12 giờ, cho uống từng ngụm nước nhỏ và đi thú y nếu nôn ói tiếp diễn."
+    ],
+    "warnings": [
+      "Nếu mèo đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc mèo",
+      "men tiêu hóa",
+      "thức ăn dễ tiêu",
+      "điện giải"
+    ],
+    "sourceRows": 280
+  },
+  {
+    "label": "cat_ear",
+    "prompts": [
+      "cat with ear infection, dirty ear or head shaking",
+      "cat scratching painful red ears",
+      "close up of cat ear with discharge, redness or irritation",
+      "domestic cat with ear infection",
+      "sick cat with ear infection"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến mèo với nhiễm trùng tai. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần kiểm tra tai, mùi hôi, dịch tiết, đỏ, sưng hoặc hành vi lắc đầu/gãi tai."
+    ],
+    "careTips": [
+      "Giữ mèo bình tĩnh, ấm áp và liên hệ bác sĩ thú y."
+    ],
+    "warnings": [
+      "Nếu mèo đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc mèo",
+      "vệ sinh tai",
+      "dung dịch rửa tai",
+      "sát trùng"
+    ],
+    "sourceRows": 277
+  },
+  {
+    "label": "cat_mobility",
+    "prompts": [
+      "cat limping, unable to stand or with mobility problem",
+      "cat lying down weak, paralyzed or injured",
+      "cat with leg injury, swelling or abnormal posture",
+      "domestic cat with mobility problem",
+      "sick cat with mobility problem"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến mèo với vấn đề vận động. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần quan sát thêm dáng đi, tư thế đứng/nằm và mức độ đau của con vật."
+    ],
+    "careTips": [
+      "Giữ mèo bình tĩnh, ấm áp và liên hệ bác sĩ thú y."
+    ],
+    "warnings": [
+      "Nếu mèo đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc mèo",
+      "hỗ trợ vận động",
+      "đệm nằm",
+      "chăm sóc chấn thương"
+    ],
+    "sourceRows": 254
+  },
+  {
+    "label": "cat_parasites",
+    "prompts": [
+      "cat with fleas, ticks, mites or visible parasites",
+      "cat scratching skin because of parasites",
+      "cat with irritated skin, scabs or hair loss from parasites",
+      "domestic cat with parasite problem",
+      "sick cat with parasite problem"
+    ],
+    "scoreBias": 0.01,
+    "summary": "Ảnh có thể liên quan đến mèo với ký sinh trùng. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến ve, bọ chét, ghẻ, giun hoặc ký sinh trùng khác."
+    ],
+    "careTips": [
+      "Giữ mèo bình tĩnh, ấm áp và liên hệ bác sĩ thú y."
+    ],
+    "warnings": [
+      "Nếu mèo đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc mèo",
+      "thuốc ký sinh trùng",
+      "xịt ve",
+      "sát trùng",
+      "vệ sinh môi trường"
+    ],
+    "sourceRows": 264
+  },
+  {
+    "label": "cat_skin",
+    "prompts": [
+      "cat with red skin, rash, wound, swelling or lesions",
+      "cat with hair loss, scabs, irritated skin or skin infection",
+      "close up of cat skin irritation, sores, redness or rash",
+      "domestic cat with skin irritation",
+      "sick cat with skin irritation",
+      "cat with crusty skin lesions, hair loss and irritated skin",
+      "sick cat with mange, scabs, rash or skin infection",
+      "cat skin disease, not dog, not pig, not rabbit"
+    ],
+    "scoreBias": 0.01,
+    "summary": "Ảnh có thể liên quan đến mèo với kích ứng da. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần quan sát kỹ vùng da/lông để kiểm tra đỏ, ngứa, rụng lông, vết loét, mủ hoặc sưng."
+    ],
+    "careTips": [
+      "Giữ mèo bình tĩnh, ấm áp và liên hệ bác sĩ thú y."
+    ],
+    "warnings": [
+      "Nếu mèo đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc mèo",
+      "sát trùng",
+      "vệ sinh da lông",
+      "xịt khử khuẩn",
+      "sản phẩm chăm sóc da"
+    ],
+    "sourceRows": 269
+  },
+  {
+    "label": "dog_digestive",
+    "prompts": [
+      "dog with vomiting, diarrhea or digestive illness",
+      "dog looking weak with digestive problems",
+      "dog near feces, vomit, food bowl or signs of stomach upset",
+      "domestic dog with digestive illness",
+      "sick dog with digestive illness"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến chó với vấn đề tiêu hóa. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến tình trạng tiêu hóa hoặc ăn uống bất thường."
+    ],
+    "careTips": [
+      "Tạm ngưng cho ăn khoảng 12 giờ, cho uống từng lượng nước nhỏ và đi thú y nếu tình trạng kéo dài."
+    ],
+    "warnings": [
+      "Nếu chó đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc chó",
+      "men tiêu hóa",
+      "thức ăn dễ tiêu",
+      "điện giải"
+    ],
+    "sourceRows": 84
+  },
+  {
+    "label": "dog_ear",
+    "prompts": [
+      "dog with ear infection, dirty ear or head shaking",
+      "dog scratching painful red ears",
+      "close up of dog ear with discharge, redness or irritation",
+      "domestic dog with ear infection",
+      "sick dog with ear infection"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến chó với nhiễm trùng tai. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần kiểm tra tai, mùi hôi, dịch tiết, đỏ, sưng hoặc hành vi lắc đầu/gãi tai."
+    ],
+    "careTips": [
+      "Giữ chó bình tĩnh, ở nơi an toàn; tiếp tục quan sát và liên hệ bác sĩ thú y."
+    ],
+    "warnings": [
+      "Nếu chó đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc chó",
+      "vệ sinh tai",
+      "dung dịch rửa tai",
+      "sát trùng"
+    ],
+    "sourceRows": 91
+  },
+  {
+    "label": "dog_mobility",
+    "prompts": [
+      "dog limping, unable to stand or with mobility problem",
+      "dog lying down weak, paralyzed or injured",
+      "dog with leg injury, swelling or abnormal posture",
+      "domestic dog with mobility problem",
+      "sick dog with mobility problem"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến chó với vấn đề vận động. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần quan sát thêm dáng đi, tư thế đứng/nằm và mức độ đau của con vật."
+    ],
+    "careTips": [
+      "Giữ chó bình tĩnh, ở nơi an toàn; tiếp tục quan sát và liên hệ bác sĩ thú y."
+    ],
+    "warnings": [
+      "Nếu chó đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc chó",
+      "hỗ trợ vận động",
+      "đệm nằm",
+      "chăm sóc chấn thương"
+    ],
+    "sourceRows": 103
+  },
+  {
+    "label": "dog_parasites",
+    "prompts": [
+      "dog with fleas, ticks, mites or visible parasites",
+      "dog scratching skin because of parasites",
+      "dog with irritated skin, scabs or hair loss from parasites",
+      "domestic dog with parasite problem",
+      "sick dog with parasite problem"
+    ],
+    "scoreBias": 0.01,
+    "summary": "Ảnh có thể liên quan đến chó với ký sinh trùng. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến ve, bọ chét, ghẻ, giun hoặc ký sinh trùng khác."
+    ],
+    "careTips": [
+      "Giữ chó bình tĩnh, ở nơi an toàn; tiếp tục quan sát và liên hệ bác sĩ thú y."
+    ],
+    "warnings": [
+      "Nếu chó đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc chó",
+      "thuốc ký sinh trùng",
+      "xịt ve",
+      "sát trùng",
+      "vệ sinh môi trường"
+    ],
+    "sourceRows": 82
+  },
+  {
+    "label": "dog_skin",
+    "prompts": [
+      "dog with red skin, rash, wound, swelling or lesions",
+      "dog with hair loss, scabs, irritated skin or skin infection",
+      "close up of dog skin irritation, sores, redness or rash",
+      "domestic dog with skin irritation",
+      "sick dog with skin irritation",
+      "dog with severe mange, demodex mites, crusty skin and hair loss",
+      "white dog with widespread red crusty skin lesions and mange",
+      "sick dog with scabies, demodectic mange, bald patches and irritated skin",
+      "dog skin disease, not pig, not cat, not rabbit"
+    ],
+    "scoreBias": 0.04,
+    "summary": "Ảnh có thể liên quan đến chó với kích ứng da. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần quan sát kỹ vùng da/lông để kiểm tra đỏ, ngứa, rụng lông, vết loét, mủ hoặc sưng."
+    ],
+    "careTips": [
+      "Hạn chế để vật nuôi liếm vùng bất thường; vệ sinh bằng dung dịch sát trùng nhẹ và hỏi thú y nếu nặng hơn."
+    ],
+    "warnings": [
+      "Nếu chó đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc chó",
+      "sát trùng",
+      "vệ sinh da lông",
+      "xịt khử khuẩn",
+      "sản phẩm chăm sóc da"
+    ],
+    "sourceRows": 88
+  },
+  {
+    "label": "pig_digestive",
+    "prompts": [
+      "pig with vomiting, diarrhea or digestive illness",
+      "pig looking weak with digestive problems",
+      "pig near feces, vomit, food bowl or signs of stomach upset",
+      "swine with digestive illness",
+      "sick pig with digestive illness"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến heo/lợn với vấn đề tiêu hóa. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến tình trạng tiêu hóa hoặc ăn uống bất thường."
+    ],
+    "careTips": [
+      "Giữ heo/lợn ở nơi mát, sạch; khuyến khích uống nước và liên hệ thú y nếu không cải thiện."
+    ],
+    "warnings": [
+      "Nếu heo/lợn đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc heo",
+      "sát trùng chuồng trại",
+      "men tiêu hóa",
+      "thức ăn dễ tiêu",
+      "điện giải"
+    ],
+    "sourceRows": 10
+  },
+  {
+    "label": "pig_mobility",
+    "prompts": [
+      "pig limping, unable to stand or with mobility problem",
+      "pig lying down weak, paralyzed or injured",
+      "pig with leg injury, swelling or abnormal posture",
+      "swine with mobility problem",
+      "sick pig with mobility problem"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến heo/lợn với vấn đề vận động. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần quan sát thêm dáng đi, tư thế đứng/nằm và mức độ đau của con vật."
+    ],
+    "careTips": [
+      "Giữ heo/lợn ở nơi mát, sạch; khuyến khích uống nước và liên hệ thú y nếu không cải thiện."
+    ],
+    "warnings": [
+      "Nếu heo/lợn đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc heo",
+      "sát trùng chuồng trại",
+      "hỗ trợ vận động",
+      "đệm nằm",
+      "chăm sóc chấn thương"
+    ],
+    "sourceRows": 16
+  },
+  {
+    "label": "pig_parasites",
+    "prompts": [
+      "pig with fleas, ticks, mites or visible parasites",
+      "pig scratching skin because of parasites",
+      "pig with irritated skin, scabs or hair loss from parasites",
+      "swine with parasite problem",
+      "sick pig with parasite problem"
+    ],
+    "scoreBias": 0.01,
+    "summary": "Ảnh có thể liên quan đến heo/lợn với ký sinh trùng. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến ve, bọ chét, ghẻ, giun hoặc ký sinh trùng khác."
+    ],
+    "careTips": [
+      "Giữ heo/lợn ở nơi mát, sạch; khuyến khích uống nước và liên hệ thú y nếu không cải thiện."
+    ],
+    "warnings": [
+      "Nếu heo/lợn đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc heo",
+      "sát trùng chuồng trại",
+      "thuốc ký sinh trùng",
+      "xịt ve",
+      "sát trùng",
+      "vệ sinh môi trường"
+    ],
+    "sourceRows": 16
+  },
+  {
+    "label": "pig_skin",
+    "prompts": [
+      "pig with red skin, rash, wound, swelling or lesions",
+      "pig with hair loss, scabs, irritated skin or skin infection",
+      "close up of pig skin irritation, sores, redness or rash",
+      "swine with skin irritation",
+      "sick pig with skin irritation",
+      "pig with red skin rash, bruising or skin disease",
+      "swine with skin lesions, not dog, not cat, not rabbit"
+    ],
+    "scoreBias": -0.015,
+    "summary": "Ảnh có thể liên quan đến heo/lợn với kích ứng da. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần quan sát kỹ vùng da/lông để kiểm tra đỏ, ngứa, rụng lông, vết loét, mủ hoặc sưng."
+    ],
+    "careTips": [
+      "Giữ heo/lợn ở nơi mát, sạch; khuyến khích uống nước và liên hệ thú y nếu không cải thiện."
+    ],
+    "warnings": [
+      "Nếu heo/lợn đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc heo",
+      "sát trùng chuồng trại",
+      "sát trùng",
+      "vệ sinh da lông",
+      "xịt khử khuẩn",
+      "sản phẩm chăm sóc da"
+    ],
+    "sourceRows": 19
+  },
+  {
+    "label": "rabbit_digestive",
+    "prompts": [
+      "rabbit with vomiting, diarrhea or digestive illness",
+      "rabbit looking weak with digestive problems",
+      "rabbit near feces, vomit, food bowl or signs of stomach upset",
+      "pet rabbit with digestive illness",
+      "sick rabbit with digestive illness"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến thỏ với vấn đề tiêu hóa. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến tình trạng tiêu hóa hoặc ăn uống bất thường."
+    ],
+    "careTips": [
+      "Giữ thỏ ấm và yên tĩnh, hạn chế bế/nắm quá nhiều và sớm hỏi bác sĩ thú y chuyên thú nhỏ."
+    ],
+    "warnings": [
+      "Nếu thỏ đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc thỏ",
+      "men tiêu hóa",
+      "thức ăn dễ tiêu",
+      "điện giải"
+    ],
+    "sourceRows": 26
+  },
+  {
+    "label": "rabbit_ear",
+    "prompts": [
+      "rabbit with ear infection, dirty ear or head shaking",
+      "rabbit scratching painful red ears",
+      "close up of rabbit ear with discharge, redness or irritation",
+      "pet rabbit with ear infection",
+      "sick rabbit with ear infection"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến thỏ với nhiễm trùng tai. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần kiểm tra tai, mùi hôi, dịch tiết, đỏ, sưng hoặc hành vi lắc đầu/gãi tai."
+    ],
+    "careTips": [
+      "Giữ thỏ ấm và yên tĩnh, hạn chế bế/nắm quá nhiều và sớm hỏi bác sĩ thú y chuyên thú nhỏ."
+    ],
+    "warnings": [
+      "Nếu thỏ đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc thỏ",
+      "vệ sinh tai",
+      "dung dịch rửa tai",
+      "sát trùng"
+    ],
+    "sourceRows": 31
+  },
+  {
+    "label": "rabbit_mobility",
+    "prompts": [
+      "rabbit limping, unable to stand or with mobility problem",
+      "rabbit lying down weak, paralyzed or injured",
+      "rabbit with leg injury, swelling or abnormal posture",
+      "pet rabbit with mobility problem",
+      "sick rabbit with mobility problem"
+    ],
+    "scoreBias": 0.0,
+    "summary": "Ảnh có thể liên quan đến thỏ với vấn đề vận động. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần quan sát thêm dáng đi, tư thế đứng/nằm và mức độ đau của con vật."
+    ],
+    "careTips": [
+      "Giữ thỏ ấm và yên tĩnh, hạn chế bế/nắm quá nhiều và sớm hỏi bác sĩ thú y chuyên thú nhỏ."
+    ],
+    "warnings": [
+      "Nếu thỏ đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc thỏ",
+      "hỗ trợ vận động",
+      "đệm nằm",
+      "chăm sóc chấn thương"
+    ],
+    "sourceRows": 27
+  },
+  {
+    "label": "rabbit_parasites",
+    "prompts": [
+      "rabbit with fleas, ticks, mites or visible parasites",
+      "rabbit scratching skin because of parasites",
+      "rabbit with irritated skin, scabs or hair loss from parasites",
+      "pet rabbit with parasite problem",
+      "sick rabbit with parasite problem"
+    ],
+    "scoreBias": 0.01,
+    "summary": "Ảnh có thể liên quan đến thỏ với ký sinh trùng. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Ảnh có thể liên quan đến ve, bọ chét, ghẻ, giun hoặc ký sinh trùng khác."
+    ],
+    "careTips": [
+      "Giữ thỏ ấm và yên tĩnh, hạn chế bế/nắm quá nhiều và sớm hỏi bác sĩ thú y chuyên thú nhỏ."
+    ],
+    "warnings": [
+      "Nếu thỏ đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc thỏ",
+      "thuốc ký sinh trùng",
+      "xịt ve",
+      "sát trùng",
+      "vệ sinh môi trường"
+    ],
+    "sourceRows": 27
+  },
+  {
+    "label": "rabbit_skin",
+    "prompts": [
+      "rabbit with red skin, rash, wound, swelling or lesions",
+      "rabbit with hair loss, scabs, irritated skin or skin infection",
+      "close up of rabbit skin irritation, sores, redness or rash",
+      "pet rabbit with skin irritation",
+      "sick rabbit with skin irritation",
+      "rabbit with crusty skin, mange, hair loss or scabs",
+      "rabbit skin disease, not dog, not pig, not cat"
+    ],
+    "scoreBias": 0.01,
+    "summary": "Ảnh có thể liên quan đến thỏ với kích ứng da. Kết quả chỉ là nhận định tham khảo từ ảnh và cần đối chiếu thêm triệu chứng thực tế.",
+    "observations": [
+      "Có thể cần quan sát kỹ vùng da/lông để kiểm tra đỏ, ngứa, rụng lông, vết loét, mủ hoặc sưng."
+    ],
+    "careTips": [
+      "Giữ thỏ ấm và yên tĩnh, hạn chế bế/nắm quá nhiều và sớm hỏi bác sĩ thú y chuyên thú nhỏ."
+    ],
+    "warnings": [
+      "Nếu thỏ đau nhiều, bỏ ăn, sốt, khó thở, chảy máu, tiêu chảy kéo dài hoặc yếu nhanh, nên liên hệ thú y sớm.",
+      "Không tự dùng thuốc khi chưa rõ nguyên nhân hoặc chưa có hướng dẫn chuyên môn."
+    ],
+    "searchKeywords": [
+      "chăm sóc thỏ",
+      "sát trùng",
+      "vệ sinh da lông",
+      "xịt khử khuẩn",
+      "sản phẩm chăm sóc da"
+    ],
+    "sourceRows": 24
+  },
+  {
+    "label": "dog_demodex_mange",
+    "prompts": [
+      "dog with demodectic mange, patchy hair loss and red crusty skin",
+      "white dog with severe mange, scabs, hair loss and irritated skin",
+      "sick dog with demodex mites, bald patches, crusts and inflamed skin",
+      "dog with widespread crusty skin lesions on face, legs and body",
+      "dog skin disease with mange, not pig, not cat, not rabbit"
+    ],
+    "scoreBias": 0.09,
+    "summary": "Ảnh có thể liên quan đến chó bị ghẻ/demodex, viêm da hoặc tổn thương da nặng. Kết quả chỉ là nhận định tham khảo từ ảnh và cần được thú y kiểm tra để xác định nguyên nhân.",
+    "observations": [
+      "Có thể thấy rụng lông, da đỏ, vảy/đóng mài hoặc tổn thương lan rộng trên mặt, chân hoặc thân chó.",
+      "Các dấu hiệu này có thể gặp trong ghẻ, viêm da, nhiễm khuẩn/nấm hoặc dị ứng nặng."
+    ],
+    "careTips": [
+      "Cách ly tương đối chó bệnh với vật nuôi khác, giữ khu vực nằm sạch và khô.",
+      "Hạn chế để chó liếm/gãi vùng tổn thương; có thể dùng vòng chống liếm nếu cần.",
+      "Không tự bôi thuốc mạnh hoặc dùng thuốc trị ghẻ khi chưa có hướng dẫn thú y.",
+      "Liên hệ thú y để soi da, kiểm tra ký sinh trùng/nấm/vi khuẩn và chọn phác đồ phù hợp."
+    ],
+    "warnings": [
+      "Nếu da có mủ, mùi hôi, chảy máu, lan nhanh, chó đau nhiều, bỏ ăn hoặc lừ đừ, nên đi thú y sớm.",
+      "Một số bệnh da có thể lây cho vật nuôi khác hoặc gây kích ứng tạm thời cho người, nên vệ sinh tay và dụng cụ chăm sóc."
+    ],
+    "searchKeywords": [
+      "chăm sóc chó",
+      "sát trùng",
+      "vệ sinh da lông",
+      "xịt khử khuẩn",
+      "sản phẩm chăm sóc da"
+    ],
+    "sourceRows": 0
+  },
+  {
+    "label": "pig_african_swine_fever_like",
+    "prompts": [
+      "pig with purple red skin blotches and hemorrhagic lesions",
+      "sick pig lying down with widespread red skin discoloration",
+      "african swine fever like symptoms in pig with skin hemorrhage",
+      "swine with red purple patches on ears belly legs and body",
+      "dead or severely sick pig with red rash and bruising on skin"
+    ],
+    "scoreBias": 0.08,
+    "summary": "Ảnh có thể liên quan đến heo/lợn có mảng đỏ tím hoặc xuất huyết trên da. Đây có thể là dấu hiệu bệnh truyền nhiễm nghiêm trọng ở heo, cần báo thú y/cơ quan chuyên môn để kiểm tra.",
+    "observations": [
+      "Có thể thấy mảng đỏ, tím đỏ hoặc xuất huyết trên thân, tai, bụng hoặc chân heo.",
+      "Nếu trong đàn có sốt cao, bỏ ăn, chết nhanh hoặc nhiều con cùng bệnh thì cần xử lý theo hướng bệnh truyền nhiễm nguy hiểm."
+    ],
+    "careTips": [
+      "Cách ly ngay heo nghi bệnh và hạn chế người, dụng cụ, phương tiện ra vào khu nuôi.",
+      "Không bán chạy, vận chuyển, giết mổ hoặc sử dụng thịt từ heo nghi bệnh.",
+      "Sát trùng chuồng trại, dụng cụ, nền chuồng và khu vực xung quanh.",
+      "Liên hệ thú y địa phương/cơ quan chăn nuôi để được lấy mẫu và hướng dẫn xử lý đúng quy định."
+    ],
+    "warnings": [
+      "Không tự kết luận bệnh chỉ từ ảnh, nhưng nếu nghi dịch tả heo châu Phi hoặc bệnh truyền nhiễm nguy hiểm thì cần báo thú y ngay.",
+      "Không tự điều trị hoặc di chuyển heo nghi bệnh vì có thể làm lây lan mầm bệnh."
+    ],
+    "searchKeywords": [
+      "sát trùng chuồng trại",
+      "iodine",
+      "thuốc sát trùng",
+      "vitamin heo",
+      "điện giải heo"
+    ],
+    "sourceRows": 0
+  },
+  {
+    "label": "cat_ear_mites_or_infection",
+    "prompts": [
+      "cat ear with dark wax, ear mites, redness or discharge",
+      "cat scratching ear with dirty black ear debris",
+      "close up of infected cat ear with discharge and irritation",
+      "cat head shaking because of ear mites or ear infection"
+    ],
+    "scoreBias": 0.05,
+    "summary": "Ảnh có thể liên quan đến mèo bị viêm tai, ve tai hoặc tích tụ ráy tai bất thường. Cần kiểm tra thêm mùi, dịch tiết và mức độ đau/ngứa.",
+    "observations": [
+      "Có thể thấy tai bẩn, đỏ, dịch tiết, ráy đen hoặc dấu hiệu mèo gãi/lắc đầu."
+    ],
+    "careTips": [
+      "Giữ mèo bình tĩnh, tránh ngoáy sâu vào tai.",
+      "Chỉ vệ sinh nhẹ vùng ngoài tai nếu có dung dịch phù hợp cho thú cưng.",
+      "Liên hệ thú y để kiểm tra ve tai, viêm tai do nấm/vi khuẩn hoặc dị vật."
+    ],
+    "warnings": [
+      "Nếu tai sưng đau, có mủ/mùi hôi, mèo nghiêng đầu, mất thăng bằng hoặc đau rõ, nên đi thú y sớm."
+    ],
+    "searchKeywords": [
+      "chăm sóc mèo",
+      "vệ sinh tai",
+      "dung dịch rửa tai",
+      "sát trùng"
+    ],
+    "sourceRows": 0
+  },
+  {
+    "label": "dog_ear_infection",
+    "prompts": [
+      "dog ear infection with redness, swelling, discharge or dirty ear",
+      "dog scratching painful ear or shaking head",
+      "close up of dog ear with brown discharge and irritation"
+    ],
+    "scoreBias": 0.05,
+    "summary": "Ảnh có thể liên quan đến chó bị viêm tai hoặc kích ứng tai. Cần đối chiếu thêm mùi hôi, dịch tiết, đỏ/sưng và hành vi gãi tai/lắc đầu.",
+    "observations": [
+      "Có thể cần kiểm tra vùng tai xem có đỏ, sưng, ráy nhiều, dịch tiết hoặc mùi hôi hay không."
+    ],
+    "careTips": [
+      "Giữ tai khô, tránh tự ngoáy sâu hoặc nhỏ thuốc khi chưa rõ nguyên nhân.",
+      "Có thể vệ sinh nhẹ vành tai bằng sản phẩm phù hợp cho chó nếu không có đau nhiều/chảy máu.",
+      "Liên hệ thú y nếu dấu hiệu kéo dài hoặc tái phát."
+    ],
+    "warnings": [
+      "Nếu chó đau nhiều, tai có mủ/mùi hôi nặng, nghiêng đầu hoặc mất thăng bằng, nên đi thú y sớm."
+    ],
+    "searchKeywords": [
+      "chăm sóc chó",
+      "vệ sinh tai",
+      "dung dịch rửa tai",
+      "sát trùng"
+    ],
+    "sourceRows": 0
+  },
+  {
+    "label": "rabbit_mange_or_skin_crusts",
+    "prompts": [
+      "rabbit with crusty skin, mange, hair loss and scabs",
+      "rabbit ear crusts, mites and irritated skin",
+      "sick rabbit with flaky skin, bald patches and severe itching",
+      "rabbit skin disease, not dog, not pig, not cat"
+    ],
+    "scoreBias": 0.06,
+    "summary": "Ảnh có thể liên quan đến thỏ bị ghẻ, ký sinh trùng hoặc kích ứng da có đóng vảy. Cần kiểm tra thêm tai, vùng rụng lông và mức độ ngứa.",
+    "observations": [
+      "Có thể thấy vùng da đóng vảy, rụng lông, bong tróc hoặc tổn thương quanh tai/mặt/thân."
+    ],
+    "careTips": [
+      "Giữ thỏ ấm, khô, yên tĩnh và hạn chế bế/nắm quá nhiều.",
+      "Vệ sinh khu vực nuôi, thay lót chuồng sạch và tránh dùng thuốc chó/mèo cho thỏ nếu chưa có hướng dẫn.",
+      "Liên hệ thú y chuyên thú nhỏ để kiểm tra ký sinh trùng hoặc nấm da."
+    ],
+    "warnings": [
+      "Thỏ yếu nhanh, bỏ ăn, tiêu chảy, tổn thương lan rộng hoặc ngứa dữ dội cần được khám sớm."
+    ],
+    "searchKeywords": [
+      "chăm sóc thỏ",
+      "sát trùng",
+      "vệ sinh môi trường",
+      "sản phẩm chăm sóc da"
+    ],
+    "sourceRows": 0
+  },
+  {
+    "label": "dog_flea_tick_infestation",
+    "prompts": [
+      "dog with fleas or ticks visible on skin and fur",
+      "dog scratching because of flea infestation",
+      "dog skin irritation from ticks, fleas or parasites",
+      "dog with small brown insects in fur"
+    ],
+    "scoreBias": 0.05,
+    "summary": "Ảnh có thể liên quan đến chó bị ve, bọ chét hoặc ký sinh trùng ngoài da. Cần kiểm tra lông, da, tai và nơi chó nằm.",
+    "observations": [
+      "Có thể thấy dấu hiệu ngứa, gãi nhiều, kích ứng da hoặc ký sinh trùng bám trên lông/da."
+    ],
+    "careTips": [
+      "Tách chó khỏi khu vực ngủ chung nếu có nhiều ve/bọ chét và vệ sinh nơi nằm.",
+      "Dùng sản phẩm trị ve/bọ chét phù hợp cân nặng và độ tuổi theo hướng dẫn.",
+      "Giặt/vệ sinh chăn nệm, ổ nằm và kiểm tra các vật nuôi khác trong nhà."
+    ],
+    "warnings": [
+      "Nếu chó thiếu máu, lừ đừ, sốt, vết cắn viêm mủ hoặc ký sinh trùng quá nhiều, nên liên hệ thú y."
+    ],
+    "searchKeywords": [
+      "chăm sóc chó",
+      "thuốc ký sinh trùng",
+      "xịt ve",
+      "vệ sinh môi trường"
+    ],
+    "sourceRows": 0
+  }
+]

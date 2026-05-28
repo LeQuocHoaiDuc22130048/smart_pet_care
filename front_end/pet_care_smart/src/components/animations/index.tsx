@@ -15,9 +15,9 @@ export const animations = {
 
     // Easing functions
     easing: {
-        easeOut: [0.4, 0, 0.2, 1],
-        easeIn: [0.4, 0, 1, 1],
-        easeInOut: [0.4, 0, 0.2, 1],
+        easeOut: [0.4, 0, 0.2, 1] as const,
+        easeIn: [0.4, 0, 1, 1] as const,
+        easeInOut: [0.4, 0, 0.2, 1] as const,
         spring: { type: 'spring', stiffness: 300, damping: 30 }
     },
 

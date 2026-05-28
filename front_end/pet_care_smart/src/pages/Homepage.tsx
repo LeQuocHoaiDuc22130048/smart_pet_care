@@ -9,7 +9,6 @@ import FeaturedProductsSlider from '@/components/FeaturedProductsSlider';
 import FeedbackCard from '@/components/feedback/FeedbackCard';
 import { useFeedback, type Feedback } from '@/context/FeedbackContext';
 import { feedbackApi } from '@/lib/feedbackApi';
-import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 
 const fadeInUp = {

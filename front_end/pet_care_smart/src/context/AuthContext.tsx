@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authApi } from '@/lib/authApi';
 import { userApi } from '@/lib/userApi';
-import { getToken, setToken, removeToken } from '@/lib/api';
+import { ApiError, getToken, setToken, removeToken } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface User {
@@ -57,13 +57,12 @@ async function fetchAvatarUrl(): Promise<string | undefined> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(() => getToken() !== null);
 
     // ── Restore session on mount ──────────────────────────────────────────────
     useEffect(() => {
         const token = getToken();
         if (!token) {
-            setIsLoading(false);
             return;
         }
 
@@ -119,7 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
 
             return role;
-        } catch {
+        } catch (error) {
+            if (error instanceof ApiError && error.httpStatus === 429) {
+                throw error;
+            }
             return null;
         }
     };

@@ -1,0 +1,29 @@
+server:
+  port: 8092
+  servlet:
+    context-path: /pet_care_cms_marketing
+
+spring:
+  application:
+    name: cms_marketing_service
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/pet_care_cms_marketing}
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+logging:
+  level:
+    com.pet_care.cms_marketing: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%highlight(%-5level)] [cms_marketing_service] %cyan(%logger{36}) - %msg%n"

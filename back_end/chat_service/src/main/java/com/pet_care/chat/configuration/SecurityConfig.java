@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Cho phép gọi chat không cần auth (guest user cũng dùng được)
+                        .requestMatchers("/chat/image-search").authenticated()
                         .requestMatchers("/chat/**").permitAll()
                         .anyRequest().authenticated()
                 )

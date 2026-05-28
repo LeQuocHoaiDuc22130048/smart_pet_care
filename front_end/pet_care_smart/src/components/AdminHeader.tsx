@@ -1,10 +1,9 @@
-import { Bell, Search, Menu, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { Search, Menu, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { Input } from './ui/input';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import ThemeToggle from './theme/ThemeToggle';
+import NotificationDropdown from './NotificationDropdown';
 
 interface Props {
     onMenuClick: () => void;
@@ -57,12 +56,7 @@ const AdminHeader = ({ onMenuClick, desktopSidebarOpen, onToggleDesktopSidebar }
             {/* Right actions */}
             <div className='flex items-center gap-1 sm:gap-2'>
                 <ThemeToggle />
-                <Button variant='ghost' size='icon' className='relative rounded-xl'>
-                    <Bell className='w-5 h-5' />
-                    <Badge className='absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-[#FFB86F] text-xs border-0'>
-                        3
-                    </Badge>
-                </Button>
+                <NotificationDropdown compact />
 
                 {user && (
                     <div className='hidden sm:flex items-center gap-2 pl-3 border-l border-border'>

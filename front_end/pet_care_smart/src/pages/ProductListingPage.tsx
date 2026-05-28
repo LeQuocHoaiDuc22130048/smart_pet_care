@@ -33,6 +33,18 @@ function getCategoryNames(product: Product): string {
     return product.category?.map((c) => c.categoryName).join(', ') || 'Khác';
 }
 
+function getPlainTextDescription(description?: string): string {
+    if (!description?.trim()) return '';
+
+    if (typeof document === 'undefined') {
+        return description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = description;
+    return (template.content.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
 // ─── FilterPanel Component ────────────────────────────────────────────────────
 interface FilterPanelProps {
     priceRange: number[];
@@ -518,12 +530,12 @@ const ProductListingPage = () => {
                                             key={product.id}
                                             className='group overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-md transition-all duration-300 bg-card'
                                         >
-                                            <div className='flex gap-4 p-3 sm:p-4'>
-                                                <div className='relative shrink-0 overflow-hidden rounded-lg bg-gray-50'>
+                                            <div className='flex flex-col gap-4 p-3 sm:flex-row sm:p-4'>
+                                                <div className='relative shrink-0 overflow-hidden rounded-lg bg-gray-50 self-start'>
                                                     <img
                                                         src={getPrimaryImage(product)}
                                                         alt={product.productName}
-                                                        className='w-24 h-24 sm:w-32 sm:h-32 object-contain group-hover:scale-105 transition-transform duration-500 cursor-pointer'
+                                                        className='w-28 h-28 sm:w-32 sm:h-32 object-contain group-hover:scale-105 transition-transform duration-500 cursor-pointer'
                                                         onClick={() => navigate(`/products/${product.id}`)}
                                                     />
                                                 </div>
@@ -537,20 +549,20 @@ const ProductListingPage = () => {
                                                     >
                                                         {product.productName}
                                                     </h3>
-                                                    {product.description && (
+                                                    {getPlainTextDescription(product.description) && (
                                                         <p className='text-sm text-muted-foreground mt-1 line-clamp-2'>
-                                                            {product.description}
+                                                            {getPlainTextDescription(product.description)}
                                                         </p>
                                                     )}
-                                                    <div className='flex items-center justify-between gap-3 mt-auto pt-3'>
-                                                        <span className='text-xl font-bold text-[#448B3D]'>
+                                                    <div className='flex flex-col gap-3 mt-auto pt-3 sm:flex-row sm:items-center sm:justify-between'>
+                                                        <span className='text-xl font-bold text-[#448B3D] whitespace-nowrap'>
                                                             {product.price.toLocaleString('vi-VN')}₫
                                                         </span>
                                                         <Button
                                                             size='sm'
                                                             onClick={() => handleAddToCart(product)}
                                                             disabled={product.status === 'OUT_OF_STOCK'}
-                                                            className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white h-10 px-4 shrink-0'
+                                                            className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white h-10 px-4 shrink-0 self-start sm:self-auto'
                                                         >
                                                             <ShoppingCart className='w-4 h-4 mr-1.5' />
                                                             Thêm vào giỏ

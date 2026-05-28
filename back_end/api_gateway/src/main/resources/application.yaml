@@ -116,6 +116,30 @@ spring:
           filters:
             - StripPrefix=2
 
+        # Notification Service
+        - id: notification_service
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=${app.api-prefix}/pet_care_notification/**
+          filters:
+            - StripPrefix=2
+
+        # CMS & Marketing Service
+        - id: cms_marketing_service
+          uri: ${CMS_MARKETING_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=${app.api-prefix}/pet_care_cms_marketing/**
+          filters:
+            - StripPrefix=2
+
+        # Image AI Service
+        - id: image_ai_service
+          uri: ${IMAGE_AI_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=${app.api-prefix}/pet_care_image_ai/**
+          filters:
+            - RewritePath=${app.api-prefix}/pet_care_image_ai/(?<segment>.*), /image-ai/$\{segment}
+
 identity:
   service:
     url: ${IDENTITY_SERVICE_URL:http://localhost:8080}
@@ -129,3 +153,10 @@ logging:
     org.springframework.security.oauth2: TRACE
   pattern:
     console: "%d{HH:mm:ss} [%highlight(%-5level)] [api_gateway] %cyan(%logger{36}) - %msg%n"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true

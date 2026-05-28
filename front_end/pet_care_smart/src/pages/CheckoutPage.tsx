@@ -15,9 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
     { value: 'CASH_ON_DELIVERY', label: 'Thanh toán khi nhận hàng (COD)' },
-    { value: 'VNPAY', label: 'VNPay' },
-    { value: 'MOMO', label: 'Ví MoMo' },
-    { value: 'BANK_TRANSFER', label: 'Chuyển khoản ngân hàng' },
+    { value: 'VNPAY', label: 'VNPay Sandbox (thanh toán thử nghiệm)' },
 ];
 
 const CheckoutPage = () => {
@@ -48,40 +46,26 @@ const CheckoutPage = () => {
             const order = orderRes.result;
 
             // 2. Create payment
-            await paymentApi.createPayment({
+            const paymentRes = await paymentApi.createPayment({
                 orderId: order.id,
-                amount: cartTotal,
+                amount: order.totalPrice,
                 paymentMethod,
                 description: `Thanh toán đơn hàng #${order.id.slice(0, 8)}`,
             });
 
-            // 3. If VNPAY/MOMO, get payment URL and redirect
-            if (paymentMethod === 'VNPAY' || paymentMethod === 'MOMO') {
-                try {
-                    console.log('[Checkout] Getting payment URL for order:', order.id);
-                    const paymentRes = await paymentApi.getPaymentByOrder(order.id);
-                    console.log('[Checkout] Payment response:', paymentRes);
-                    const txId = paymentRes.result?.id;
-                    if (txId) {
-                        console.log('[Checkout] Transaction ID:', txId);
-                        const urlRes = await paymentApi.getPaymentUrl(txId);
-                        console.log('[Checkout] Payment URL response:', urlRes);
-                        const url = urlRes.result?.paymentUrl;
-                        if (url) {
-                            console.log('[Checkout] Redirecting to:', url);
-                            await clearCart();
-                            window.location.href = url;
-                            return;
-                        } else {
-                            console.warn('[Checkout] No payment URL in response');
-                        }
-                    } else {
-                        console.warn('[Checkout] No transaction ID in payment response');
-                    }
-                } catch (err) {
-                    console.error('[Checkout] Error getting payment URL:', err);
-                    // fallback to success flow
+            // 3. For VNPay, redirect only after obtaining a signed sandbox URL.
+            if (paymentMethod === 'VNPAY') {
+                const txId = paymentRes.result?.transactionId;
+                if (!txId) {
+                    throw new Error('Không thể tạo mã giao dịch VNPay');
                 }
+                const urlRes = await paymentApi.getPaymentUrl(txId);
+                if (!urlRes.result) {
+                    throw new Error('Không thể tạo đường dẫn thanh toán VNPay');
+                }
+                await clearCart();
+                window.location.href = urlRes.result;
+                return;
             }
 
             await clearCart();

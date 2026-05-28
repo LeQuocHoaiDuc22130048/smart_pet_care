@@ -33,7 +33,9 @@ const FeedbackCard = ({ feedback: f }: Props) => {
                         <div className='flex items-center gap-1.5'>
                             <p className='font-semibold text-sm text-foreground'>{f.authorName}</p>
                             {f.verified && (
-                                <BadgeCheck className='w-4 h-4 text-[#448B3D]' title='Đã mua hàng' />
+                                <span title='Đã mua hàng'>
+                                    <BadgeCheck className='w-4 h-4 text-[#448B3D]' />
+                                </span>
                             )}
                         </div>
                         <p className='text-xs text-muted-foreground'>{f.date}</p>

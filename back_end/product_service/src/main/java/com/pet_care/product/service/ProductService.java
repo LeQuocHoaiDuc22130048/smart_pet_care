@@ -16,7 +16,6 @@ import com.pet_care.product.exception.ErrorCode;
 import com.pet_care.product.mapper.ProductMapper;
 import com.pet_care.product.repository.CategoryRepository;
 import com.pet_care.product.repository.InventoryLogRepository;
-import com.pet_care.product.repository.ProductImageRepository;
 import com.pet_care.product.repository.ProductRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +45,6 @@ public class ProductService {
     ProductRepository productRepository;
     CategoryRepository categoryRepository;
     ImageAsyncService imageAsyncService;
-    ProductImageRepository productImageRepository;
     InventoryLogRepository inventoryLogRepository;
     ObjectMapper objectMapper; // inject bean, không new mỗi request
 
@@ -90,7 +88,7 @@ public class ProductService {
                 new TransactionSynchronizationAdapter() {
                     @Override
                     public void afterCommit() {
-                        imageAsyncService.uploadImageAsync(savedProduct, finalUploadList);
+                        imageAsyncService.uploadImageAsyncWithoutDelete(savedProduct, finalUploadList);
                     }
                 }
         );
@@ -98,12 +96,14 @@ public class ProductService {
         return productMapper.toProductResponse(products);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductResponse> getAllProducts() {
         return productRepository.findAll().stream()
                 .map(productMapper::toProductResponse)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public ProductResponse getProductById(String productId) {
         Products product = productRepository.findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
@@ -140,13 +140,11 @@ public class ProductService {
 
             final Products savedProduct = product;
             final List<ImageUploadData> finalList = uploadDataList;
-            // Xóa ảnh cũ và upload ảnh mới SAU KHI transaction commit
-            // Tránh trường hợp: xóa ảnh cũ thành công → upload mới thất bại → sản phẩm mất ảnh
+            // uploadImageAsync sẽ xóa ảnh cũ rồi upload ảnh mới — đảm bảo thứ tự đúng
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronizationAdapter() {
                         @Override
                         public void afterCommit() {
-                            productImageRepository.deleteByProduct(savedProduct);
                             imageAsyncService.uploadImageAsync(savedProduct, finalList);
                         }
                     }

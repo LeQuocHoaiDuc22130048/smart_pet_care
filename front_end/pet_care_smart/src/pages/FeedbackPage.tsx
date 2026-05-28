@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Star, Filter } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { useFeedback } from '@/context/FeedbackContext';
+import { useFeedback, type Feedback } from '@/context/FeedbackContext';
 import { useAuth } from '@/context/AuthContext';
 import FeedbackCard from '@/components/feedback/FeedbackCard';
 import RatingSummary from '@/components/feedback/RatingSummary';
@@ -15,7 +15,7 @@ const SORT = ['Mới nhất', 'Hữu ích nhất', 'Đánh giá cao', 'Đánh gi
 const FeedbackPage = () => {
     const { avgRating } = useFeedback();
     const { isAuthenticated } = useAuth();
-    const [feedbacks, setFeedbacks] = useState<any[]>([]);
+    const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<typeof FILTERS[number]>('Tất cả');
     const [sort, setSort] = useState<typeof SORT[number]>('Mới nhất');
@@ -32,7 +32,7 @@ const FeedbackPage = () => {
             try {
                 setLoading(true);
                 const response = await feedbackApi.getMyFeedbacks(0, 100);
-                const apiFeedbacks = response.result.content.map((f: any) => ({
+                const apiFeedbacks: Feedback[] = response.result.content.map(f => ({
                     id: f.id,
                     type: f.type === 'PRODUCT' ? 'product' : f.type === 'ORDER' ? 'service' : 'general',
                     rating: f.rating,

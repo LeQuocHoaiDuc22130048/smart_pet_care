@@ -1,0 +1,98 @@
+server:
+  port: ${COMMERCE_SERVICE_PORT:8083}
+
+spring:
+  application:
+    name: commerce_service
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: ${ECOMMERCE_DB_URL:${COMMERCE_DB_URL:${DB_URL:jdbc:mysql://localhost:3306/pet_care_ecommerce?createDatabaseIfNotExist=true}}}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+  jpa:
+    hibernate:
+      ddl-auto: ${COMMERCE_DDL_AUTO:update}
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: ${COMMERCE_FLYWAY_ENABLED:false}
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY}
+
+services:
+  product-service:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8081/pet_care_product}
+  order:
+    url: ${ORDER_SERVICE_URL:http://localhost:8083/pet_care_order}
+
+vnpay:
+  tmn-code: ${VNPAY_TMN_CODE:WZOHMQT5}
+  secret-key: ${VNPAY_SECRET_KEY}
+  pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+  return-url: ${VNPAY_RETURN_URL:http://localhost:8084/pet_care_payment/payments/vnpay-callback}
+  frontend-return-url: ${VNPAY_FRONTEND_RETURN_URL:http://localhost:5173/payment-result}
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+        loggerLevel: basic
+
+eureka:
+  client:
+    enabled: ${EUREKA_CLIENT_ENABLED:false}
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 2s
+    instances:
+      product-service:
+        baseConfig: default
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 3s
+        cancelRunningFuture: true
+    instances:
+      product-service:
+        baseConfig: default
+
+logging:
+  level:
+    com.pet_care.cart: DEBUG
+    com.pet_care.order_service: DEBUG
+    com.pet_care.payment_service: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%highlight(%-5level)] [commerce_service] %cyan(%logger{36}) - %msg%n"

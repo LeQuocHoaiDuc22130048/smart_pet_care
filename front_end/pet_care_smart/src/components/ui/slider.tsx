@@ -39,6 +39,8 @@ function Slider({
     onValueChange,
     setInternalValue,
   });
+  // Pointer listeners intentionally read the latest render values via this ref.
+  // eslint-disable-next-line react-hooks/refs
   stateRef.current = { vals, min, max, step, isControlled, onValueChange, setInternalValue };
 
   const trackRef = React.useRef<HTMLDivElement>(null);
@@ -161,7 +163,7 @@ function Slider({
           onKeyDown={e => {
             if (disabled) return;
             const { vals: cur, min: mn, max: mx, step: st, isControlled: ctrl, setInternalValue: setVal, onValueChange: cb } = stateRef.current;
-            let next = [...cur];
+            const next = [...cur];
             if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next[i] = Math.min(mx, Math.max(mn, Math.round((v + st - mn) / st) * st + mn));
             else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next[i] = Math.min(mx, Math.max(mn, Math.round((v - st - mn) / st) * st + mn));
             else return;
