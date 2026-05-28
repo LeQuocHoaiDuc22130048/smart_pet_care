@@ -62,4 +62,9 @@ public class StaffService {
         return staffRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.STAFF_NOT_FOUND));
     }
+
+    Staff getEntityForBooking(String id) {
+        return staffRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new AppException(ErrorCode.STAFF_NOT_FOUND));
+    }
 }

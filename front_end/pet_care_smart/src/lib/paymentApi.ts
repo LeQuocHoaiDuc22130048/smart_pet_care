@@ -8,11 +8,11 @@ import { apiRequest, type ApiResponse } from './api';
 
 // ─── Enums (khớp PaymentMethod backend) ──────────────────────────────────────
 export type PaymentMethod = 'VNPAY' | 'MOMO' | 'BANK_TRANSFER' | 'CASH_ON_DELIVERY';
-export type PaymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED';
+export type PaymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'REFUNDED';
 
 // ─── Response types ───────────────────────────────────────────────────────────
 export interface Payment {
-    id: string;
+    id: number;
     orderId: string;
     userId?: string;
     amount: number;
@@ -20,7 +20,7 @@ export interface Payment {
     status: PaymentStatus;
     description?: string;
     paymentUrl?: string;
-    transactionId?: string;
+    transactionId: string;
     referenceCode?: string;
     createdAt?: string;
 }
@@ -75,7 +75,7 @@ export const paymentApi = {
     },
 
     /** GET /pet_care_payment/payments/{transactionId}/payment-url */
-    getPaymentUrl(transactionId: string): Promise<ApiResponse<{ paymentUrl: string }>> {
+    getPaymentUrl(transactionId: string): Promise<ApiResponse<string>> {
         return apiRequest(`/pet_care_payment/payments/${transactionId}/payment-url`, {
             requireAuth: true,
         });

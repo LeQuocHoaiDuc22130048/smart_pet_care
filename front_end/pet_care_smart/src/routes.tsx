@@ -13,6 +13,7 @@ import BookingServicePage from './pages/BookingServicePage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import AdminDashboardLayout from './layout/AdminDashboardLayout';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+// import AdminCmsMarketingPage from './pages/AdminCmsMarketingPage';
 import UserDashboardLayout from './layout/UserDashboardLayout';
 import UserDashboardPage from './pages/UserDashboardPage';
 import BlogPage from './pages/BlogPage';
@@ -22,6 +23,7 @@ import ReturnPolicyPage from './pages/ReturnPolicyPage';
 import ShippingPolicyPage from './pages/ShippingPolicyPage';
 import ContactPage from './pages/ContactPage';
 import GoogleCallbackPage from './pages/GoogleCallbackPage';
+import PaymentResultPage from './pages/PaymentResultPage';
 
 import FeedbackPage from './pages/FeedbackPage';
 
@@ -46,6 +48,7 @@ export const routes = createBrowserRouter([
             { path: 'chinh-sach-van-chuyen', Component: ShippingPolicyPage },
             { path: 'lien-he', Component: ContactPage },
             { path: 'feedback', Component: FeedbackPage },
+            { path: 'payment-result', Component: PaymentResultPage }
         ]
     },
     {
@@ -60,7 +63,10 @@ export const routes = createBrowserRouter([
     {
         path: '/admin',
         Component: AdminDashboardLayout,
-        children: [{ index: true, Component: AdminDashboardPage }]
+        children: [
+            { index: true, Component: AdminDashboardPage }
+            // { path: 'cms-marketing', Component: AdminCmsMarketingPage },
+        ]
     },
     {
         path: '/unauthorized',

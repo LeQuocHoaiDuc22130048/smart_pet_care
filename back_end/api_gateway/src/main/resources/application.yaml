@@ -116,6 +116,22 @@ spring:
           filters:
             - StripPrefix=2
 
+        # Notification Service
+        - id: notification_service
+          uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=${app.api-prefix}/pet_care_notification/**
+          filters:
+            - StripPrefix=2
+
+        # CMS & Marketing Service
+        - id: cms_marketing_service
+          uri: ${CMS_MARKETING_SERVICE_URL:http://localhost:8092}
+          predicates:
+            - Path=${app.api-prefix}/pet_care_cms_marketing/**
+          filters:
+            - StripPrefix=2
+
         # Image AI Service
         - id: image_ai_service
           uri: ${IMAGE_AI_SERVICE_URL:http://localhost:8090}

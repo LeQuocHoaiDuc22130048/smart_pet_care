@@ -189,6 +189,8 @@ const ProductDetailPage = () => {
 
     useEffect(() => {
         if (!id) return;
+        // Display the loading state again when navigating between product IDs.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         productApi
             .getById(id)

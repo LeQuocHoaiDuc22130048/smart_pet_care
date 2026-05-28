@@ -33,7 +33,6 @@ import {
     bookingStatusBadge,
     categoryIcon,
     formatTime as formatBookingTime,
-    formatDate as formatBookingDate,
 } from '@/lib/bookingApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -168,6 +167,8 @@ function ProductDescriptionEditor({
                 editorRef.current = null;
             }
         };
+    // CKEditor is created once; the following effect synchronizes subsequent value changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -203,7 +204,7 @@ function mapApiOrder(o: ApiOrder): Order {
         customer: o.userId ?? 'Khách hàng',
         productId: o.items?.[0]?.productId ?? '',
         product: o.items?.[0]?.productName ?? `Đơn hàng #${o.id.slice(0, 8)}`,
-        amount: `${o.totalAmount?.toLocaleString('vi-VN')}₫`,
+        amount: `${o.totalPrice?.toLocaleString('vi-VN')}₫`,
         address: '',
         status: statusMap[o.status] ?? 'Đang xử lý',
         date: o.createdAt ? new Date(o.createdAt).toLocaleDateString('vi-VN') : '',
@@ -255,7 +256,20 @@ function Modal({ title, onClose, children, size = 'default' }: {
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const ORDER_STATUSES = ['Đang xử lý', 'Đang giao', 'Hoàn thành', 'Đã hủy'] as const;
-const BOOKING_STATUSES: ApiBookingStatus[] = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+function allowedBookingStatuses(current: ApiBookingStatus): ApiBookingStatus[] {
+    switch (current) {
+        case 'PENDING':
+            return ['PENDING', 'CONFIRMED', 'CANCELLED', 'NO_SHOW'];
+        case 'CONFIRMED':
+            return ['CONFIRMED', 'IN_PROGRESS', 'CANCELLED', 'NO_SHOW'];
+        case 'IN_PROGRESS':
+            return ['IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+        case 'COMPLETED':
+        case 'CANCELLED':
+        case 'NO_SHOW':
+            return [current];
+    }
+}
 
 // ─── Helper: tính chart data từ orders thực tế ────────────────────────────────
 function buildChartData(orders: Order[]) {
@@ -595,19 +609,23 @@ const AdminDashboardPage = () => {
             await productApi.deleteCategory(cat.categoryId);
             toast.success('Đã xóa danh mục');
             await fetchAdminData();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Delete category error:', error);
+            const errorCode = typeof error === 'object' && error !== null && 'code' in error
+                ? error.code
+                : undefined;
+            const errorMessage = error instanceof Error ? error.message : '';
 
             // Kiểm tra error code (ApiError có thuộc tính code)
             // Kiểm tra cả message để đảm bảo
-            if (error?.code === 2103 || error?.message?.includes('used by product')) {
+            if (errorCode === 2103 || errorMessage.includes('used by product')) {
                 toast.error('Không thể xóa! Danh mục đang được sử dụng bởi sản phẩm.', {
                     duration: 5000,
                     description: 'Vui lòng xóa tất cả sản phẩm trong danh mục này trước.'
                 });
             } else {
                 // Hiển thị message từ backend
-                toast.error(error?.message || 'Không thể xóa danh mục');
+                toast.error(errorMessage || 'Không thể xóa danh mục');
             }
         }
     };
@@ -639,7 +657,6 @@ const AdminDashboardPage = () => {
     const [showPasswordFor, setShowPasswordFor] = useState<string | null>(null);
     const [editingPassword, setEditingPassword] = useState<{ id: string; value: string } | null>(null);
     const [bookings, setBookings] = useState<BookingResponse[]>([]);
-    const [bookingsLoading, setBookingsLoading] = useState(false);
     const [search, setSearch] = useState('');
 
     // Pagination states
@@ -1708,12 +1725,16 @@ const AdminDashboardPage = () => {
                                                 <p className="text-xs text-muted-foreground">#{b.id.slice(0, 8)} · 🕐 {formatBookingTime(b.appointmentTime)}</p>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <Select value={b.status} onValueChange={(v) => updateBookingStatus(b.id, v as ApiBookingStatus)}>
+                                                <Select
+                                                    value={b.status}
+                                                    disabled={b.status === 'COMPLETED' || b.status === 'CANCELLED' || b.status === 'NO_SHOW'}
+                                                    onValueChange={(v) => updateBookingStatus(b.id, v as ApiBookingStatus)}
+                                                >
                                                     <SelectTrigger size="sm" className="w-44">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {BOOKING_STATUSES.map((s) => (
+                                                        {allowedBookingStatuses(b.status).map((s) => (
                                                             <SelectItem key={s} value={s}>{bookingStatusLabel(s)}</SelectItem>
                                                         ))}
                                                     </SelectContent>

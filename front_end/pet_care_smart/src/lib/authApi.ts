@@ -44,7 +44,7 @@ export interface UserUpdateRequest {
     password?: string;
     firstName?: string;
     lastName?: string;
-    birthDate: string;      // LocalDate → "yyyy-MM-dd", @NotNull
+    birthDate?: string;     // LocalDate -> "yyyy-MM-dd"
     roles?: string[];
 }
 
@@ -58,7 +58,7 @@ export interface PermissionRequest {
 export interface RoleRequest {
     name: string;
     description?: string;
-    permissions?: string[];
+    permissions: string[];
 }
 
 // ─── Response types ───────────────────────────────────────────────────────────

@@ -99,11 +99,11 @@ services:
   # BUSINESS SERVICES
   # ─────────────────────────────────────────────
 
-  identity-service:
+  account-service:
     build:
-      context: ./identity_service
+      context: ./account_service
       dockerfile: Dockerfile
-    container_name: petcare-identity
+    container_name: petcare-account
     restart: unless-stopped
     depends_on:
       eureka-server:
@@ -114,7 +114,8 @@ services:
         condition: service_healthy
     environment:
       <<: *eureka-client-env
-      DB_URL: jdbc:mysql://mysql:3306/pet_care_identity?createDatabaseIfNotExist=true
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=160m"
+      ACCOUNT_DB_URL: jdbc:mysql://mysql:3306/pet_care_account?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
@@ -125,40 +126,18 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
-      USER_SERVICE_URL: http://user-service:8082/pet_care_user
-    ports:
-      - "8080:8080"
-    networks:
-      - petcare-net
-
-  user-service:
-    build:
-      context: ./user_service
-      dockerfile: Dockerfile
-    container_name: petcare-user
-    restart: unless-stopped
-    depends_on:
-      eureka-server:
-        condition: service_started
-      mysql:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      <<: *eureka-client-env
-      DB_URL: jdbc:mysql://mysql:3306/pet_care_user?createDatabaseIfNotExist=true
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
+      USER_SERVICE_URL: http://account-service:8080/pet_care_user
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     ports:
-      - "8082:8082"
+      - "8080:8080"
+      - "8082:8080"
     networks:
-      - petcare-net
+      petcare-net:
+        aliases:
+          - identity-service
+          - user-service
 
   product-service:
     build:
@@ -189,11 +168,11 @@ services:
     networks:
       - petcare-net
 
-  order-service:
+  ecommerce-service:
     build:
-      context: ./order_service
+      context: ./commerce_service
       dockerfile: Dockerfile
-    container_name: petcare-order
+    container_name: petcare-ecommerce
     restart: unless-stopped
     depends_on:
       eureka-server:
@@ -206,71 +185,31 @@ services:
         condition: service_started
     environment:
       <<: *eureka-client-env
-      DB_URL: jdbc:mysql://mysql:3306/pet_care_order?createDatabaseIfNotExist=true
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=160m"
+      ECOMMERCE_DB_URL: jdbc:mysql://mysql:3306/pet_care_ecommerce?createDatabaseIfNotExist=true
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
-    ports:
-      - "8083:8083"
-    networks:
-      - petcare-net
-
-  payment-service:
-    build:
-      context: ./payment_service
-      dockerfile: Dockerfile
-    container_name: petcare-payment
-    restart: unless-stopped
-    depends_on:
-      eureka-server:
-        condition: service_started
-      mysql:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      <<: *eureka-client-env
-      DB_URL: jdbc:mysql://mysql:3306/pet_care_payment?createDatabaseIfNotExist=true
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
       VNPAY_TMN_CODE: ${VNPAY_TMN_CODE}
       VNPAY_SECRET_KEY: ${VNPAY_SECRET_KEY}
-      ORDER_SERVICE_URL: http://order-service:8083/pet_care_order
+      VNPAY_PAY_URL: ${VNPAY_PAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      VNPAY_RETURN_URL: ${VNPAY_RETURN_URL:-http://localhost:8084/pet_care_payment/payments/vnpay-callback}
+      VNPAY_FRONTEND_RETURN_URL: ${VNPAY_FRONTEND_RETURN_URL:-http://localhost:5173/payment-result}
+      ORDER_SERVICE_URL: http://ecommerce-service:8083/pet_care_order
     ports:
-      - "8084:8084"
+      - "8083:8083"
+      - "8084:8083"
+      - "8085:8083"
     networks:
-      - petcare-net
-
-  cart-service:
-    build:
-      context: ./cart_service/cart
-      dockerfile: Dockerfile
-    container_name: petcare-cart
-    restart: unless-stopped
-    depends_on:
-      eureka-server:
-        condition: service_started
-      mysql:
-        condition: service_healthy
-      product-service:
-        condition: service_started
-    environment:
-      <<: *eureka-client-env
-      DB_URL: jdbc:mysql://mysql:3306/pet_care_cart?createDatabaseIfNotExist=true
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
-      PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
-    ports:
-      - "8085:8085"
-    networks:
-      - petcare-net
+      petcare-net:
+        aliases:
+          - commerce-service
+          - order-service
+          - payment-service
+          - cart-service
 
   booking-service:
     build:
@@ -283,7 +222,7 @@ services:
         condition: service_started
       mysql:
         condition: service_healthy
-      user-service:
+      account-service:
         condition: service_started
     environment:
       <<: *eureka-client-env
@@ -291,7 +230,7 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
-      USER_SERVICE_URL: http://user-service:8082/pet_care_user
+      USER_SERVICE_URL: http://account-service:8080/pet_care_user
       SERVER_SERVLET_CONTEXT_PATH: /pet_care_booking
     ports:
       - "8086:8086"
@@ -320,7 +259,7 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
-      ORDER_SERVICE_URL: http://order-service:8083/pet_care_order
+      ORDER_SERVICE_URL: http://ecommerce-service:8083/pet_care_order
       PRODUCT_SERVICE_URL: http://product-service:8081/pet_care_product
     ports:
       - "8088:8088"
@@ -348,6 +287,50 @@ services:
       IMAGE_AI_SERVICE_URL: http://image-ai-service:8090
     ports:
       - "8089:8089"
+    networks:
+      - petcare-net
+
+  notification-service:
+    build:
+      context: ./notification_service
+      dockerfile: Dockerfile
+    container_name: petcare-notification
+    restart: unless-stopped
+    depends_on:
+      eureka-server:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      <<: *eureka-client-env
+      MONGODB_URI: mongodb://mongodb:27017/pet_care_notification
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+    ports:
+      - "8091:8091"
+    networks:
+      - petcare-net
+
+  cms-marketing-service:
+    build:
+      context: ./cms_marketing_service
+      dockerfile: Dockerfile
+    container_name: petcare-cms-marketing
+    restart: unless-stopped
+    depends_on:
+      eureka-server:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
+    environment:
+      <<: *eureka-client-env
+      MONGODB_URI: mongodb://mongodb:27017/pet_care_cms_marketing
+      JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+    ports:
+      - "8092:8092"
     networks:
       - petcare-net
 
@@ -393,30 +376,31 @@ services:
     restart: unless-stopped
     depends_on:
       - eureka-server
-      - identity-service
-      - user-service
+      - account-service
       - product-service
-      - order-service
-      - payment-service
-      - cart-service
+      - ecommerce-service
       - booking-service
       - feedback-service
       - chat-service
+      - notification-service
+      - cms-marketing-service
       - image-ai-service
     environment:
       <<: *eureka-client-env
       GATEWAY_PORT: 8888
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
-      IDENTITY_SERVICE_URL: http://identity-service:8080
-      USER_SERVICE_URL: http://user-service:8082
+      IDENTITY_SERVICE_URL: http://account-service:8080
+      USER_SERVICE_URL: http://account-service:8080
       PRODUCT_SERVICE_URL: http://product-service:8081
-      ORDER_SERVICE_URL: http://order-service:8083
-      PAYMENT_SERVICE_URL: http://payment-service:8084
-      CART_SERVICE_URL: http://cart-service:8085
+      ORDER_SERVICE_URL: http://ecommerce-service:8083
+      PAYMENT_SERVICE_URL: http://ecommerce-service:8083
+      CART_SERVICE_URL: http://ecommerce-service:8083
       BOOKING_SERVICE_URL: http://booking-service:8086
       FEEDBACK_SERVICE_URL: http://feedback-service:8088
       CHAT_SERVICE_URL: http://chat-service:8089
+      NOTIFICATION_SERVICE_URL: http://notification-service:8091
+      CMS_MARKETING_SERVICE_URL: http://cms-marketing-service:8092
       IMAGE_AI_SERVICE_URL: http://image-ai-service:8090
     ports:
       - "8888:8888"

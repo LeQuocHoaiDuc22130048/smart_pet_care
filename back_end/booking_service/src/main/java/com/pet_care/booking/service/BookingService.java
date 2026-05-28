@@ -49,13 +49,16 @@ public class BookingService {
             throw new AppException(ErrorCode.SERVICE_PACKAGE_NOT_FOUND);
         }
 
-        Staff staff = staffService.getEntity(request.getStaffId());
+        Staff staff = staffService.getEntityForBooking(request.getStaffId());
         if (!Boolean.TRUE.equals(staff.getActive())) {
             throw new AppException(ErrorCode.STAFF_NOT_FOUND);
         }
 
-        if (!bookingRepository.findConflictingBookings(
-                staff.getId(), request.getAppointmentDate(), request.getAppointmentTime()).isEmpty()) {
+        if (hasConflictingBooking(
+                staff.getId(),
+                request.getAppointmentDate(),
+                request.getAppointmentTime(),
+                servicePackage.getDurationMinutes())) {
             throw new AppException(ErrorCode.STAFF_NOT_AVAILABLE);
         }
 
@@ -163,6 +166,17 @@ public class BookingService {
         if (date.atTime(time).isBefore(LocalDateTime.now())) {
             throw new AppException(ErrorCode.INVALID_BOOKING_TIME);
         }
+    }
+
+    private boolean hasConflictingBooking(String staffId, LocalDate date, LocalTime start, Integer durationMinutes) {
+        LocalTime end = start.plusMinutes(durationMinutes);
+        return bookingRepository.findByStaffIdAndAppointmentDate(staffId, date).stream()
+                .filter(booking -> !isTerminal(booking.getStatus()))
+                .anyMatch(booking -> {
+                    LocalTime bookedStart = booking.getAppointmentTime();
+                    LocalTime bookedEnd = bookedStart.plusMinutes(booking.getServicePackage().getDurationMinutes());
+                    return start.isBefore(bookedEnd) && bookedStart.isBefore(end);
+                });
     }
 
     private Booking getEntity(String id) {

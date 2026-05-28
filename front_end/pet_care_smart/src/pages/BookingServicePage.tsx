@@ -18,7 +18,6 @@ import {
     type Staff,
     categoryIcon,
     formatPrice,
-    formatTime,
 } from '@/lib/bookingApi';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -26,7 +25,7 @@ const getAvailableDates = () => {
     const dates: Date[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    let d = new Date(today);
+    const d = new Date(today);
     d.setDate(d.getDate() + 1);
     while (dates.length < 12) {
         if (d.getDay() !== 0) dates.push(new Date(d));

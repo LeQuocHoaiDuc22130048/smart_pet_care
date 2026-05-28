@@ -65,9 +65,6 @@ interface FeedbackContextType {
     loadProductFeedbacks: (productId: string) => Promise<void>;
 }
 
-// ── Mock data (removed - using API only) ─────────────────────────────────────
-const MOCK: Feedback[] = [];
-
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
 export function FeedbackProvider({ children }: { children: ReactNode }) {

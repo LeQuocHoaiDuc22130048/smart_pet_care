@@ -223,7 +223,7 @@ const AIChatBot = () => {
             setMessages(stored);
             historyRef.current = stored
                 .filter(m => m.id !== '1')
-                .map(m => ({ role: m.sender === 'user' ? 'user' : 'model' as const, text: m.text }))
+                .map((m): ApiChatMessage => ({ role: m.sender === 'user' ? 'user' : 'model', text: m.text }))
                 .slice(-10);
         }
     }, [authLoading, userId]);
@@ -242,7 +242,7 @@ const AIChatBot = () => {
         setMessages(loaded);
         historyRef.current = loaded
             .filter(m => m.id !== '1')
-            .map(m => ({ role: m.sender === 'user' ? 'user' : 'model' as const, text: m.text }))
+            .map((m): ApiChatMessage => ({ role: m.sender === 'user' ? 'user' : 'model', text: m.text }))
             .slice(-10);
     }, [userId, authLoading]);
 
@@ -303,10 +303,8 @@ const AIChatBot = () => {
         setInput('');
         setIsTyping(true);
 
-        historyRef.current = [
-            ...historyRef.current,
-            { role: 'user', text },
-        ].slice(-10);
+        const userHistoryEntry: ApiChatMessage = { role: 'user', text };
+        historyRef.current = [...historyRef.current, userHistoryEntry].slice(-10);
 
         try {
             const response = await sendChatMessage({
@@ -323,10 +321,8 @@ const AIChatBot = () => {
 
             const parsed = response.result?.parsed ?? { text: response.result?.reply ?? ERROR_MESSAGE, suggestions: [] };
 
-            historyRef.current = [
-                ...historyRef.current,
-                { role: 'model', text: parsed.text },
-            ].slice(-10);
+            const botHistoryEntry: ApiChatMessage = { role: 'model', text: parsed.text };
+            historyRef.current = [...historyRef.current, botHistoryEntry].slice(-10);
 
             setMessages(prev => [
                 ...prev,

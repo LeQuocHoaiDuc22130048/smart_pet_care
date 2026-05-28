@@ -264,7 +264,15 @@ export function InlineError({
  * Toast Error Message
  * Use with sonner toast for temporary error messages
  */
-export function showErrorToast(message: string, toast: any) {
+interface ErrorToast {
+    error: (message: string, options: {
+        description: string;
+        duration: number;
+        action: { label: string; onClick: () => void };
+    }) => void;
+}
+
+export function showErrorToast(message: string, toast: ErrorToast) {
     toast.error(message, {
         description:
             'Please try again or contact support if the problem persists.',

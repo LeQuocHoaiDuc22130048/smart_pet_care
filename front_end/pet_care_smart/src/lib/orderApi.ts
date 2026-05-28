@@ -31,7 +31,7 @@ export interface Order {
     id: string;
     userId?: string;
     items: OrderItem[];
-    totalAmount: number;
+    totalPrice: number;
     status: OrderStatus;
     note?: string;
     createdAt?: string;

@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useCart, type CartItem } from '@/context/CartContext';
+import { useCart } from '@/context/CartContext';
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,8 +14,6 @@ const CartPage = () => {
     const removeFromCart = cartContext?.removeFromCart ?? (async () => { });
     const updateQuantity = cartContext?.updateQuantity ?? (async () => { });
     const cartTotal = cartContext?.cartTotal ?? 0;
-    const clearCart = cartContext?.clearCart ?? (async () => { });
-
     // Safe guard: ensure cart is an array
     const safeCart = Array.isArray(cart) ? cart : [];
     const safeCartTotal = typeof cartTotal === 'number' && !isNaN(cartTotal) ? cartTotal : 0;

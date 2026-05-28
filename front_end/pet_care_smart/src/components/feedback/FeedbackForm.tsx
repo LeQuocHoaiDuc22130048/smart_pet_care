@@ -111,7 +111,7 @@ const FeedbackForm = ({ type, productId, productName, serviceId, serviceName, on
             if (!user) setName('');
 
             onSuccess?.();
-        } catch (error) {
+        } catch {
             // Error already handled in context
         } finally {
             setLoading(false);

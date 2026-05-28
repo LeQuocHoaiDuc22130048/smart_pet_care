@@ -21,6 +21,8 @@ export default function NavbarWishlistDropdown() {
     const { pathname } = useLocation();
 
     useEffect(() => {
+        // Navigation should close the open mobile panel.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMobileOpen(false);
     }, [pathname]);
 
