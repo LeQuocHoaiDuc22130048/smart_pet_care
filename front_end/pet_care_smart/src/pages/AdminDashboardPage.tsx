@@ -25,6 +25,7 @@ import { DashboardThemeSettings } from '@/components/dashboard/DashboardThemeSet
 import { productApi, type Product as ApiProduct, type Category as ApiCategory } from '@/lib/productApi';
 import { orderApi, type Order as ApiOrder, type OrderStatus } from '@/lib/orderApi';
 import { authApi, type UserIdentity } from '@/lib/authApi';
+import { userApi } from '@/lib/userApi';
 import {
     bookingApi,
     type BookingResponse,
@@ -461,21 +462,79 @@ const AdminDashboardPage = () => {
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const [profileForm, setProfileForm] = useState({ name: user?.name ?? '', email: user?.email ?? '' });
     const [profileSaved, setProfileSaved] = useState(false);
+    const [avatarSaving, setAvatarSaving] = useState(false);
+    const [profileSaving, setProfileSaving] = useState(false);
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    useEffect(() => {
+        setProfileForm({ name: user?.name ?? '', email: user?.email ?? '' });
+    }, [user?.email, user?.name]);
+
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const input = e.currentTarget;
         const file = e.target.files?.[0];
         if (!file) return;
+        if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) {
+            toast.error('Vui lòng chọn ảnh có dung lượng tối đa 10 MB');
+            input.value = '';
+            return;
+        }
+
+        const previousAvatar = user?.avatar;
+        setAvatarSaving(true);
         const reader = new FileReader();
         reader.onload = (ev) => {
             updateUser({ avatar: ev.target?.result as string });
         };
         reader.readAsDataURL(file);
+
+        try {
+            const res = await userApi.updateAvatar(file);
+            const savedUrl = res.result.avatar_url ?? res.result.avatarUrl;
+            if (savedUrl) {
+                updateUser({ avatar: savedUrl });
+            }
+            toast.success('Đã cập nhật ảnh đại diện');
+        } catch (error) {
+            console.error('Error uploading admin avatar:', error);
+            updateUser({ avatar: previousAvatar });
+            toast.error('Không thể cập nhật ảnh đại diện');
+        } finally {
+            setAvatarSaving(false);
+            input.value = '';
+        }
     };
 
-    const saveProfile = () => {
-        updateUser({ name: profileForm.name, email: profileForm.email });
-        setProfileSaved(true);
-        setTimeout(() => setProfileSaved(false), 2000);
+    const saveProfile = async () => {
+        const fullName = profileForm.name.trim();
+        if (!fullName) return;
+        const [firstName, ...lastNameParts] = fullName.split(/\s+/);
+        const lastName = lastNameParts.join(' ');
+
+        setProfileSaving(true);
+        try {
+            const res = await userApi.updateProfile({
+                firstName,
+                lastName,
+                email: profileForm.email.trim() || undefined,
+            });
+            const updatedFirst = res.result.first_name ?? res.result.firstName ?? firstName;
+            const updatedLast = res.result.last_name ?? res.result.lastName ?? lastName;
+            const savedUrl = res.result.avatar_url ?? res.result.avatarUrl;
+            updateUser({
+                firstName: updatedFirst,
+                lastName: updatedLast,
+                email: res.result.email ?? profileForm.email,
+                avatar: savedUrl ?? user?.avatar,
+            });
+            setProfileSaved(true);
+            toast.success('Đã cập nhật thông tin cá nhân');
+            setTimeout(() => setProfileSaved(false), 2000);
+        } catch (error) {
+            console.error('Error saving admin profile:', error);
+            toast.error('Không thể cập nhật thông tin cá nhân');
+        } finally {
+            setProfileSaving(false);
+        }
     };
 
     const setTab = (value: string) => {
@@ -1830,14 +1889,15 @@ const AdminDashboardPage = () => {
                                             : <span className="text-2xl font-bold text-[#448B3D]">{user?.name.charAt(0)}</span>
                                         }
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => avatarInputRef.current?.click()}
-                                        className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#448B3D] hover:bg-[#336B2D] text-white flex items-center justify-center shadow-md transition-colors"
-                                        title="Đổi ảnh đại diện"
-                                    >
-                                        <Camera className="w-3.5 h-3.5" />
-                                    </button>
+                                     <button
+                                         type="button"
+                                         disabled={avatarSaving}
+                                         onClick={() => avatarInputRef.current?.click()}
+                                         className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#448B3D] hover:bg-[#336B2D] disabled:opacity-60 text-white flex items-center justify-center shadow-md transition-colors"
+                                         title="Đổi ảnh đại diện"
+                                     >
+                                         {avatarSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                                     </button>
                                     <input
                                         ref={avatarInputRef}
                                         type="file"
@@ -1849,13 +1909,14 @@ const AdminDashboardPage = () => {
                                 <div>
                                     <p className="font-semibold text-foreground">{user?.name}</p>
                                     <p className="text-sm text-muted-foreground">{user?.email}</p>
-                                    <button
-                                        type="button"
-                                        onClick={() => avatarInputRef.current?.click()}
-                                        className="text-xs text-[#448B3D] hover:underline mt-1 font-medium"
-                                    >
-                                        Thay đổi ảnh đại diện
-                                    </button>
+                                     <button
+                                         type="button"
+                                         disabled={avatarSaving}
+                                         onClick={() => avatarInputRef.current?.click()}
+                                         className="text-xs text-[#448B3D] hover:underline disabled:opacity-60 mt-1 font-medium"
+                                     >
+                                         {avatarSaving ? 'Đang tải ảnh...' : 'Thay đổi ảnh đại diện'}
+                                     </button>
                                 </div>
                             </div>
 
@@ -1883,15 +1944,16 @@ const AdminDashboardPage = () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <Button
-                                    onClick={saveProfile}
-                                    className="bg-[#448B3D] hover:bg-[#336B2D] text-white"
-                                    disabled={!profileForm.name.trim()}
-                                >
-                                    {profileSaved ? '✓ Đã lưu' : 'Lưu thay đổi'}
-                                </Button>
-                                <Button variant="outline" onClick={() => setProfileForm({ name: user?.name ?? '', email: user?.email ?? '' })}>
-                                    Đặt lại
-                                </Button>
+                                     onClick={saveProfile}
+                                     className="bg-[#448B3D] hover:bg-[#336B2D] text-white"
+                                     disabled={!profileForm.name.trim() || profileSaving}
+                                 >
+                                     {profileSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                     {profileSaved ? '✓ Đã lưu' : 'Lưu thay đổi'}
+                                 </Button>
+                                 <Button variant="outline" disabled={profileSaving} onClick={() => setProfileForm({ name: user?.name ?? '', email: user?.email ?? '' })}>
+                                     Đặt lại
+                                 </Button>
                             </div>
                         </div>
                     </Card>

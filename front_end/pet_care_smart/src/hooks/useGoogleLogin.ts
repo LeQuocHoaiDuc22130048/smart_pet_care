@@ -59,82 +59,11 @@ export function useGoogleLogin() {
                 return;
             }
 
-            if (!window.google?.accounts?.id) {
-                toast.error('Google Sign-In chưa sẵn sàng. Vui lòng thử lại.');
-                reject(new Error('Google Identity Services not loaded'));
-                return;
-            }
-
-            const handleCredential = async (response: CredentialResponse) => {
-                if (!response.credential) {
-                    toast.error('Không nhận được thông tin xác thực từ Google');
-                    reject(new Error('No credential in Google response'));
-                    return;
-                }
-                try {
-                    const res = await authApi.authenticateWithGoogle({ idToken: response.credential });
-                    if (res.result?.token) {
-                        const role = await loginWithToken(res.result.token);
-                        if (role !== null) {
-                            toast.success('Đăng nhập Google thành công!');
-                            navigate(role === 'admin' ? '/admin' : '/dashboard');
-                            resolve();
-                        } else {
-                            toast.error('Không thể xác thực tài khoản');
-                            reject(new Error('loginWithToken returned null'));
-                        }
-                    } else {
-                        toast.error('Đăng nhập thất bại — không nhận được token');
-                        reject(new Error('No token returned from backend'));
-                    }
-                } catch (err: unknown) {
-                    const message = err instanceof Error ? err.message : 'Đăng nhập Google thất bại';
-                    console.error('Google login error:', err);
-                    toast.error(message);
-                    reject(err);
-                }
-            };
-
-            // Initialize with use_fedcm_for_prompt: true to opt-in to FedCM
-            // and suppress the deprecation warning
-            window.google.accounts.id.initialize({
-                client_id: clientId,
-                callback: handleCredential,
-                use_fedcm_for_prompt: true,
-                auto_select: false,
-                cancel_on_tap_outside: true,
-            });
-
-            window.google.accounts.id.prompt((notification) => {
-                const type = notification.getMomentType();
-
-                if (notification.isNotDisplayed()) {
-                    const reason = notification.getNotDisplayedReason();
-                    log(`One Tap not displayed (${reason}), falling back to popup`);
-                    // Fall back to popup for any suppression reason
-                    openPopupFallback(clientId, loginWithToken, navigate, resolve, reject);
-
-                } else if (notification.isSkippedMoment()) {
-                    // User dismissed the prompt — not an error, just resolve
-                    log(`One Tap skipped (${notification.getSkippedReason()})`);
-                    resolve();
-
-                } else if (notification.isDismissedMoment()) {
-                    log(`One Tap dismissed (${notification.getDismissedReason()})`);
-                    resolve();
-
-                } else {
-                    log(`One Tap moment: ${type}`);
-                }
-            });
+            openPopupFallback(clientId, loginWithToken, navigate, resolve, reject);
         });
     }, [loginWithToken, navigate]);
 
     return { handleGoogleLogin };
-}
-
-function log(msg: string) {
-    console.debug('[GoogleLogin]', msg);
 }
 
 // ─── Popup fallback ───────────────────────────────────────────────────────────

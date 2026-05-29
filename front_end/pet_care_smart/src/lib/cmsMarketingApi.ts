@@ -55,6 +55,14 @@ export type BlogPostPayload = Omit<BlogPost, 'id' | 'publishedAt' | 'createdAt' 
 export type MarketingCampaignPayload = Omit<MarketingCampaign, 'id' | 'createdAt' | 'updatedAt'>;
 
 export const cmsMarketingApi = {
+    getPublicBanners: (position?: string) => {
+        const query = position ? `?position=${encodeURIComponent(position)}` : '';
+        return apiRequest<Banner[]>(`${CMS_BASE}/public/banners${query}`);
+    },
+    getPublicPosts: () => apiRequest<BlogPost[]>(`${CMS_BASE}/public/posts`),
+    getPublicPost: (slug: string) => apiRequest<BlogPost>(`${CMS_BASE}/public/posts/${slug}`),
+    getActiveCampaigns: () => apiRequest<MarketingCampaign[]>(`${CMS_BASE}/public/campaigns/active`),
+
     getBanners: () => apiRequest<Banner[]>(`${CMS_BASE}/admin/banners`, { requireAuth: true }),
     createBanner: (body: BannerPayload) => apiRequest<Banner>(`${CMS_BASE}/admin/banners`, {
         method: 'POST',

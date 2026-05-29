@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,8 +36,7 @@ public class UserProfileService {
 
     public UserProfileResponse getMyProfile() {
         String username = getCurrentUsername();
-        UserProfile profile = userProfileRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
+        UserProfile profile = getOrCreateProfile(username);
         return mapper.toUserProfileResponse(profile);
     }
 
@@ -51,8 +52,7 @@ public class UserProfileService {
         log.info("updateMyProfile called for user '{}' | firstName='{}' lastName='{}' email='{}' phone='{}'",
                 username, request.getFirstName(), request.getLastName(), request.getEmail(), request.getPhone());
 
-        UserProfile profile = userProfileRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
+        UserProfile profile = getOrCreateProfile(username);
 
         if (request.getFirstName() != null) profile.setFirstName(request.getFirstName());
         if (request.getLastName() != null) profile.setLastName(request.getLastName());
@@ -80,8 +80,7 @@ public class UserProfileService {
         validateAvatar(avatar);
 
         String username = getCurrentUsername();
-        UserProfile profile = userProfileRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_PROFILE_NOT_FOUND));
+        UserProfile profile = getOrCreateProfile(username);
 
         String avatarUrl = cloudinaryService.uploadUserAvatar(avatar.getBytes(), profile.getId());
         profile.setAvatarUrl(avatarUrl);
@@ -101,6 +100,22 @@ public class UserProfileService {
                 || !contentType.startsWith("image/")) {
             throw new AppException(ErrorCode.INVALID_AVATAR_FILE);
         }
+    }
+
+    private UserProfile getOrCreateProfile(String username) {
+        return userProfileRepository.findByUsername(username)
+                .orElseGet(() -> {
+                    log.warn("Profile not found for user '{}', creating a minimal profile", username);
+                    UserProfile profile = UserProfile.builder()
+                            .id(UUID.randomUUID().toString())
+                            .username(username)
+                            .firstName(username)
+                            .lastName("")
+                            .phone("")
+                            .syncedAt(LocalDateTime.now())
+                            .build();
+                    return userProfileRepository.saveAndFlush(profile);
+                });
     }
 
     private String getCurrentUsername() {

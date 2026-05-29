@@ -20,6 +20,7 @@ public class NotificationService {
     public static final String ADMIN_AUDIENCE = "ADMIN";
 
     NotificationRepository notificationRepository;
+    EmailNotificationService emailNotificationService;
 
     public NotificationResponse create(NotificationCreateRequest request) {
         Notification notification = Notification.builder()
@@ -32,7 +33,9 @@ public class NotificationService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        return toResponse(notificationRepository.save(notification));
+        Notification saved = notificationRepository.save(notification);
+        emailNotificationService.sendIfEligible(saved);
+        return toResponse(saved);
     }
 
     public NotificationResponse createSystemNotification(

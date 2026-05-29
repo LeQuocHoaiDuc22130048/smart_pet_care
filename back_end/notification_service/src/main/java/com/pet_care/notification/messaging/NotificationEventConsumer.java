@@ -1,18 +1,14 @@
 package com.pet_care.notification.messaging;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pet_care.notification.configuration.RabbitMQConfig;
 import com.pet_care.notification.enums.NotificationType;
 import com.pet_care.notification.service.NotificationService;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -23,11 +19,9 @@ import org.springframework.stereotype.Component;
 public class NotificationEventConsumer {
 
     NotificationService notificationService;
-    ObjectMapper objectMapper;
 
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_PAYMENT_SUCCESS_QUEUE)
-    public void handlePaymentSuccess(Message message) {
-        Map<String, Object> event = readEvent(message);
+    public void handlePaymentSuccess(Map<String, Object> event) {
         String userId = valueAsString(event.get("userId"));
         String orderId = valueAsString(event.get("orderId"));
         BigDecimal amount = valueAsBigDecimal(event.get("amount"));
@@ -51,8 +45,7 @@ public class NotificationEventConsumer {
     }
 
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_PAYMENT_FAILED_QUEUE)
-    public void handlePaymentFailed(Message message) {
-        Map<String, Object> event = readEvent(message);
+    public void handlePaymentFailed(Map<String, Object> event) {
         String userId = valueAsString(event.get("userId"));
         String orderId = valueAsString(event.get("orderId"));
         String reason = valueAsString(event.get("reason"));
@@ -73,8 +66,7 @@ public class NotificationEventConsumer {
     }
 
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_USER_CREATED_QUEUE)
-    public void handleUserCreated(Message message) {
-        Map<String, Object> event = readEvent(message);
+    public void handleUserCreated(Map<String, Object> event) {
         String userId = valueAsString(event.get("userId"));
         String firstName = valueAsString(event.get("firstName"));
 
@@ -94,8 +86,7 @@ public class NotificationEventConsumer {
     }
 
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_ORDER_STATUS_CHANGED_QUEUE)
-    public void handleOrderStatusChanged(Message message) {
-        Map<String, Object> event = readEvent(message);
+    public void handleOrderStatusChanged(Map<String, Object> event) {
         String userId = valueAsString(event.get("userId"));
         String orderId = valueAsString(event.get("orderId"));
         String newStatus = valueAsString(event.get("newStatus"));
@@ -115,8 +106,7 @@ public class NotificationEventConsumer {
     }
 
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_BOOKING_CREATED_QUEUE)
-    public void handleBookingCreated(Message message) {
-        Map<String, Object> event = readEvent(message);
+    public void handleBookingCreated(Map<String, Object> event) {
         String bookingId = valueAsString(event.get("bookingId"));
         String customerId = valueAsString(event.get("userId"));
         String petName = valueAsString(event.get("petName"));
@@ -134,11 +124,23 @@ public class NotificationEventConsumer {
                 NotificationType.BOOKING,
                 bookingId
         );
+
+        if (customerId != null && !customerId.isBlank()) {
+            notificationService.createSystemNotification(
+                    customerId,
+                    "Đặt lịch thành công",
+                    "Bạn đã đặt " + safeText(serviceName, "dịch vụ")
+                            + " cho " + safeText(petName, "thú cưng")
+                            + " lúc " + formatAppointmentTime(appointmentDate, appointmentTime)
+                            + ". Lịch hẹn đang chờ xác nhận.",
+                    NotificationType.BOOKING,
+                    bookingId
+            );
+        }
     }
 
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_BOOKING_STATUS_CHANGED_QUEUE)
-    public void handleBookingStatusChanged(Message message) {
-        Map<String, Object> event = readEvent(message);
+    public void handleBookingStatusChanged(Map<String, Object> event) {
         String userId = valueAsString(event.get("userId"));
         String bookingId = valueAsString(event.get("bookingId"));
         String newStatus = valueAsString(event.get("newStatus"));
@@ -164,8 +166,7 @@ public class NotificationEventConsumer {
     }
 
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_SERVICE_PACKAGE_UPDATED_QUEUE)
-    public void handleServicePackageUpdated(Message message) {
-        Map<String, Object> event = readEvent(message);
+    public void handleServicePackageUpdated(Map<String, Object> event) {
         String userId = valueAsString(event.get("userId"));
         String bookingId = valueAsString(event.get("bookingId"));
         String servicePackageId = valueAsString(event.get("servicePackageId"));
@@ -188,15 +189,6 @@ public class NotificationEventConsumer {
                 NotificationType.BOOKING,
                 servicePackageId == null ? bookingId : servicePackageId
         );
-    }
-
-    private Map<String, Object> readEvent(Message message) {
-        try {
-            String json = new String(message.getBody(), StandardCharsets.UTF_8);
-            return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Cannot read notification event payload", e);
-        }
     }
 
     private String valueAsString(Object value) {

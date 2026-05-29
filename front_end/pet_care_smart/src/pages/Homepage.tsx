@@ -10,6 +10,8 @@ import FeedbackCard from '@/components/feedback/FeedbackCard';
 import { useFeedback, type Feedback } from '@/context/FeedbackContext';
 import { feedbackApi } from '@/lib/feedbackApi';
 import { useAuth } from '@/context/AuthContext';
+import { productApi, type Category, type Product } from '@/lib/productApi';
+import { bookingApi, categoryIcon, formatPrice, type ServicePackage } from '@/lib/bookingApi';
 
 const fadeInUp = {
     initial: { opacity: 0, y: 24 },
@@ -26,6 +28,15 @@ const Homepage = () => {
     // Local state for homepage feedbacks
     const [homepageFeedbacks, setHomepageFeedbacks] = useState<Feedback[]>([]);
     const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+    const [categories, setCategories] = useState<Array<{
+        id: string;
+        name: string;
+        desc: string;
+        image: string;
+        count: string;
+    }>>([]);
+    const [services, setServices] = useState<ServicePackage[]>([]);
+    const [loadingHomepageData, setLoadingHomepageData] = useState(true);
 
     // Slider state cho feedback
     const [fbIndex, setFbIndex] = useState(0);
@@ -81,6 +92,62 @@ const Homepage = () => {
         return () => clearInterval(t);
     }, [nextFb, homepageFeedbacks.length]);
 
+    useEffect(() => {
+        let mounted = true;
+
+        const getPrimaryImage = (product?: Product) => {
+            const primary = product?.images?.find((image) => image.isPrimary);
+            return primary?.imageUrl
+                ?? product?.images?.[0]?.imageUrl
+                ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=400&fit=crop';
+        };
+
+        const loadHomepageData = async () => {
+            setLoadingHomepageData(true);
+            try {
+                const [categoriesRes, productsRes, servicesRes] = await Promise.allSettled([
+                    productApi.getAllCategories(),
+                    productApi.getAll(),
+                    bookingApi.getServicePackages()
+                ]);
+
+                if (!mounted) return;
+
+                const apiCategories = categoriesRes.status === 'fulfilled' ? categoriesRes.value.result ?? [] : [];
+                const apiProducts = productsRes.status === 'fulfilled' ? productsRes.value.result ?? [] : [];
+                const apiServices = servicesRes.status === 'fulfilled' ? servicesRes.value.result ?? [] : [];
+
+                const visibleCategories = apiCategories.slice(0, 3).map((category: Category) => {
+                    const categoryProducts = apiProducts.filter((product) =>
+                        product.category?.some((item) => item.categoryId === category.categoryId)
+                    );
+                    const firstProduct = categoryProducts.find((product) => product.images?.length);
+                    return {
+                        id: category.categoryId,
+                        name: category.categoryName,
+                        desc: category.description || 'Khám phá các sản phẩm phù hợp cho vật nuôi',
+                        image: getPrimaryImage(firstProduct),
+                        count: `${categoryProducts.length} sản phẩm`
+                    };
+                });
+
+                setCategories(visibleCategories);
+                setServices(apiServices.filter((service) => service.active).slice(0, 3));
+            } catch (error) {
+                console.error('Error loading homepage data:', error);
+                setCategories([]);
+                setServices([]);
+            } finally {
+                if (mounted) setLoadingHomepageData(false);
+            }
+        };
+
+        void loadHomepageData();
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
     const features = [
         {
             icon: '✅',
@@ -106,33 +173,6 @@ const Homepage = () => {
             description: 'Gọi ngay (84) 702 500 551 để được tư vấn chọn sản phẩm phù hợp',
             bg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800'
         }
-    ];
-
-    const categories = [
-        {
-            name: 'Thức ăn',
-            desc: 'Thức ăn cho chó, mèo, gia súc',
-            image: 'https://images.unsplash.com/photo-1767023023369-96a7c923be0c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkb2clMjBmb29kJTIwYm93bCUyMGhlYWx0aHl8ZW58MXx8fHwxNzcwNzQyNDk0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            count: '500+ sản phẩm'
-        },
-        {
-            name: 'Đồ chơi & Phụ kiện',
-            desc: 'Vòng cổ, dây dắt, đồ chơi',
-            image: 'https://images.unsplash.com/photo-1744608257939-1ecbd90f1320?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXQlMjB0b3lzJTIwY29sb3JmdWx8ZW58MXx8fHwxNzcwNzYxMDAwfDA&ixlib=rb-4.1.0&q=80&w=1080',
-            count: '300+ sản phẩm'
-        },
-        {
-            name: 'Thuốc & Sức khỏe',
-            desc: 'Thuốc, vitamin, tiêm phòng',
-            image: 'https://images.unsplash.com/photo-1625321171045-1fea4ac688e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2ZXRlcmluYXJpYW4lMjBleGFtaW5pbmclMjBwZXR8ZW58MXx8fHwxNzcwNzM3MjE3fDA&ixlib=rb-4.1.0&q=80&w=1080',
-            count: 'Đặt lịch ngay'
-        }
-    ];
-
-    const services = [
-        { icon: '🛁', title: 'Tắm & Cắt lông', description: 'Tắm sạch, cắt tỉa lông gọn gàng tại nhà bạn', price: '150.000đ' },
-        { icon: '💉', title: 'Tiêm phòng', description: 'Tiêm đầy đủ các loại vắc-xin cần thiết', price: '200.000đ' },
-        { icon: '🏥', title: 'Khám sức khỏe', description: 'Kiểm tra sức khỏe định kỳ, phát hiện bệnh sớm', price: '250.000đ' }
     ];
 
     return (
@@ -182,10 +222,15 @@ const Homepage = () => {
                         </h2>
                         <p className='text-lg text-muted-foreground'>Tìm đúng sản phẩm bạn cần</p>
                     </motion.div>
+                    {loadingHomepageData ? (
+                        <div className='py-12 text-center text-muted-foreground'>Đang tải danh mục...</div>
+                    ) : categories.length === 0 ? (
+                        <div className='py-12 text-center text-muted-foreground'>Chưa có danh mục sản phẩm</div>
+                    ) : (
                     <div className='grid md:grid-cols-3 gap-6'>
                         {categories.map((cat, i) => (
                             <motion.div
-                                key={i}
+                                key={cat.id}
                                 initial={{ opacity: 0, scale: 0.97 }}
                                 whileInView={{ opacity: 1, scale: 1 }}
                                 viewport={{ once: true }}
@@ -212,6 +257,7 @@ const Homepage = () => {
                             </motion.div>
                         ))}
                     </div>
+                    )}
                     <motion.div {...fadeInUp} className='text-center mt-8'>
                         <Button
                             size='lg'
@@ -235,20 +281,25 @@ const Homepage = () => {
                             Bác sĩ đến tận nơi — Không cần đi xa
                         </p>
                     </motion.div>
+                    {loadingHomepageData ? (
+                        <div className='py-12 text-center text-muted-foreground'>Đang tải dịch vụ...</div>
+                    ) : services.length === 0 ? (
+                        <div className='py-12 text-center text-muted-foreground'>Chưa có gói dịch vụ đang hoạt động</div>
+                    ) : (
                     <div className='grid md:grid-cols-3 gap-6'>
                         {services.map((svc, i) => (
                             <motion.div
-                                key={i}
+                                key={svc.id}
                                 initial={{ opacity: 0, y: 24 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: i * 0.1, duration: 0.4 }}
                             >
                                 <Card className='p-7 rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-lg transition-all duration-300 text-center h-full flex flex-col'>
-                                    <div className='text-6xl mb-4'>{svc.icon}</div>
-                                    <h3 className='text-xl font-bold text-foreground mb-2'>{svc.title}</h3>
+                                    <div className='text-6xl mb-4'>{categoryIcon(svc.category)}</div>
+                                    <h3 className='text-xl font-bold text-foreground mb-2'>{svc.name}</h3>
                                     <p className='text-base text-muted-foreground mb-4 flex-1 leading-relaxed'>{svc.description}</p>
-                                    <div className='text-2xl font-bold text-[#448B3D] mb-4'>Từ {svc.price}</div>
+                                    <div className='text-2xl font-bold text-[#448B3D] mb-4'>Từ {formatPrice(svc.price)}</div>
                                     <Button
                                         onClick={() => navigate('/booking')}
                                         className='w-full rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-12 text-base'
@@ -260,6 +311,7 @@ const Homepage = () => {
                             </motion.div>
                         ))}
                     </div>
+                    )}
                 </div>
             </section>
 
