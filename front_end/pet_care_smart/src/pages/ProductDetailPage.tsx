@@ -4,12 +4,13 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCart } from '@/context/CartContext';
 import { useFeedback } from '@/context/FeedbackContext';
+import { useWishlist } from '@/context/WishlistContext';
 import FeedbackCard from '@/components/feedback/FeedbackCard';
 import FeedbackForm from '@/components/feedback/FeedbackForm';
 import RatingSummary from '@/components/feedback/RatingSummary';
 import {
     ShoppingCart, Heart, Star, Truck, Shield,
-    ArrowLeft, ChevronLeft, ChevronRight, MessageSquarePlus, Loader2
+    ArrowLeft, ChevronLeft, ChevronRight, MessageSquarePlus, Loader2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -29,6 +30,13 @@ function getImages(product: Product): string[] {
 
 function getCategoryNames(product: Product): string {
     return product.category?.map((c) => c.categoryName).join(', ') || 'Khác';
+}
+
+function getPrimaryImage(product: Product): string {
+    const primary = product.images?.find((image) => image.isPrimary);
+    return primary?.imageUrl
+        ?? product.images?.[0]?.imageUrl
+        ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=400&fit=crop';
 }
 
 const BLOCKED_HTML_TAGS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'form']);
@@ -173,16 +181,19 @@ const ProductDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { addToCart } = useCart();
+    const { toggleWishlist, isWishlisted } = useWishlist();
     const { feedbacks, avgRating, loadProductFeedbacks } = useFeedback();
     const [showFeedbackForm, setShowFeedbackForm] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [selectedImage, setSelectedImage] = useState(0);
     const [imgDirection, setImgDirection] = useState(1);
-    const [wishlisted, setWishlisted] = useState(false);
+    const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
     // ── Data state ────────────────────────────────────────────────────────────
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
+    const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+    const [relatedLoading, setRelatedLoading] = useState(false);
 
     // Filter product feedbacks from state
     const productFeedbacks = product ? feedbacks.filter(f => f.productId === product.id) : [];
@@ -190,14 +201,59 @@ const ProductDetailPage = () => {
     useEffect(() => {
         if (!id) return;
         // Display the loading state again when navigating between product IDs.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
+        setSelectedImage(0);
+        setDescriptionExpanded(false);
         productApi
             .getById(id)
             .then((res) => setProduct(res.result))
             .catch(() => toast.error('Không thể tải thông tin sản phẩm'))
             .finally(() => setLoading(false));
     }, [id]);
+
+    useEffect(() => {
+        if (!product?.id) return;
+
+        let mounted = true;
+
+        const loadRelatedProducts = async () => {
+            const categoryIds = product.category?.map((category) => category.categoryId) ?? [];
+
+            setRelatedLoading(true);
+
+            if (categoryIds.length === 0) {
+                setRelatedProducts([]);
+                setRelatedLoading(false);
+                return;
+            }
+
+            try {
+                const res = await productApi.getAll();
+                if (!mounted) return;
+
+                const related = (res.result ?? [])
+                    .filter((item) => {
+                        if (item.id === product.id || item.status !== 'ACTIVE') return false;
+                        const itemCategoryIds = item.category?.map((category) => category.categoryId) ?? [];
+                        return itemCategoryIds.some((categoryId) => categoryIds.includes(categoryId));
+                    })
+                    .sort((a, b) => b.stockQuantity - a.stockQuantity)
+                    .slice(0, 4);
+
+                setRelatedProducts(related);
+            } catch {
+                if (mounted) setRelatedProducts([]);
+            } finally {
+                if (mounted) setRelatedLoading(false);
+            }
+        };
+
+        void loadRelatedProducts();
+
+        return () => {
+            mounted = false;
+        };
+    }, [product?.id, product?.category]);
 
     // Load product feedbacks
     useEffect(() => {
@@ -258,12 +314,31 @@ const ProductDetailPage = () => {
         toast.success(`Đã thêm ${quantity} "${product.productName}" vào giỏ hàng!`);
     };
 
+    const handleAddRelatedToCart = (relatedProduct: Product) => {
+        addToCart({
+            id: relatedProduct.id,
+            name: relatedProduct.productName,
+            price: relatedProduct.price,
+            image: getPrimaryImage(relatedProduct),
+            category: getCategoryNames(relatedProduct),
+        });
+        toast.success('Đã thêm vào giỏ hàng!');
+    };
+
     const handleWishlist = () => {
-        setWishlisted((prev) => !prev);
-        toast.success(wishlisted ? 'Đã xóa khỏi yêu thích' : 'Đã thêm vào yêu thích ❤️');
+        const liked = isWishlisted(product.id);
+        toggleWishlist({
+            id: product.id,
+            name: product.productName,
+            price: product.price,
+            image: images[0],
+            category: getCategoryNames(product),
+        });
+        toast.success(liked ? 'Đã xóa khỏi yêu thích' : '❤️ Đã thêm vào yêu thích');
     };
 
     const isOutOfStock = product.status === 'OUT_OF_STOCK' || product.stockQuantity === 0;
+    const wishlisted = isWishlisted(product.id);
     const productDescriptionHtml = sanitizeCkEditorHtml(product.description);
 
     return (
@@ -445,10 +520,35 @@ const ProductDetailPage = () => {
                             </TabsList>
                             <TabsContent value='description' className='mt-4'>
                                 {productDescriptionHtml ? (
-                                    <div
-                                        className='ckeditor-content'
-                                        dangerouslySetInnerHTML={{ __html: productDescriptionHtml }}
-                                    />
+                                    <div>
+                                        <div className='relative'>
+                                            <div
+                                                className={`ckeditor-content transition-all duration-300 ${descriptionExpanded ? '' : 'max-h-72 overflow-hidden'}`}
+                                                dangerouslySetInnerHTML={{ __html: productDescriptionHtml }}
+                                            />
+                                            {!descriptionExpanded && (
+                                                <div className='pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent' />
+                                            )}
+                                        </div>
+                                        <Button
+                                            type='button'
+                                            variant='outline'
+                                            onClick={() => setDescriptionExpanded((value) => !value)}
+                                            className='mt-4 rounded-xl border-[#448B3D]/40 text-[#448B3D] hover:bg-[#448B3D]/10 hover:text-[#336B2D]'
+                                        >
+                                            {descriptionExpanded ? (
+                                                <>
+                                                    Thu gọn
+                                                    <ChevronUp className='w-4 h-4 ml-2' />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Xem thêm mô tả
+                                                    <ChevronDown className='w-4 h-4 ml-2' />
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
                                 ) : (
                                     <p className='text-muted-foreground leading-relaxed'>
                                         Chưa có mô tả cho sản phẩm này.
@@ -457,6 +557,98 @@ const ProductDetailPage = () => {
                             </TabsContent>
                         </Tabs>
                     </div>
+                </div>
+
+                {/* ── Sản phẩm liên quan ── */}
+                <div className='mt-12 pt-10 border-t border-border'>
+                    <div className='flex items-center justify-between gap-4 mb-6'>
+                        <div>
+                            <h2 className='text-2xl font-bold text-foreground'>Sản phẩm liên quan</h2>
+                            <p className='text-sm text-muted-foreground mt-1'>
+                                Gợi ý dựa trên danh mục của sản phẩm đang xem
+                            </p>
+                        </div>
+                        <Button
+                            variant='outline'
+                            onClick={() => navigate('/products')}
+                            className='hidden sm:inline-flex rounded-xl'
+                        >
+                            Xem tất cả
+                        </Button>
+                    </div>
+
+                    {relatedLoading ? (
+                        <div className='h-40 flex items-center justify-center text-muted-foreground'>
+                            <Loader2 className='w-5 h-5 animate-spin mr-2 text-[#448B3D]' />
+                            Đang tải sản phẩm liên quan...
+                        </div>
+                    ) : relatedProducts.length === 0 ? (
+                        <div className='rounded-xl border border-dashed border-border py-10 text-center'>
+                            <p className='font-semibold text-foreground'>Chưa có sản phẩm liên quan</p>
+                            <p className='text-sm text-muted-foreground mt-1'>
+                                Bạn có thể xem thêm các sản phẩm khác trong cửa hàng.
+                            </p>
+                            <Button
+                                variant='outline'
+                                onClick={() => navigate('/products')}
+                                className='mt-4 rounded-xl'
+                            >
+                                Xem tất cả sản phẩm
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className='grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5'>
+                            {relatedProducts.map((relatedProduct) => {
+                                const relatedOutOfStock = relatedProduct.status === 'OUT_OF_STOCK' || relatedProduct.stockQuantity === 0;
+
+                                return (
+                                    <Card
+                                        key={relatedProduct.id}
+                                        className='group overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-lg transition-all duration-300 bg-card flex flex-col'
+                                    >
+                                        <div className='relative overflow-hidden bg-gray-50'>
+                                            <img
+                                                src={getPrimaryImage(relatedProduct)}
+                                                alt={relatedProduct.productName}
+                                                className='w-full h-40 sm:h-48 object-contain group-hover:scale-105 transition-transform duration-500 cursor-pointer'
+                                                onClick={() => navigate(`/products/${relatedProduct.id}`)}
+                                            />
+                                            {relatedOutOfStock && (
+                                                <Badge className='absolute top-2 left-2 bg-gray-500 text-white border-0 text-xs px-2 py-0.5'>
+                                                    Hết hàng
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <div className='p-3 sm:p-4 flex flex-col flex-1'>
+                                            <p className='text-xs text-muted-foreground mb-1 line-clamp-1'>
+                                                {getCategoryNames(relatedProduct)}
+                                            </p>
+                                            <h3
+                                                className='font-bold text-sm sm:text-base text-foreground mb-2 hover:text-[#448B3D] transition-colors cursor-pointer leading-snug line-clamp-2 flex-1'
+                                                onClick={() => navigate(`/products/${relatedProduct.id}`)}
+                                            >
+                                                {relatedProduct.productName}
+                                            </h3>
+                                            <div className='flex items-center justify-between gap-2 mt-auto'>
+                                                <span className='text-lg font-bold text-[#448B3D]'>
+                                                    {relatedProduct.price.toLocaleString('vi-VN')}₫
+                                                </span>
+                                                <Button
+                                                    size='sm'
+                                                    onClick={() => handleAddRelatedToCart(relatedProduct)}
+                                                    disabled={relatedOutOfStock}
+                                                    className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white h-9 w-9 p-0 shrink-0'
+                                                    aria-label='Thêm vào giỏ'
+                                                >
+                                                    <ShoppingCart className='w-4 h-4' />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 {/* ── Đánh giá sản phẩm ── */}
