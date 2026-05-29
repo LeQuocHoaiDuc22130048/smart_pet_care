@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { ApiError } from '@/lib/api';
 import { feedbackApi, type Feedback as ApiFeedback, type FeedbackStats, type CreateFeedbackRequest } from '@/lib/feedbackApi';
 import { toast } from 'sonner';
 
@@ -67,6 +68,23 @@ interface FeedbackContextType {
 
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
+const FEEDBACK_ERROR_MESSAGES: Record<number, string> = {
+    6002: 'Bạn đã gửi đánh giá cho mục này rồi.',
+    6003: 'Thông tin đánh giá chưa hợp lệ. Vui lòng kiểm tra lại sản phẩm hoặc dịch vụ.',
+    6004: 'Đánh giá đã quá thời gian chỉnh sửa.',
+    6006: 'Chỉ có thể đánh giá đơn hàng đã hoàn thành.',
+    6101: 'Ảnh không đúng định dạng. Vui lòng dùng JPG hoặc PNG.',
+    6102: 'Kích thước ảnh không được vượt quá 5MB.',
+};
+
+function getFeedbackErrorMessage(error: unknown): string {
+    if (error instanceof ApiError) {
+        return FEEDBACK_ERROR_MESSAGES[error.code] ?? error.message ?? 'Không thể gửi đánh giá. Vui lòng thử lại!';
+    }
+
+    return 'Không thể gửi đánh giá. Vui lòng thử lại!';
+}
+
 export function FeedbackProvider({ children }: { children: ReactNode }) {
     const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
     const [loading, setLoading] = useState(false);
@@ -117,7 +135,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             if (error instanceof Error && error.message.includes('not supported')) {
                 // Already showed toast above
             } else {
-                toast.error('Không thể gửi đánh giá. Vui lòng thử lại!');
+                toast.error(getFeedbackErrorMessage(error));
             }
             throw error;
         } finally {

@@ -48,8 +48,10 @@ public class StockEventConsumer {
         }
 
         Orders order = orderOpt.get();
+        OrderStatus oldStatus = order.getStatus();
         order.setStatus(OrderStatus.FAILED);
-        orderRepository.save(order);
+        Orders saved = orderRepository.save(order);
+        orderEventPublisher.publishOrderStatusChanged(saved, oldStatus, OrderStatus.FAILED);
         log.info("Order {} marked as FAILED due to stock reservation failure", orderId);
     }
 
@@ -64,8 +66,10 @@ public class StockEventConsumer {
         }
 
         Orders order = orderOpt.get();
+        OrderStatus oldStatus = order.getStatus();
         order.setStatus(OrderStatus.RESERVED);
-        orderRepository.save(order);
+        Orders saved = orderRepository.save(order);
+        orderEventPublisher.publishOrderStatusChanged(saved, oldStatus, OrderStatus.RESERVED);
         log.info("Order {} marked as RESERVED, publishing payment request", orderId);
 
         orderEventPublisher.publish("payment.create",

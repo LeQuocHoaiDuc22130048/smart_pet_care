@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authApi } from '@/lib/authApi';
-import { userApi } from '@/lib/userApi';
+import { userApi, type UserProfile } from '@/lib/userApi';
 import { ApiError, getToken, setToken, removeToken } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,14 +45,33 @@ function extractRole(roles?: { name: string }[]): 'user' | 'admin' {
     return hasAdmin ? 'admin' : 'user';
 }
 
-// ─── Helper: fetch avatar URL from user service (silent fail) ─────────────────
-async function fetchAvatarUrl(): Promise<string | undefined> {
+// ─── Helper: fetch profile from user service (silent fail) ───────────────────
+async function fetchMyProfile(): Promise<UserProfile | undefined> {
     try {
         const res = await userApi.getMyProfile();
-        return res.result?.avatar_url ?? res.result?.avatarUrl ?? undefined;
+        return res.result;
     } catch {
         return undefined;
     }
+}
+
+function mergeIdentityWithProfile(
+    identity: { id: string; username: string; firstName: string; lastName: string; roles?: { name: string }[] },
+    profile?: UserProfile
+): User {
+    const firstName = profile?.first_name ?? profile?.firstName ?? identity.firstName;
+    const lastName = profile?.last_name ?? profile?.lastName ?? identity.lastName;
+
+    return {
+        id: identity.id,
+        username: identity.username,
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`.trim(),
+        email: profile?.email,
+        role: extractRole(identity.roles),
+        avatar: profile?.avatar_url ?? profile?.avatarUrl,
+    };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -73,17 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (res.result?.valid) {
                     const infoRes = await authApi.getMyInfo();
                     const u = infoRes.result;
-                    // Fetch avatar từ user service (identity service không lưu avatar)
-                    const avatar = await fetchAvatarUrl();
-                    setUser({
-                        id: u.id,
-                        username: u.username,
-                        firstName: u.firstName,
-                        lastName: u.lastName,
-                        name: `${u.firstName} ${u.lastName}`,
-                        role: extractRole(u.roles),
-                        avatar,
-                    });
+                    const profile = await fetchMyProfile();
+                    setUser(mergeIdentityWithProfile(u, profile));
                 } else {
                     removeToken();
                 }
@@ -104,20 +114,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const infoRes = await authApi.getMyInfo();
             const u = infoRes.result;
-            const role = extractRole(u.roles);
-            // Fetch avatar từ user service
-            const avatar = await fetchAvatarUrl();
-            setUser({
-                id: u.id,
-                username: u.username,
-                firstName: u.firstName,
-                lastName: u.lastName,
-                name: `${u.firstName} ${u.lastName}`,
-                role,
-                avatar,
-            });
+            const profile = await fetchMyProfile();
+            const mergedUser = mergeIdentityWithProfile(u, profile);
+            setUser(mergedUser);
 
-            return role;
+            return mergedUser.role;
         } catch (error) {
             if (error instanceof ApiError && error.httpStatus === 429) {
                 throw error;
@@ -133,20 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const infoRes = await authApi.getMyInfo();
             const u = infoRes.result;
-            const role = extractRole(u.roles);
-            // Fetch avatar từ user service
-            const avatar = await fetchAvatarUrl();
-            setUser({
-                id: u.id,
-                username: u.username,
-                firstName: u.firstName,
-                lastName: u.lastName,
-                name: `${u.firstName} ${u.lastName}`,
-                role,
-                avatar,
-            });
+            const profile = await fetchMyProfile();
+            const mergedUser = mergeIdentityWithProfile(u, profile);
+            setUser(mergedUser);
 
-            return role;
+            return mergedUser.role;
         } catch {
             removeToken();
             return null;

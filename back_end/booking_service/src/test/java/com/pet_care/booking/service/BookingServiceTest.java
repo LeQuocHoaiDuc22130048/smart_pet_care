@@ -37,6 +37,7 @@ import com.pet_care.booking.enums.BookingStatus;
 import com.pet_care.booking.exception.AppException;
 import com.pet_care.booking.exception.ErrorCode;
 import com.pet_care.booking.mapper.BookingMapper;
+import com.pet_care.booking.messaging.NotificationEventPublisher;
 import com.pet_care.booking.repository.BookingRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +57,9 @@ class BookingServiceTest {
 
     @Mock
     UserServiceClient userServiceClient;
+
+    @Mock
+    NotificationEventPublisher notificationEventPublisher;
 
     @InjectMocks
     BookingService bookingService;

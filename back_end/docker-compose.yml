@@ -222,6 +222,8 @@ services:
         condition: service_started
       mysql:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
       account-service:
         condition: service_started
     environment:
@@ -232,6 +234,8 @@ services:
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
       USER_SERVICE_URL: http://account-service:8080/pet_care_user
       SERVER_SERVLET_CONTEXT_PATH: /pet_care_booking
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
     ports:
       - "8086:8086"
     networks:
@@ -307,8 +311,17 @@ services:
       <<: *eureka-client-env
       MONGODB_URI: mongodb://mongodb:27017/pet_care_notification
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
+      ACCOUNT_DB_URL: jdbc:mysql://mysql:3306/pet_care_account?createDatabaseIfNotExist=true
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     ports:
       - "8091:8091"
     networks:

@@ -10,4 +10,5 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
     List<Booking> findByUserIdOrderByAppointmentDateDescAppointmentTimeDesc(String userId);
     List<Booking> findByStatus(BookingStatus status);
     List<Booking> findByStaffIdAndAppointmentDate(String staffId, LocalDate appointmentDate);
+    List<Booking> findByServicePackageIdAndStatusNotIn(String servicePackageId, List<BookingStatus> statuses);
 }

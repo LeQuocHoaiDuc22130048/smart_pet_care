@@ -3,10 +3,25 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, ArrowRight} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { cmsMarketingApi, type Banner } from '@/lib/cmsMarketingApi';
+import { productApi } from '@/lib/productApi';
+import { bookingApi } from '@/lib/bookingApi';
 
-const slides = [
+type HeroSlide = {
+    id: string;
+    badge: string;
+    title: string;
+    highlight: string;
+    description: string;
+    image: string;
+    gradient: string;
+    cta: { label: string; path: string };
+    ctaSecondary: { label: string; path: string };
+};
+
+const fallbackSlides: HeroSlide[] = [
     {
-        id: 1,
+        id: 'default-products',
         badge: 'Chăm sóc vật nuôi tốt nhất',
         title: 'Tất cả những gì vật nuôi cần,',
         highlight: 'Có ngay tại đây',
@@ -17,7 +32,7 @@ const slides = [
         ctaSecondary: { label: 'Đặt lịch khám', path: '/booking' }
     },
     {
-        id: 2,
+        id: 'default-image-search',
         badge: 'Tìm sản phẩm dễ dàng',
         title: 'Chụp ảnh sản phẩm,',
         highlight: 'Tìm ngay trong giây lát',
@@ -28,7 +43,7 @@ const slides = [
         ctaSecondary: { label: 'Xem sản phẩm', path: '/products' }
     },
     {
-        id: 3,
+        id: 'default-booking',
         badge: 'Dịch vụ thú y tại nhà',
         title: 'Bác sĩ thú y đến tận nơi,',
         highlight: 'Tiện lợi & Tin cậy',
@@ -40,27 +55,95 @@ const slides = [
     }
 ];
 
+const gradients = [
+    'from-[#448B3D]/15 via-[#FFB86F]/10 to-[#7FD99E]/15',
+    'from-[#7FD99E]/15 via-[#448B3D]/10 to-[#FFB86F]/15',
+    'from-[#FFB86F]/15 via-[#448B3D]/10 to-[#7FD99E]/15'
+];
+
+function toHeroSlide(banner: Banner, index: number): HeroSlide {
+    const [title, ...rest] = banner.title.split(',');
+    return {
+        id: banner.id,
+        badge: banner.position || 'PetCare Smart',
+        title: rest.length > 0 ? `${title},` : banner.title,
+        highlight: rest.length > 0 ? rest.join(',').trim() : 'Khám phá ngay',
+        description: banner.subtitle || 'Khám phá nội dung mới nhất từ PetCare Smart.',
+        image: banner.imageUrl,
+        gradient: gradients[index % gradients.length],
+        cta: { label: 'Xem ngay', path: banner.linkUrl || '/products' },
+        ctaSecondary: { label: 'Đặt lịch dịch vụ', path: '/booking' }
+    };
+}
+
 const HeroSlider = () => {
     const navigate = useNavigate();
     const [current, setCurrent] = useState(0);
     const [direction, setDirection] = useState(1);
+    const [slides, setSlides] = useState<HeroSlide[]>(fallbackSlides);
+    const [stats, setStats] = useState([
+        { value: '0', label: 'Sản phẩm' },
+        { value: '0', label: 'Dịch vụ' },
+        { value: '7:00-18:00', label: 'Tư vấn' }
+    ]);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadHeroData = async () => {
+            try {
+                const [bannerRes, productRes, serviceRes] = await Promise.allSettled([
+                    cmsMarketingApi.getPublicBanners('homepage'),
+                    productApi.getAll(),
+                    bookingApi.getServicePackages()
+                ]);
+                const banners = bannerRes.status === 'fulfilled'
+                    ? (bannerRes.value.result ?? []).filter((banner) => banner.imageUrl)
+                    : [];
+                if (mounted && banners.length > 0) {
+                    setSlides(banners.map(toHeroSlide));
+                    setCurrent(0);
+                }
+                if (mounted) {
+                    const productCount = productRes.status === 'fulfilled'
+                        ? (productRes.value.result ?? []).filter((product) => product.status === 'ACTIVE').length
+                        : 0;
+                    const serviceCount = serviceRes.status === 'fulfilled'
+                        ? (serviceRes.value.result ?? []).filter((service) => service.active).length
+                        : 0;
+                    setStats([
+                        { value: productCount.toLocaleString('vi-VN'), label: 'Sản phẩm' },
+                        { value: serviceCount.toLocaleString('vi-VN'), label: 'Dịch vụ' },
+                        { value: '7:00-18:00', label: 'Tư vấn' }
+                    ]);
+                }
+            } catch (error) {
+                console.error('Error loading hero data:', error);
+            }
+        };
+
+        void loadHeroData();
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     const next = useCallback(() => {
         setDirection(1);
         setCurrent((prev) => (prev + 1) % slides.length);
-    }, []);
+    }, [slides.length]);
 
     const prev = useCallback(() => {
         setDirection(-1);
         setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
-    }, []);
+    }, [slides.length]);
 
     useEffect(() => {
         const timer = setInterval(next, 5000);
         return () => clearInterval(timer);
     }, [next]);
 
-    const slide = slides[current];
+    const slide = slides[current] ?? fallbackSlides[0];
 
     const variants = {
         enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
@@ -157,11 +240,7 @@ const HeroSlider = () => {
                                 transition={{ delay: 0.45 }}
                                 className='flex items-center space-x-4 sm:space-x-8 pt-2 sm:pt-4'
                             >
-                                {[
-                                    { value: '50K+', label: 'Hộ gia đình tin dùng' },
-                                    { value: '1000+', label: 'Sản phẩm' },
-                                    { value: '24/7', label: 'Hỗ trợ' }
-                                ].map((stat, i) => (
+                                {stats.map((stat, i) => (
                                     <div key={i} className='flex items-center space-x-4'>
                                         {i > 0 && <div className='w-px h-12 bg-border' />}
                                         <div className='text-center'>

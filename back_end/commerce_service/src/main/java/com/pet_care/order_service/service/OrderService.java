@@ -91,8 +91,7 @@ public class OrderService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         if (orders.getStatus() == OrderStatus.CANCELLED) return;
         publishRollbackEvent(orders);
-        orders.setStatus(OrderStatus.CANCELLED);
-        orderRepository.save(orders);
+        saveStatusChange(orders, OrderStatus.CANCELLED);
     }
 
     @Transactional
@@ -106,26 +105,23 @@ public class OrderService {
         }
 
         switch (status) {
-            case "PAID":   orders.setStatus(OrderStatus.PAID);   break;
-            case "FAILED": orders.setStatus(OrderStatus.FAILED); break;
+            case "PAID":   return orderMapper.toOrderResponse(saveStatusChange(orders, OrderStatus.PAID));
+            case "FAILED": return orderMapper.toOrderResponse(saveStatusChange(orders, OrderStatus.FAILED));
             default: throw new AppException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
-        return orderMapper.toOrderResponse(orderRepository.save(orders));
     }
 
     @Transactional
     public void handlePaymentFailed(Orders order) {
         publishRollbackEvent(order);
-        order.setStatus(OrderStatus.FAILED);
-        orderRepository.save(order);
+        saveStatusChange(order, OrderStatus.FAILED);
     }
 
     @Transactional
     public void updateOrderStatusFromPayment(String orderId, String status) {
         Orders order = getOrder(orderId);
         OrderStatus newStatus = OrderStatus.valueOf(status);
-        order.setStatus(newStatus);
-        orderRepository.save(order);
+        saveStatusChange(order, newStatus);
         log.info("Updated order {} status to {}", orderId, newStatus);
     }
 
@@ -133,8 +129,7 @@ public class OrderService {
     public void cancelOrderDueToPaymentFailure(String orderId) {
         Orders order = getOrder(orderId);
         publishRollbackEvent(order);
-        order.setStatus(OrderStatus.PAYMENT_FAILED);
-        orderRepository.save(order);
+        saveStatusChange(order, OrderStatus.PAYMENT_FAILED);
         log.info("Cancelled order {} due to payment failure", orderId);
     }
 
@@ -169,8 +164,7 @@ public class OrderService {
     public OrderResponse adminUpdateStatus(String orderId, AdminUpdateStatusRequest request) {
         Orders order = getOrder(orderId);
         OrderStatus oldStatus = order.getStatus();
-        order.setStatus(request.getStatus());
-        Orders saved = orderRepository.save(order);
+        Orders saved = saveStatusChange(order, request.getStatus());
         log.info("Admin updated order {} status: {} → {}", orderId, oldStatus, request.getStatus());
         return orderMapper.toOrderResponse(saved);
     }
@@ -181,8 +175,7 @@ public class OrderService {
         Orders order = getOrder(orderId);
         if (order.getStatus() == OrderStatus.CANCELLED) return;
         publishRollbackEvent(order);
-        order.setStatus(OrderStatus.CANCELLED);
-        orderRepository.save(order);
+        saveStatusChange(order, OrderStatus.CANCELLED);
         log.info("Admin cancelled order {}", orderId);
     }
 
@@ -208,6 +201,14 @@ public class OrderService {
                         .quantity(i.getQuantity())
                         .build()).toList();
         orderEventPublisher.publish("stock.rollback", items);
+    }
+
+    private Orders saveStatusChange(Orders order, OrderStatus newStatus) {
+        OrderStatus oldStatus = order.getStatus();
+        order.setStatus(newStatus);
+        Orders saved = orderRepository.save(order);
+        orderEventPublisher.publishOrderStatusChanged(saved, oldStatus, newStatus);
+        return saved;
     }
 
     private void publishReserveStockEvent(Orders savedOrder) {

@@ -2,11 +2,15 @@ package com.pet_care.booking.service;
 
 import com.pet_care.booking.dto.request.ServicePackageRequest;
 import com.pet_care.booking.dto.response.ServicePackageResponse;
+import com.pet_care.booking.entity.Booking;
 import com.pet_care.booking.entity.ServicePackage;
+import com.pet_care.booking.enums.BookingStatus;
 import com.pet_care.booking.enums.ServiceCategory;
 import com.pet_care.booking.exception.AppException;
 import com.pet_care.booking.exception.ErrorCode;
 import com.pet_care.booking.mapper.ServicePackageMapper;
+import com.pet_care.booking.messaging.NotificationEventPublisher;
+import com.pet_care.booking.repository.BookingRepository;
 import com.pet_care.booking.repository.ServicePackageRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +25,9 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ServicePackageService {
     ServicePackageRepository servicePackageRepository;
+    BookingRepository bookingRepository;
     ServicePackageMapper servicePackageMapper;
+    NotificationEventPublisher notificationEventPublisher;
 
     public List<ServicePackageResponse> getActive(ServiceCategory category) {
         List<ServicePackage> packages = category == null
@@ -50,14 +56,27 @@ public class ServicePackageService {
     public ServicePackageResponse update(String id, ServicePackageRequest request) {
         ServicePackage servicePackage = getEntity(id);
         servicePackageMapper.updateEntity(servicePackage, request);
-        return servicePackageMapper.toResponse(servicePackageRepository.save(servicePackage));
+        ServicePackage saved = servicePackageRepository.save(servicePackage);
+        notifyAffectedBookings(saved);
+        return servicePackageMapper.toResponse(saved);
     }
 
     @Transactional
     public void delete(String id) {
         ServicePackage servicePackage = getEntity(id);
         servicePackage.setActive(false);
-        servicePackageRepository.save(servicePackage);
+        ServicePackage saved = servicePackageRepository.save(servicePackage);
+        notifyAffectedBookings(saved);
+    }
+
+    private void notifyAffectedBookings(ServicePackage servicePackage) {
+        List<Booking> affectedBookings = bookingRepository.findByServicePackageIdAndStatusNotIn(
+                servicePackage.getId(),
+                List.of(BookingStatus.COMPLETED, BookingStatus.CANCELLED, BookingStatus.NO_SHOW)
+        );
+        affectedBookings.forEach(booking ->
+                notificationEventPublisher.publishServicePackageUpdated(booking, servicePackage)
+        );
     }
 
     ServicePackage getEntity(String id) {
