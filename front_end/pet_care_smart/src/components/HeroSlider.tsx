@@ -277,23 +277,23 @@ const HeroSlider = () => {
             </div>
 
             {/* Controls */}
-            <div className='absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center space-x-4'>
+            <div className='absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center space-x-2.5'>
                 <button
                     onClick={prev}
-                    className='w-10 h-10 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-white dark:hover:bg-white/20 transition-all shadow-md'
+                    className='!size-7 !min-h-0 !p-0 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-white dark:hover:bg-white/20 transition-all shadow-sm'
                     aria-label='Previous slide'
                 >
-                    <ChevronLeft className='w-5 h-5' />
+                    <ChevronLeft className='w-3.5 h-3.5' />
                 </button>
 
-                <div className='flex items-center space-x-2'>
+                <div className='flex items-center space-x-1.5'>
                     {slides.map((_, i) => (
                         <button
                             key={i}
                             onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
-                            className={`transition-all duration-300 rounded-full ${i === current
-                                ? 'w-8 h-3 bg-[#448B3D]'
-                                : 'w-3 h-3 bg-[#448B3D]/30 hover:bg-[#448B3D]/60'
+                            className={`!size-2.5 !min-h-0 !p-0 aspect-square transition-all duration-300 rounded-full ${i === current
+                                ? 'bg-[#448B3D]'
+                                : 'bg-[#448B3D]/30 hover:bg-[#448B3D]/60'
                                 }`}
                             aria-label={`Go to slide ${i + 1}`}
                         />
@@ -302,10 +302,10 @@ const HeroSlider = () => {
 
                 <button
                     onClick={next}
-                    className='w-10 h-10 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-white dark:hover:bg-white/20 transition-all shadow-md'
+                    className='!size-7 !min-h-0 !p-0 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-white dark:hover:bg-white/20 transition-all shadow-sm'
                     aria-label='Next slide'
                 >
-                    <ChevronRight className='w-5 h-5' />
+                    <ChevronRight className='w-3.5 h-3.5' />
                 </button>
             </div>
         </section>

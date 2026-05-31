@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Calendar, Heart, ShoppingBag, Phone, ChevronRight, Star, MessageSquarePlus, ArrowRight } from 'lucide-react';
+import { Calendar, Heart, ShoppingBag, Phone, Star, MessageSquarePlus, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useCallback, useEffect } from 'react';
@@ -10,7 +10,6 @@ import FeedbackCard from '@/components/feedback/FeedbackCard';
 import { useFeedback, type Feedback } from '@/context/FeedbackContext';
 import { feedbackApi } from '@/lib/feedbackApi';
 import { useAuth } from '@/context/AuthContext';
-import { productApi, type Category, type Product } from '@/lib/productApi';
 import { bookingApi, categoryIcon, formatPrice, type ServicePackage } from '@/lib/bookingApi';
 
 const fadeInUp = {
@@ -28,13 +27,6 @@ const Homepage = () => {
     // Local state for homepage feedbacks
     const [homepageFeedbacks, setHomepageFeedbacks] = useState<Feedback[]>([]);
     const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
-    const [categories, setCategories] = useState<Array<{
-        id: string;
-        name: string;
-        desc: string;
-        image: string;
-        count: string;
-    }>>([]);
     const [services, setServices] = useState<ServicePackage[]>([]);
     const [loadingHomepageData, setLoadingHomepageData] = useState(true);
 
@@ -95,47 +87,17 @@ const Homepage = () => {
     useEffect(() => {
         let mounted = true;
 
-        const getPrimaryImage = (product?: Product) => {
-            const primary = product?.images?.find((image) => image.isPrimary);
-            return primary?.imageUrl
-                ?? product?.images?.[0]?.imageUrl
-                ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=400&fit=crop';
-        };
-
         const loadHomepageData = async () => {
             setLoadingHomepageData(true);
             try {
-                const [categoriesRes, productsRes, servicesRes] = await Promise.allSettled([
-                    productApi.getAllCategories(),
-                    productApi.getAll(),
-                    bookingApi.getServicePackages()
-                ]);
+                const servicesRes = await bookingApi.getServicePackages();
 
                 if (!mounted) return;
 
-                const apiCategories = categoriesRes.status === 'fulfilled' ? categoriesRes.value.result ?? [] : [];
-                const apiProducts = productsRes.status === 'fulfilled' ? productsRes.value.result ?? [] : [];
-                const apiServices = servicesRes.status === 'fulfilled' ? servicesRes.value.result ?? [] : [];
-
-                const visibleCategories = apiCategories.slice(0, 3).map((category: Category) => {
-                    const categoryProducts = apiProducts.filter((product) =>
-                        product.category?.some((item) => item.categoryId === category.categoryId)
-                    );
-                    const firstProduct = categoryProducts.find((product) => product.images?.length);
-                    return {
-                        id: category.categoryId,
-                        name: category.categoryName,
-                        desc: category.description || 'Khám phá các sản phẩm phù hợp cho vật nuôi',
-                        image: getPrimaryImage(firstProduct),
-                        count: `${categoryProducts.length} sản phẩm`
-                    };
-                });
-
-                setCategories(visibleCategories);
+                const apiServices = servicesRes.result ?? [];
                 setServices(apiServices.filter((service) => service.active).slice(0, 3));
             } catch (error) {
                 console.error('Error loading homepage data:', error);
-                setCategories([]);
                 setServices([]);
             } finally {
                 if (mounted) setLoadingHomepageData(false);
@@ -212,63 +174,6 @@ const Homepage = () => {
 
             {/* Sản phẩm nổi bật */}
             <FeaturedProductsSlider />
-
-            {/* Danh mục */}
-            <section className='py-8 sm:py-14 bg-[#448B3D]/5'>
-                <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-                    <motion.div {...fadeInUp} className='text-center mb-10'>
-                        <h2 className='text-3xl sm:text-4xl font-bold text-foreground mb-3'>
-                            Mua theo danh mục
-                        </h2>
-                        <p className='text-lg text-muted-foreground'>Tìm đúng sản phẩm bạn cần</p>
-                    </motion.div>
-                    {loadingHomepageData ? (
-                        <div className='py-12 text-center text-muted-foreground'>Đang tải danh mục...</div>
-                    ) : categories.length === 0 ? (
-                        <div className='py-12 text-center text-muted-foreground'>Chưa có danh mục sản phẩm</div>
-                    ) : (
-                    <div className='grid md:grid-cols-3 gap-6'>
-                        {categories.map((cat, i) => (
-                            <motion.div
-                                key={cat.id}
-                                initial={{ opacity: 0, scale: 0.97 }}
-                                whileInView={{ opacity: 1, scale: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: i * 0.1, duration: 0.4 }}
-                            >
-                                <Card
-                                    className='group cursor-pointer overflow-hidden rounded-xl border-2 border-border hover:border-[#448B3D] hover:shadow-lg transition-all duration-300'
-                                    onClick={() => navigate('/products')}
-                                >
-                                    <div className='relative h-52 overflow-hidden'>
-                                        <img
-                                            src={cat.image}
-                                            alt={cat.name}
-                                            className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500'
-                                        />
-                                        <div className='absolute inset-0 bg-gradient-to-t from-black/70 to-transparent' />
-                                        <div className='absolute bottom-0 left-0 right-0 p-5 text-white'>
-                                            <h3 className='text-2xl font-bold mb-0.5'>{cat.name}</h3>
-                                            <p className='text-white/85 text-sm'>{cat.desc}</p>
-                                            <p className='text-white/70 text-xs mt-1'>{cat.count}</p>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </motion.div>
-                        ))}
-                    </div>
-                    )}
-                    <motion.div {...fadeInUp} className='text-center mt-8'>
-                        <Button
-                            size='lg'
-                            onClick={() => navigate('/products')}
-                            className='rounded-xl bg-[#448B3D] hover:bg-[#336B2D] text-white font-bold h-13 px-10 text-lg'
-                        >
-                            Xem tất cả sản phẩm<ChevronRight />
-                        </Button>
-                    </motion.div>
-                </div>
-            </section>
 
             {/* Dịch vụ */}
             <section className='py-8 sm:py-14 bg-background'>
@@ -453,7 +358,8 @@ const Homepage = () => {
                                                 <button
                                                     key={i}
                                                     onClick={() => { setFbDir(i > fbIndex ? 1 : -1); setFbIndex(i); }}
-                                                    className={`rounded-full transition-all duration-300 ${i === fbIndex ? 'w-6 h-2 bg-[#448B3D]' : 'w-2 h-2 bg-[#448B3D]/30 hover:bg-[#448B3D]/60'}`}
+                                                    className={`!size-2.5 !min-h-0 !p-0 aspect-square rounded-full transition-all duration-300 ${i === fbIndex ? 'bg-[#448B3D]' : 'bg-[#448B3D]/30 hover:bg-[#448B3D]/60'}`}
+                                                    aria-label={`Xem đánh giá ${i + 1}`}
                                                 />
                                             ))}
                                         </div>

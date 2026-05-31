@@ -72,7 +72,7 @@ public class PetCareKnowledgeService {
     public String buildDatasetAnswer(String question) {
         List<ScoredEntry> matched = findRelevantEntries(question);
         if (matched.isEmpty()) {
-            return "Mình chưa tìm thấy dòng dữ liệu thật sự khớp trong bộ PetCare, nên chỉ có thể tư vấn sơ bộ: bạn hãy theo dõi thêm triệu chứng, giữ bé ở nơi sạch và liên hệ bác sĩ thú y nếu bé mệt, bỏ ăn, đau nhiều hoặc tình trạng xấu đi. Bạn cũng có thể ghé PetCare để được gợi ý sản phẩm chăm sóc phù hợp.";
+            return buildGenericVeterinaryFallback(question);
         }
 
         KnowledgeEntry entry = matched.get(0).entry();
@@ -85,7 +85,7 @@ public class PetCareKnowledgeService {
                 : entry.getAdvice();
 
         StringBuilder answer = new StringBuilder();
-        answer.append("Mình tra theo dữ liệu PetCare thì tình trạng này phù hợp với nhóm ")
+        answer.append("Tình trạng bạn mô tả khá phù hợp với nhóm ")
                 .append(category)
                 .append(" ở ")
                 .append(displaySpecies)
@@ -96,6 +96,35 @@ public class PetCareKnowledgeService {
         }
 
         answer.append(buildCareDetails(intent, displaySpecies));
+        return answer.toString();
+    }
+
+    private String buildGenericVeterinaryFallback(String question) {
+        String species = normalizeSpeciesLabel(inferSpecies(question));
+        if (species.isBlank()) {
+            species = "thú cưng";
+        }
+
+        boolean urgent = hasUrgentSigns(question);
+        StringBuilder answer = new StringBuilder();
+        answer.append("Mình chưa thể xác định chính xác tình trạng này chỉ qua mô tả, ")
+                .append("nên phần dưới đây là tư vấn sơ bộ và không thay thế bác sĩ thú y. ");
+
+        if (urgent) {
+            answer.append("Vì bạn có nhắc tới dấu hiệu có thể nguy hiểm, bạn nên đưa ")
+                    .append(species)
+                    .append(" đi thú y sớm, đặc biệt nếu triệu chứng đang nặng lên. ");
+        }
+
+        answer.append("Trước mắt, bạn hãy giữ ")
+                .append(species)
+                .append(" ở nơi sạch, yên tĩnh, đủ nước, tránh tự dùng thuốc của người hoặc thuốc không rõ liều. ")
+                .append("Theo dõi thêm mức ăn uống, tỉnh táo, thân nhiệt, hô hấp, nôn/tiêu chảy, đau, da/lông, mắt/tai và chất thải. ")
+                .append("Nếu có khó thở, co giật, xuất huyết, liệt, đau nhiều, lừ đừ rõ, nôn/tiêu chảy liên tục, ")
+                .append("bỏ ăn hơn 24 giờ hoặc tình trạng xấu nhanh, bạn nên liên hệ bác sĩ thú y ngay. ")
+                .append("Bạn có thể mô tả thêm loài, tuổi, cân nặng, thời gian bị, triệu chứng chính và ảnh nếu có; ")
+                .append("PetCare cũng có dịch vụ Khám sức khỏe để hỗ trợ kiểm tra trực tiếp.");
+
         return answer.toString();
     }
 
@@ -258,7 +287,8 @@ public class PetCareKnowledgeService {
         if (containsAny(value, "da", "do", "kich ung", "ngua", "nep", "long", "vay", "nam", "phat ban", "mui hoi")) {
             return "skin";
         }
-        if (containsAny(value, "non", "tieu chay", "phan", "bung", "bo an", "tao bon", "day hoi", "an phai")) {
+        if (containsAny(value, "non", "tieu chay", "phan", "bung", "bo an", "bieng an", "chan an", "kem an",
+                "khong an", "an it", "tao bon", "day hoi", "an phai")) {
             return "digestive";
         }
         if (containsAny(value, "tai", "lac dau", "ray tai", "mui tai")) {
@@ -268,6 +298,15 @@ public class PetCareKnowledgeService {
             return "parasite";
         }
         return "";
+    }
+
+    private boolean hasUrgentSigns(String question) {
+        String value = normalize(question);
+        return containsAny(value,
+                "kho tho", "tho gap", "ngat", "co giat", "xuat huyet", "chay mau", "non lien tuc",
+                "tieu chay lien tuc", "di ngoai ra mau", "phan co mau", "liet", "khong dung duoc",
+                "bo an hon 24", "bo an 2 ngay", "bo an nhieu ngay", "sot cao", "lu du", "yeu nhanh",
+                "ngo doc", "an phai thuoc", "nuot di vat", "dau nhieu");
     }
 
     private String inferSpecies(String question) {

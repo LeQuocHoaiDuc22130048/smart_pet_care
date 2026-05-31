@@ -7,17 +7,30 @@ export const BASE_URL = '/api/v1';
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export const TOKEN_KEY = 'pcs_token';
+const LEGACY_LOCAL_STORAGE_TOKEN_KEY = TOKEN_KEY;
 
 export function getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
+    const sessionToken = sessionStorage.getItem(TOKEN_KEY);
+    if (sessionToken) return sessionToken;
+
+    const legacyToken = localStorage.getItem(LEGACY_LOCAL_STORAGE_TOKEN_KEY);
+    if (legacyToken) {
+        sessionStorage.setItem(TOKEN_KEY, legacyToken);
+        localStorage.removeItem(LEGACY_LOCAL_STORAGE_TOKEN_KEY);
+        return legacyToken;
+    }
+
+    return null;
 }
 
 export function setToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(LEGACY_LOCAL_STORAGE_TOKEN_KEY);
 }
 
 export function removeToken(): void {
-    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(LEGACY_LOCAL_STORAGE_TOKEN_KEY);
 }
 
 // ─── Standard response wrapper ────────────────────────────────────────────────

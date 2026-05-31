@@ -33,13 +33,13 @@ spring:
 
 # JWT Configuration
 jwt:
-  signerKey: ${JWT_SIGNER_KEY:defaultSecretKeyForDevelopmentOnlyPleaseChangeInProduction}
+  signerKey: ${JWT_SIGNER_KEY}
 
 # Cloudinary Configuration
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:dwgy7eahq}
-  api-key: ${CLOUDINARY_API_KEY:939868796146753}
-  api-secret: ${CLOUDINARY_API_SECRET:nG_pGMIvFOd70A0bcKCrrhepui4}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 # Feign Client Configuration
 feign:

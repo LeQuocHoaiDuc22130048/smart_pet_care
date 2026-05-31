@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { searchByImage, type ImageSearchResponseData, type SuggestionCard } from '@/lib/chatApi';
+import { htmlToPlainText } from '@/lib/htmlSafety';
 import { AlertTriangle, CalendarDays, ImageIcon, Info, Loader2, Lock, Search, Sparkles, Stethoscope, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -12,15 +13,7 @@ const getProductImage = (product: SuggestionCard) =>
     product.imageUrl || '/image-removebg-preview.png';
 
 function getPlainTextDescription(description?: string): string {
-    if (!description?.trim()) return '';
-
-    if (typeof document === 'undefined') {
-        return description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    }
-
-    const template = document.createElement('template');
-    template.innerHTML = description;
-    return (template.content.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return htmlToPlainText(description);
 }
 
 const ImageSearchPage = () => {

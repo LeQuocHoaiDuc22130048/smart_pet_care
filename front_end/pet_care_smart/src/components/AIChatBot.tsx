@@ -4,6 +4,7 @@ import { Input } from './ui/input';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import { sendChatMessage } from '@/lib/chatApi';
+import { htmlToPlainText } from '@/lib/htmlSafety';
 import type { ChatMessage as ApiChatMessage, BotReply, SuggestionCard } from '@/lib/chatApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -88,15 +89,7 @@ const formatPrice = (price: number) =>
     price.toLocaleString('vi-VN') + 'đ';
 
 function getPlainTextDescription(description?: string): string {
-    if (!description?.trim()) return '';
-
-    if (typeof document === 'undefined') {
-        return description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    }
-
-    const template = document.createElement('template');
-    template.innerHTML = description;
-    return (template.content.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return htmlToPlainText(description);
 }
 
 // ─── Suggestion Card Component ────────────────────────────────────────────────

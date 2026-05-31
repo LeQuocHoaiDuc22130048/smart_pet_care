@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { productApi, type Product, type Category } from '@/lib/productApi';
 import { cn } from '@/lib/utils';
+import { htmlToPlainText } from '@/lib/htmlSafety';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getPrimaryImage(product: Product): string {
@@ -34,15 +35,7 @@ function getCategoryNames(product: Product): string {
 }
 
 function getPlainTextDescription(description?: string): string {
-    if (!description?.trim()) return '';
-
-    if (typeof document === 'undefined') {
-        return description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    }
-
-    const template = document.createElement('template');
-    template.innerHTML = description;
-    return (template.content.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return htmlToPlainText(description);
 }
 
 // ─── FilterPanel Component ────────────────────────────────────────────────────

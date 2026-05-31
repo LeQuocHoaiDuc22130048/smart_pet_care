@@ -17,6 +17,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { productApi, type Product } from '@/lib/productApi';
+import { sanitizeHtml } from '@/lib/htmlSafety';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getImages(product: Product): string[] {
@@ -37,144 +38,6 @@ function getPrimaryImage(product: Product): string {
     return primary?.imageUrl
         ?? product.images?.[0]?.imageUrl
         ?? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=400&fit=crop';
-}
-
-const BLOCKED_HTML_TAGS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'form']);
-const ALLOWED_HTML_TAGS = new Set([
-    'a',
-    'b',
-    'blockquote',
-    'br',
-    'code',
-    'div',
-    'em',
-    'figcaption',
-    'figure',
-    'h1',
-    'h2',
-    'h3',
-    'h4',
-    'h5',
-    'h6',
-    'hr',
-    'i',
-    'img',
-    'li',
-    'ol',
-    'p',
-    'pre',
-    's',
-    'span',
-    'strong',
-    'sub',
-    'sup',
-    'table',
-    'tbody',
-    'td',
-    'tfoot',
-    'th',
-    'thead',
-    'tr',
-    'u',
-    'ul',
-]);
-const GLOBAL_HTML_ATTRIBUTES = new Set(['class', 'style', 'title']);
-const TAG_HTML_ATTRIBUTES: Record<string, Set<string>> = {
-    a: new Set(['href', 'target', 'rel']),
-    img: new Set(['src', 'alt', 'width', 'height', 'loading']),
-    td: new Set(['colspan', 'rowspan']),
-    th: new Set(['colspan', 'rowspan', 'scope']),
-};
-const ALLOWED_STYLE_PROPERTIES = new Set([
-    'text-align',
-    'margin-left',
-    'margin-right',
-    'padding-left',
-    'width',
-    'height',
-]);
-
-function isSafeUrl(value: string, allowImageData = false): boolean {
-    const trimmed = value.trim().toLowerCase();
-    return (
-        trimmed.startsWith('http://') ||
-        trimmed.startsWith('https://') ||
-        trimmed.startsWith('/') ||
-        trimmed.startsWith('#') ||
-        trimmed.startsWith('mailto:') ||
-        trimmed.startsWith('tel:') ||
-        (allowImageData && trimmed.startsWith('data:image/'))
-    );
-}
-
-function sanitizeStyle(value: string): string {
-    return value
-        .split(';')
-        .map((rule) => rule.trim())
-        .filter(Boolean)
-        .filter((rule) => {
-            const property = rule.split(':')[0]?.trim().toLowerCase();
-            return ALLOWED_STYLE_PROPERTIES.has(property);
-        })
-        .join('; ');
-}
-
-function sanitizeCkEditorHtml(value?: string): string {
-    if (!value?.trim() || typeof window === 'undefined') {
-        return '';
-    }
-
-    const template = document.createElement('template');
-    template.innerHTML = value;
-
-    template.content.querySelectorAll('*').forEach((element) => {
-        const tagName = element.tagName.toLowerCase();
-        if (BLOCKED_HTML_TAGS.has(tagName)) {
-            element.remove();
-            return;
-        }
-
-        if (!ALLOWED_HTML_TAGS.has(tagName)) {
-            element.replaceWith(...Array.from(element.childNodes));
-            return;
-        }
-
-        Array.from(element.attributes).forEach((attribute) => {
-            const attrName = attribute.name.toLowerCase();
-            const attrValue = attribute.value;
-            const isAllowedAttribute = GLOBAL_HTML_ATTRIBUTES.has(attrName) || TAG_HTML_ATTRIBUTES[tagName]?.has(attrName);
-
-            if (!isAllowedAttribute || attrName.startsWith('on') || attrName === 'srcdoc') {
-                element.removeAttribute(attribute.name);
-                return;
-            }
-
-            if (attrName === 'href' && !isSafeUrl(attrValue)) {
-                element.removeAttribute(attribute.name);
-                return;
-            }
-
-            if (attrName === 'src' && !isSafeUrl(attrValue, tagName === 'img')) {
-                element.removeAttribute(attribute.name);
-                return;
-            }
-
-            if (attrName === 'style') {
-                const sanitized = sanitizeStyle(attrValue);
-                if (sanitized) {
-                    element.setAttribute('style', sanitized);
-                } else {
-                    element.removeAttribute(attribute.name);
-                }
-            }
-        });
-
-        if (tagName === 'a') {
-            element.setAttribute('rel', 'noopener noreferrer');
-        }
-    });
-
-    return template.innerHTML;
 }
 
 const ProductDetailPage = () => {
@@ -339,7 +202,7 @@ const ProductDetailPage = () => {
 
     const isOutOfStock = product.status === 'OUT_OF_STOCK' || product.stockQuantity === 0;
     const wishlisted = isWishlisted(product.id);
-    const productDescriptionHtml = sanitizeCkEditorHtml(product.description);
+    const productDescriptionHtml = sanitizeHtml(product.description);
 
     return (
         <div className='min-h-screen bg-background py-8'>
