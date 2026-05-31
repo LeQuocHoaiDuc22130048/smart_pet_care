@@ -68,8 +68,9 @@ public class GeminiService {
             }
 
             Khi hỏi triệu chứng/bệnh:
-            - Nếu có KIẾN THỨC PHÙ HỢP TỪ DATASET PETCARE, bắt buộc dùng đúng ý "Lời khuyên" và "Chăm sóc" từ dataset
-            - Không chỉ nói "đưa đi thú y"; phải nêu biện pháp chăm sóc/sơ cứu tại nhà dựa trên dataset nếu có
+            - Nếu có phần KIẾN THỨC PHÙ HỢP trong system prompt, bắt buộc dùng đúng ý "Lời khuyên" và "Chăm sóc" từ phần đó
+            - Không nhắc tới dataset, dữ liệu nội bộ, hệ thống tra cứu hoặc quy trình tìm kiếm trong câu trả lời cho khách
+            - Không chỉ nói "đưa đi thú y"; phải nêu biện pháp chăm sóc/sơ cứu tại nhà nếu có thông tin phù hợp
             - Trình bày theo thứ tự: nhận định ngắn -> biện pháp tại nhà -> khi nào cần đi thú y -> lời mời dùng sản phẩm/dịch vụ PetCare
             - Nêu đây chỉ là tư vấn sơ bộ, không thay thế bác sĩ thú y
             - Nếu có dấu hiệu nguy hiểm như khó thở, co giật, xuất huyết, bỏ ăn kéo dài, liệt, nôn/tiêu chảy liên tục: khuyên đi thú y ngay
@@ -208,7 +209,7 @@ public class GeminiService {
         }
 
         if (asksBotCapabilities(value)) {
-            return Optional.of(simpleResponse("Mình có thể hỗ trợ tư vấn chăm sóc thú cưng, tra gợi ý từ dữ liệu PetCare, tìm sản phẩm phù hợp và phân tích ảnh để đưa ra nhận định tham khảo. Nếu bé có triệu chứng cụ thể, bạn mô tả thêm loài, tuổi, biểu hiện và thời gian bị nhé."));
+            return Optional.of(simpleResponse("Mình có thể hỗ trợ tư vấn chăm sóc thú cưng, gợi ý sản phẩm phù hợp và phân tích ảnh để đưa ra nhận định tham khảo. Nếu bé có triệu chứng cụ thể, bạn mô tả thêm loài, tuổi, biểu hiện và thời gian bị nhé."));
         }
 
         return Optional.empty();

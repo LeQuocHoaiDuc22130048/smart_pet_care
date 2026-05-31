@@ -12,7 +12,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Test SecurityConfig configuration
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+        "JWT_SIGNER_KEY=test-secret-key-must-be-at-least-512-bits-long-for-hs512-algorithm"
+})
 class SecurityConfigTest {
 
     @Autowired(required = false)

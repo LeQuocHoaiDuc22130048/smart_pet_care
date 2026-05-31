@@ -221,14 +221,12 @@ const UserDashboardPage = () => {
     const saveProfile = async () => {
         setProfileSaving(true);
         try {
-            console.log('[UserDashboard] Saving profile:', profileForm);
             const res = await userApi.updateProfile({
                 firstName: profileForm.firstName,
                 lastName: profileForm.lastName,
                 phone: profileForm.phone,
                 email: profileForm.email,
             });
-            console.log('[UserDashboard] Profile updated:', res);
             setProfile(res.result);
             // Backend trả về snake_case do @JsonProperty
             const updatedFirst = res.result.first_name ?? res.result.firstName ?? profileForm.firstName;

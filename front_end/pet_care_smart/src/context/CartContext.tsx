@@ -59,7 +59,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             const res = await cartApi.getCart();
             const items = res.result?.items ?? [];
-            console.log('[CartContext] Synced cart items:', items);
             setCart(items.map(mapApiItem));
         } catch (err) {
             console.error('[CartContext] Error syncing cart:', err);

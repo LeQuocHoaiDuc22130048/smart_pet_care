@@ -1,0 +1,32 @@
+# Environment files
+.env
+*.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node dependencies and builds
+node_modules/
+dist/
+dist-ssr/
+
+# Java builds
+target/
+*.class
+
+# Logs
+logs/
+*.log
+
+# IDE and OS files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
