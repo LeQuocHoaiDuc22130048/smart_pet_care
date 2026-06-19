@@ -191,8 +191,8 @@ const BookingServicePage = () => {
                 {/* Step indicator */}
                 <div className='flex items-center justify-between mb-8 px-2'>
                     {STEPS.map((label, i) => (
-                        <div key={i} className='flex items-center flex-1'>
-                            <div className='flex flex-col items-center'>
+                        <div key={i} className={`flex items-center ${i < STEPS.length - 1 ? 'flex-1' : 'flex-none'}`}>
+                            <div className='flex flex-col items-center shrink-0'>
                                 <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all ${i < step ? 'bg-[#448B3D] text-white' :
                                     i === step ? 'bg-[#448B3D] text-white ring-4 ring-[#448B3D]/20' :
                                         'bg-muted text-muted-foreground'

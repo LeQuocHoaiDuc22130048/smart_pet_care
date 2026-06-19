@@ -13,7 +13,7 @@ import BookingServicePage from './pages/BookingServicePage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import AdminDashboardLayout from './layout/AdminDashboardLayout';
 import AdminDashboardPage from './pages/AdminDashboardPage';
-import AdminCmsMarketingPage from './pages/AdminCmsMarketingPage';
+// import AdminCmsMarketingPage from './pages/AdminCmsMarketingPage';
 import UserDashboardLayout from './layout/UserDashboardLayout';
 import UserDashboardPage from './pages/UserDashboardPage';
 import BlogPage from './pages/BlogPage';
@@ -65,7 +65,7 @@ export const routes = createBrowserRouter([
         Component: AdminDashboardLayout,
         children: [
             { index: true, Component: AdminDashboardPage },
-            { path: 'cms-marketing', Component: AdminCmsMarketingPage },
+            // { path: 'cms-marketing', Component: AdminCmsMarketingPage },
         ]
     },
     {
