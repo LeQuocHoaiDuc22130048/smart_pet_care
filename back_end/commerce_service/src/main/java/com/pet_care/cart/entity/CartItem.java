@@ -30,6 +30,10 @@ public class CartItem {
     @Column(name = "product_name")
     String productName;
 
+    // Snapshot ảnh chính tại thời điểm thêm vào giỏ
+    @Column(name = "image_url", length = 1000)
+    String imageUrl;
+
     // Snapshot giá tại thời điểm thêm vào giỏ
     @Column(name = "unit_price")
     BigDecimal unitPrice;

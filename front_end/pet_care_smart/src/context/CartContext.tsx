@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { cartApi, type CartItem as ApiCartItem } from '@/lib/cartApi';
+import { productApi, type Product } from '@/lib/productApi';
 
 // ─── Local cart item (UI shape) ───────────────────────────────────────────────
 export interface CartItem {
@@ -26,28 +27,54 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+const fallbackImage = 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=200&h=200&fit=crop';
+
+function getPrimaryImage(product: Product): string | undefined {
+    const primary = product.images?.find((image) => image.isPrimary);
+    return primary?.imageUrl ?? product.images?.[0]?.imageUrl;
+}
 
 // ─── Map API cart item → local cart item ─────────────────────────────────────
-function mapApiItem(item: ApiCartItem): CartItem {
-    // Nếu không có imageUrl từ backend, sẽ dùng placeholder
-    // Frontend sẽ cần fetch product detail để lấy ảnh thật
-    const fallbackImage = 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=200&h=200&fit=crop';
-
+function mapApiItem(item: ApiCartItem, image?: string, category = ''): CartItem {
     return {
         id: item.productId,
         itemId: item.id,
         name: item.productName,
         price: item.unitPrice ?? 0,
         quantity: item.quantity,
-        image: item.imageUrl || fallbackImage,
-        category: '',
+        image: item.imageUrl || image || fallbackImage,
+        category,
     };
+}
+
+async function mapApiItems(items: ApiCartItem[], currentCart: CartItem[] = []): Promise<CartItem[]> {
+    return Promise.all(items.map(async (item) => {
+        const existing = currentCart.find((cartItem) => cartItem.id === item.productId);
+        const existingImage = existing?.image && existing.image !== fallbackImage ? existing.image : undefined;
+
+        if (item.imageUrl || existingImage) {
+            return mapApiItem(item, existingImage, existing?.category);
+        }
+
+        try {
+            const product = (await productApi.getById(item.productId)).result;
+            if (!product) return mapApiItem(item, undefined, existing?.category);
+            return mapApiItem(item, getPrimaryImage(product), product.category?.map((c) => c.categoryName).join(', ') || existing?.category);
+        } catch {
+            return mapApiItem(item, undefined, existing?.category);
+        }
+    }));
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const { isAuthenticated } = useAuth();
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const cartRef = useRef<CartItem[]>([]);
+
+    useEffect(() => {
+        cartRef.current = cart;
+    }, [cart]);
 
     // ── Sync cart from server ─────────────────────────────────────────────────
     const syncCart = useCallback(async () => {
@@ -59,7 +86,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             const res = await cartApi.getCart();
             const items = res.result?.items ?? [];
-            setCart(items.map(mapApiItem));
+            const nextCart = await mapApiItems(items, cartRef.current);
+            setCart(nextCart);
         } catch (err) {
             console.error('[CartContext] Error syncing cart:', err);
             // silently fail — keep local state
@@ -89,7 +117,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         try {
             const res = await cartApi.addItem(item.id, 1);
-            setCart((res.result?.items ?? []).map(mapApiItem));
+            const nextCart = await mapApiItems(res.result?.items ?? [], [{ ...item, quantity: 1 }, ...cartRef.current]);
+            setCart(nextCart);
         } catch {
             // Fallback to local
             setCart((prev) => {
@@ -113,7 +142,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (isAuthenticated && item.itemId) {
             try {
                 const res = await cartApi.removeItem(item.itemId);
-                setCart((res.result?.items ?? []).map(mapApiItem));
+                const nextCart = await mapApiItems(res.result?.items ?? [], cartRef.current.filter((i) => i.id !== productId));
+                setCart(nextCart);
             } catch {
                 // revert
                 setCart((prev) => [...prev, item]);
@@ -137,7 +167,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (isAuthenticated && item.itemId) {
             try {
                 const res = await cartApi.updateItem(item.itemId, quantity);
-                setCart((res.result?.items ?? []).map(mapApiItem));
+                const nextCart = await mapApiItems(res.result?.items ?? [], cartRef.current);
+                setCart(nextCart);
             } catch {
                 // revert
                 setCart((prev) => prev.map((i) => i.id === productId ? { ...i, quantity: item.quantity } : i));

@@ -4,6 +4,7 @@ import com.pet_care.cart.client.ProductClient;
 import com.pet_care.cart.dto.request.AddToCartRequest;
 import com.pet_care.cart.dto.request.UpdateCartItemRequest;
 import com.pet_care.cart.dto.response.CartResponse;
+import com.pet_care.cart.dto.response.ImageResponse;
 import com.pet_care.cart.dto.response.ProductResponse;
 import com.pet_care.cart.entity.Cart;
 import com.pet_care.cart.entity.CartItem;
@@ -34,8 +35,10 @@ public class CartService {
      * Lấy giỏ hàng của user hiện tại.
      * Tự tạo mới nếu chưa có.
      */
+    @Transactional
     public CartResponse getMyCart(String userId) {
         Cart cart = getOrCreateCart(userId);
+        refreshMissingImageSnapshots(cart);
         return cartMapper.toCartResponse(cart);
     }
 
@@ -58,8 +61,10 @@ public class CartService {
                             int newQty = existing.getQuantity() + request.getQuantity();
                             validateStock(product, newQty);
                             existing.setQuantity(newQty);
-                            // Cập nhật giá mới nhất
+                            // Cập nhật snapshot mới nhất
                             existing.setUnitPrice(product.getPrice());
+                            existing.setProductName(product.getProductName());
+                            existing.setImageUrl(getPrimaryImageUrl(product));
                             cartItemRepository.save(existing);
                         },
                         () -> {
@@ -69,6 +74,7 @@ public class CartService {
                                     .cart(cart)
                                     .productId(product.getId())
                                     .productName(product.getProductName())
+                                    .imageUrl(getPrimaryImageUrl(product))
                                     .unitPrice(product.getPrice())
                                     .quantity(request.getQuantity())
                                     .build();
@@ -99,6 +105,8 @@ public class CartService {
             validateStock(product, request.getQuantity());
             item.setQuantity(request.getQuantity());
             item.setUnitPrice(product.getPrice());
+            item.setProductName(product.getProductName());
+            item.setImageUrl(getPrimaryImageUrl(product));
             cartItemRepository.save(item);
         }
 
@@ -170,5 +178,33 @@ public class CartService {
                 && product.getStockQuantity() < requestedQty) {
             throw new AppException(ErrorCode.QUANTITY_EXCEEDS_STOCK);
         }
+    }
+
+    private void refreshMissingImageSnapshots(Cart cart) {
+        cart.getItems().stream()
+                .filter(item -> item.getImageUrl() == null || item.getImageUrl().isBlank())
+                .forEach(item -> {
+                    try {
+                        ProductResponse product = fetchProduct(item.getProductId());
+                        item.setProductName(product.getProductName());
+                        item.setUnitPrice(product.getPrice());
+                        item.setImageUrl(getPrimaryImageUrl(product));
+                    } catch (AppException e) {
+                        log.warn("Cannot refresh cart item image for product {}: {}", item.getProductId(), e.getMessage());
+                    }
+                });
+    }
+
+    private String getPrimaryImageUrl(ProductResponse product) {
+        if (product.getImages() == null || product.getImages().isEmpty()) {
+            return null;
+        }
+
+        return product.getImages().stream()
+                .filter(image -> Boolean.TRUE.equals(image.getIsPrimary()))
+                .findFirst()
+                .or(() -> product.getImages().stream().findFirst())
+                .map(ImageResponse::getImageUrl)
+                .orElse(null);
     }
 }

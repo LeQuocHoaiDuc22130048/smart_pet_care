@@ -14,6 +14,7 @@ public class CartItemResponse {
     String id;
     String productId;
     String productName;
+    String imageUrl;
     BigDecimal unitPrice;
     Integer quantity;
     BigDecimal subtotal;

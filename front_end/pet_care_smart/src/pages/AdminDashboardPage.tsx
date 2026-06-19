@@ -213,9 +213,10 @@ function mapApiOrder(o: ApiOrder): Order {
 }
 
 function mapApiUser(u: UserIdentity): Customer {
+    const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
     return {
         id: u.id,
-        name: `${u.firstName} ${u.lastName}`,
+        name: fullName || u.username || 'Khách hàng',
         email: u.username,
         phone: '',
         address: '',
@@ -296,7 +297,7 @@ function buildChartData(orders: Order[]) {
         // Calculate sales from amount string "123,456₫"
         const sales = monthOrders.reduce((s, o) => {
             try {
-                const amount = parseFloat(o.amount.replace(/[₫,]/g, '')) || 0;
+                const amount = parseFloat(o.amount.replace(/[^\d]/g, '')) || 0;
                 return s + amount;
             } catch {
                 return s;
@@ -550,9 +551,11 @@ const AdminDashboardPage = () => {
     const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [customerLoadError, setCustomerLoadError] = useState<string | null>(null);
 
     const fetchAdminData = useCallback(async () => {
         setApiLoading(true);
+        setCustomerLoadError(null);
         try {
             const [productsRes, categoriesRes, ordersRes, usersRes, bookingsRes] = await Promise.allSettled([
                 productApi.getAll(),
@@ -602,12 +605,18 @@ const AdminDashboardPage = () => {
             if (usersRes.status === 'fulfilled' && usersRes.value?.result) {
                 try {
                     setCustomers((usersRes.value.result ?? []).map(mapApiUser));
+                    setCustomerLoadError(null);
                 } catch (err) {
                     console.error('Error mapping users:', err);
                     setCustomers([]);
+                    setCustomerLoadError('Không thể xử lý dữ liệu khách hàng từ máy chủ.');
                 }
             } else {
                 setCustomers([]);
+                const reason = usersRes.status === 'rejected' && usersRes.reason instanceof Error
+                    ? usersRes.reason.message
+                    : 'Không thể tải danh sách khách hàng.';
+                setCustomerLoadError(reason);
             }
 
             if (bookingsRes.status === 'fulfilled' && bookingsRes.value?.result) {
@@ -623,6 +632,7 @@ const AdminDashboardPage = () => {
             setCategories([]);
             setOrders([]);
             setCustomers([]);
+            setCustomerLoadError('Không thể tải danh sách khách hàng.');
             setBookings([]);
         } finally {
             setApiLoading(false);
@@ -1433,7 +1443,7 @@ const AdminDashboardPage = () => {
                                     <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                                         <Calendar className="w-4 h-4 text-[#448B3D]" /> Tiến trình đơn hàng
                                     </h3>
-                                    <div className="flex items-center gap-0">
+                                    <div className="flex items-center w-full">
                                         {(['Đang xử lý', 'Đang giao', 'Hoàn thành'] as const).map((step, idx, arr) => {
                                             const stepOrder = ['Đang xử lý', 'Đang giao', 'Hoàn thành'];
                                             const currentIdx = stepOrder.indexOf(o.status);
@@ -1441,8 +1451,8 @@ const AdminDashboardPage = () => {
                                             const isDone = o.status !== 'Đã hủy' && stepIdx <= currentIdx;
                                             const isActive = stepIdx === currentIdx && o.status !== 'Đã hủy';
                                             return (
-                                                <div key={step} className="flex items-center flex-1">
-                                                    <div className="flex flex-col items-center gap-1.5 flex-1">
+                                                <div key={step} className={`flex items-center ${idx < arr.length - 1 ? 'flex-1' : 'flex-none'}`}>
+                                                    <div className="flex flex-col items-center gap-1.5 shrink-0">
                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors
                                                             ${isActive ? 'bg-[#448B3D] border-[#448B3D] text-white' : isDone ? 'bg-[#448B3D]/20 border-[#448B3D] text-[#448B3D]' : 'bg-muted border-border text-muted-foreground'}`}>
                                                             {isDone && !isActive ? '✓' : idx + 1}
@@ -1452,7 +1462,7 @@ const AdminDashboardPage = () => {
                                                         </span>
                                                     </div>
                                                     {idx < arr.length - 1 && (
-                                                        <div className={`h-0.5 flex-1 mx-1 rounded ${isDone && stepOrder.indexOf(arr[idx + 1]) <= currentIdx ? 'bg-[#448B3D]' : 'bg-border'}`} />
+                                                        <div className={`h-0.5 flex-1 mx-2 rounded ${isDone && stepOrder.indexOf(arr[idx + 1]) <= currentIdx ? 'bg-[#448B3D]' : 'bg-border'}`} />
                                                     )}
                                                 </div>
                                             );
@@ -1521,7 +1531,18 @@ const AdminDashboardPage = () => {
                                     ))}
                                 </tbody>
                             </table>
-                            {filteredCustomers.length === 0 && <p className="text-center text-muted-foreground py-8">Không tìm thấy khách hàng</p>}
+                            {filteredCustomers.length === 0 && (
+                                <div className="text-center text-muted-foreground py-8">
+                                    {customerLoadError ? (
+                                        <>
+                                            <p className="font-medium text-destructive">Không thể hiển thị danh sách khách hàng</p>
+                                            <p className="mt-1 text-sm">{customerLoadError}</p>
+                                        </>
+                                    ) : (
+                                        <p>Không tìm thấy khách hàng</p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <Pagination
                             currentPage={currentPage.customers}

@@ -35,7 +35,7 @@ const menuItems: MenuItem[] = [
         ]
     },
     { icon: Calendar, label: 'Lịch đặt', tab: 'bookings' },
-    { icon: Megaphone, label: 'CMS & Marketing', tab: 'cms-marketing' },
+    // { icon: Megaphone, label: 'CMS & Marketing', tab: 'cms-marketing' },
     { icon: BarChart, label: 'Thống kê', tab: 'stats' },
     { icon: Settings, label: 'Cài đặt', tab: 'settings' },
 ];
